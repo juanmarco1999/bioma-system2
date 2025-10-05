@@ -3347,123 +3347,220 @@ let chartServicos = null;
 let chartFaturamento = null;
 
 async function loadRelatorios() {
+   // ===== RELATÓRIOS EM TEMPO REAL - CORRIGIDO SEM SPINNER =====
+let chartServicos = null;
+let chartFaturamento = null;
+
+async function loadRelatorios() {
+    console.log('📊 Carregando relatórios em tempo real');
+    
     try {
         const res = await fetch('/api/orcamentos', { credentials: 'include' });
-        const payload = await res.json();
-
-        const elFaturamentoTotal = document.getElementById('relFaturamentoTotal');
-        const elFaturamentoMes   = document.getElementById('relFaturamentoMes');
-        const elCashbackTotal    = document.getElementById('relCashbackTotal');
-        const elTicketMedio      = document.getElementById('relTicketMedio');
-
-        if (!payload.success || !payload.orcamentos || payload.orcamentos.length === 0) {
-            elFaturamentoTotal.textContent = 'R$ 0';
-            elFaturamentoMes.textContent   = 'R$ 0';
-            elCashbackTotal.textContent    = 'R$ 0';
-            elTicketMedio.textContent      = 'R$ 0';
-            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum dado</td></tr>';
-            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum dado</td></tr>';
+        const data = await res.json();
+        
+        if (!data.success || !data.orcamentos) {
+            console.warn('⚠️ Nenhum orçamento encontrado');
+            document.getElementById('relFaturamentoTotal').textContent = 'R$ 0';
+            document.getElementById('relFaturamentoMes').textContent = 'R$ 0';
+            document.getElementById('relCashbackTotal').textContent = 'R$ 0';
+            document.getElementById('relTicketMedio').textContent = 'R$ 0';
+            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum dado disponível</td></tr>';
+            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum dado disponível</td></tr>';
             return;
         }
-
-        const aprovados = payload.orcamentos.filter(o => o.status === 'Aprovado');
-
-        // Totais
-        const totalGeral = aprovados.reduce((acc, o) => acc + (o.total_final || 0), 0);
-        const totalCash  = aprovados.reduce((acc, o) => acc + (o.cashback_valor || 0), 0);
-        const mesAtual   = new Date().getMonth();
-        const totalMes   = aprovados
-            .filter(o => (new Date(o.created_at)).getMonth() === mesAtual)
-            .reduce((acc, o) => acc + (o.total_final || 0), 0);
-        const ticket     = aprovados.length ? (totalGeral / aprovados.length) : 0;
-
-        elFaturamentoTotal.textContent = `R$ ${totalGeral.toFixed(2)}`;
-        elFaturamentoMes.textContent   = `R$ ${totalMes.toFixed(2)}`;
-        elCashbackTotal.textContent    = `R$ ${totalCash.toFixed(2)}`;
-        elTicketMedio.textContent      = `R$ ${ticket.toFixed(2)}`;
-
-        // Top clientes
-        const gastoPorCliente = {};
-        aprovados.forEach(o => {
-            const key = `${o.cliente_nome}||${o.cliente_cpf || ''}`;
-            gastoPorCliente[key] = (gastoPorCliente[key] || 0) + (o.total_final || 0);
-        });
-        const topClientes = Object.entries(gastoPorCliente)
-            .map(([k, v]) => ({ nome: k.split('||')[0], cpf: k.split('||')[1], total: v }))
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5);
-
-        document.getElementById('topClientesBody').innerHTML = topClientes.map((c, i) => `
-            <tr>
-                <td>${i+1}</td>
-                <td>${c.nome}</td>
-                <td>${c.cpf || '-'}</td>
-                <td><strong>R$ ${c.total.toFixed(2)}</strong></td>
-                <td><span class="badge success">VIP</span></td>
-            </tr>
-        `).join('');
-
-        // Top produtos (contagem de nomes)
-        const contagemProdutos = {};
-        aprovados.forEach(o => {
-            (o.produtos || []).forEach(p => {
-                contagemProdutos[p.nome] = (contagemProdutos[p.nome] || 0) + (p.qtd || 1);
+        
+        const orcamentos = data.orcamentos.filter(o => o.status === 'Aprovado');
+        
+        if (orcamentos.length === 0) {
+            console.warn('⚠️ Nenhum orçamento aprovado');
+            document.getElementById('relFaturamentoTotal').textContent = 'R$ 0';
+            document.getElementById('relFaturamentoMes').textContent = 'R$ 0';
+            document.getElementById('relCashbackTotal').textContent = 'R$ 0';
+            document.getElementById('relTicketMedio').textContent = 'R$ 0';
+            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum orçamento aprovado ainda</td></tr>';
+            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum produto vendido</td></tr>';
+            return;
+        }
+        
+        // Faturamento total
+        const faturamentoTotal = orcamentos.reduce((acc, o) => acc + (o.total_final || 0), 0);
+        document.getElementById('relFaturamentoTotal').textContent = `R$ ${faturamentoTotal.toFixed(0)}`;
+        
+        // Faturamento mês atual
+        const mesAtual = new Date().getMonth();
+        const anoAtual = new Date().getFullYear();
+        const faturamentoMes = orcamentos
+            .filter(o => {
+                const d = new Date(o.created_at);
+                return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+            })
+            .reduce((acc, o) => acc + o.total_final, 0);
+        document.getElementById('relFaturamentoMes').textContent = `R$ ${faturamentoMes.toFixed(0)}`;
+        
+        // Cashback total
+        const cashbackTotal = orcamentos.reduce((acc, o) => acc + (o.cashback_valor || 0), 0);
+        document.getElementById('relCashbackTotal').textContent = `R$ ${cashbackTotal.toFixed(0)}`;
+        
+        // Ticket médio
+        const ticketMedio = orcamentos.length > 0 ? faturamentoTotal / orcamentos.length : 0;
+        document.getElementById('relTicketMedio').textContent = `R$ ${ticketMedio.toFixed(0)}`;
+        
+        // Top Serviços
+        const servicosCount = {};
+        orcamentos.forEach(o => {
+            (o.servicos || []).forEach(s => {
+                const key = s.nome;
+                if (!servicosCount[key]) {
+                    servicosCount[key] = { total: 0, qtd: 0 };
+                }
+                servicosCount[key].total += s.total || 0;
+                servicosCount[key].qtd += s.qtd || 1;
             });
         });
-        const topProdutos = Object.entries(contagemProdutos)
-            .map(([nome, qtd]) => ({ nome, qtd }))
-            .sort((a, b) => b.qtd - a.qtd)
+        
+        const topServicos = Object.entries(servicosCount)
+            .sort((a, b) => b[1].total - a[1].total)
             .slice(0, 5);
-
-        document.getElementById('topProdutosBody').innerHTML = topProdutos.map((p, i) => `
-            <tr>
-                <td>${i+1}</td>
-                <td>${p.nome}</td>
-                <td><strong>${p.qtd}</strong></td>
-            </tr>
-        `).join('');
-
-        // Gráfico faturamento por mês (ano corrente)
-        const meses = Array.from({length:12}, (_,i)=>i);
-        const somaPorMes = meses.map(m => aprovados
-            .filter(o => (new Date(o.created_at)).getMonth() === m)
-            .reduce((acc, o) => acc + (o.total_final || 0), 0)
-        );
-
-        if (chartFaturamento) chartFaturamento.destroy();
-        const ctxF = document.getElementById('chartFaturamento').getContext('2d');
-        chartFaturamento = new Chart(ctxF, {
-            type: 'bar',
-            data: {
-                labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
-                datasets: [{ label: 'Faturamento', data: somaPorMes }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        // Gráfico serviços (quantidade por serviço)
-        const contagemServ = {};
-        aprovados.forEach(o => (o.servicos || []).forEach(s => {
-            const key = `${s.nome} - ${s.tamanho || ''}`.trim();
-            contagemServ[key] = (contagemServ[key] || 0) + 1;
-        }));
-        const servLabels = Object.keys(contagemServ);
-        const servValues = servLabels.map(k => contagemServ[k]);
-
+        
+        // Gráfico Serviços
+        const ctxServicos = document.getElementById('chartServicos');
         if (chartServicos) chartServicos.destroy();
-        const ctxS = document.getElementById('chartServicos').getContext('2d');
-        chartServicos = new Chart(ctxS, {
-            type: 'pie',
-            data: { labels: servLabels, datasets: [{ data: servValues }] },
-            options: { responsive: true, maintainAspectRatio: false }
+        
+        if (topServicos.length > 0) {
+            chartServicos = new Chart(ctxServicos, {
+                type: 'bar',
+                data: {
+                    labels: topServicos.map(s => s[0]),
+                    datasets: [{
+                        label: 'Faturamento (R$)',
+                        data: topServicos.map(s => s[1].total),
+                        backgroundColor: 'rgba(124, 58, 237, 0.8)',
+                        borderColor: 'rgba(124, 58, 237, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+        
+        // Faturamento Mensal (últimos 6 meses)
+        const meses = [];
+        const faturamentoMensal = [];
+        
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - i);
+            const mes = d.getMonth();
+            const ano = d.getFullYear();
+            
+            meses.push(d.toLocaleDateString('pt-BR', { month: 'short' }));
+            
+            const fat = orcamentos
+                .filter(o => {
+                    const od = new Date(o.created_at);
+                    return od.getMonth() === mes && od.getFullYear() === ano;
+                })
+                .reduce((acc, o) => acc + o.total_final, 0);
+            
+            faturamentoMensal.push(fat);
+        }
+        
+        const ctxFaturamento = document.getElementById('chartFaturamento');
+        if (chartFaturamento) chartFaturamento.destroy();
+        
+        chartFaturamento = new Chart(ctxFaturamento, {
+            type: 'line',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: 'Faturamento (R$)',
+                    data: faturamentoMensal,
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
         });
-
+        
+        // Top Clientes
+        const resClientes = await fetch('/api/clientes', { credentials: 'include' });
+        const dataClientes = await resClientes.json();
+        
+        if (dataClientes.success && dataClientes.clientes && dataClientes.clientes.length > 0) {
+            const topClientes = dataClientes.clientes
+                .sort((a, b) => (b.total_gasto || 0) - (a.total_gasto || 0))
+                .slice(0, 10);
+            
+            const htmlClientes = topClientes.map((c, idx) => `
+                <tr>
+                    <td><strong style="font-size: 1.5rem; color: ${idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : 'var(--text-primary)'}">${idx + 1}º</strong></td>
+                    <td><strong>${c.nome}</strong></td>
+                    <td><strong style="color: var(--success);">R$ ${(c.total_gasto || 0).toFixed(2)}</strong></td>
+                    <td>${c.total_visitas || 0}</td>
+                    <td>${c.ultima_visita ? new Date(c.ultima_visita).toLocaleDateString('pt-BR') : '-'}</td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('topClientesBody').innerHTML = htmlClientes;
+        } else {
+            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente encontrado</td></tr>';
+        }
+        
+        // Top Produtos
+        const produtosCount = {};
+        orcamentos.forEach(o => {
+            (o.produtos || []).forEach(p => {
+                const key = p.nome;
+                if (!produtosCount[key]) {
+                    produtosCount[key] = { total: 0, qtd: 0 };
+                }
+                produtosCount[key].total += p.total || 0;
+                produtosCount[key].qtd += p.qtd || 1;
+            });
+        });
+        
+        const topProdutos = Object.entries(produtosCount)
+            .sort((a, b) => b[1].qtd - a[1].qtd)
+            .slice(0, 10);
+        
+        if (topProdutos.length > 0) {
+            const htmlProdutos = topProdutos.map(p => `
+                <tr>
+                    <td><strong>${p[0]}</strong></td>
+                    <td>${p[1].qtd}</td>
+                    <td><strong>R$ ${p[1].total.toFixed(2)}</strong></td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('topProdutosBody').innerHTML = htmlProdutos;
+        } else {
+            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum produto vendido</td></tr>';
+        }
+        
+        console.log('✅ Relatórios carregados com sucesso');
+        
     } catch (e) {
-        console.error('Erro ao carregar relatórios:', e);
-        document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar</td></tr>';
-        document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar</td></tr>';
+        console.error('❌ Erro ao carregar relatórios:', e);
+        document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+        document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar dados</td></tr>';
     }
 }
+
 // ===== CLUBE BIOMA =====
 function assinarPlano(plano) {
     const planos = {
