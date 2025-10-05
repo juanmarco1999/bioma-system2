@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 import urllib.parse, os, io, csv, json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import requests, pandas as pd
+import requests
 from bson import ObjectId
 from functools import wraps
 from reportlab.lib.pagesizes import A4
@@ -420,44 +420,65 @@ def dashboard_stats():
 @app.route('/api/importar', methods=['POST'])
 @login_required
 def importar():
-    if 'file' not in request.files: return jsonify({'success': False, 'message': 'Sem arquivo'})
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'Sem arquivo'})
+    
     f = request.files['file']
     t = request.form.get('tipo', 'produtos')
-    if not f.filename or not f.filename.endswith(('.csv', '.xlsx', '.xls')):
-        return jsonify({'success': False, 'message': 'Formato inválido'})
+    
+    if not f.filename or not f.filename.endswith('.csv'):
+        return jsonify({'success': False, 'message': 'Apenas arquivos CSV são suportados'})
+    
     try:
         fn = secure_filename(f.filename)
         fp = os.path.join(app.config['UPLOAD_FOLDER'], fn)
         f.save(fp)
-        df = pd.read_csv(fp) if fn.endswith('.csv') else pd.read_excel(fp)
-        df = df.fillna('')
+        
+        # Ler CSV manualmente
+        import csv
         cs = 0
-        if t == 'produtos':
-            for _, r in df.iterrows():
-                db.produtos.insert_one({
-                    'nome': str(r.get('nome', '')).strip(), 'sku': str(r.get('sku', '')).strip(),
-                    'preco': float(r.get('preco', 0)), 'custo': float(r.get('custo', 0)),
-                    'estoque': int(r.get('estoque', 0)), 'categoria': str(r.get('categoria', 'Produto')).strip(),
-                    'ativo': True, 'created_at': datetime.now()
-                })
-                cs += 1
-        else:
-            tam = ['Kids', 'Masculino', 'Curto', 'Médio', 'Longo', 'Extra Longo']
-            for _, r in df.iterrows():
-                n = str(r.get('nome', '')).strip()
-                for t in tam:
-                    db.servicos.insert_one({
-                        'nome': n, 'sku': f"{n}-{t}".upper().replace(' ', '-'),
-                        'tamanho': t, 'preco': float(r.get(t.lower().replace(' ', '_'), 0)),
-                        'categoria': str(r.get('categoria', 'Serviço')).strip(),
-                        'ativo': True, 'created_at': datetime.now()
-                    })
-                cs += 1
+        
+        with open(fp, 'r', encoding='utf-8-sig') as csvfile:
+            reader = csv.DictReader(csvfile)
+            
+            if t == 'produtos':
+                for row in reader:
+                    if row.get('nome'):
+                        db.produtos.insert_one({
+                            'nome': row.get('nome', '').strip(),
+                            'sku': row.get('sku', '').strip(),
+                            'preco': float(row.get('preco', 0) or 0),
+                            'custo': float(row.get('custo', 0) or 0),
+                            'estoque': int(row.get('estoque', 0) or 0),
+                            'categoria': row.get('categoria', 'Produto').strip(),
+                            'ativo': True,
+                            'created_at': datetime.now()
+                        })
+                        cs += 1
+            else:  # servicos
+                tam = ['kids', 'masculino', 'curto', 'médio', 'longo', 'extra_longo']
+                for row in reader:
+                    n = row.get('nome', '').strip()
+                    if n:
+                        for t_size in tam:
+                            preco = float(row.get(t_size, 0) or 0)
+                            db.servicos.insert_one({
+                                'nome': n,
+                                'sku': f"{n}-{t_size.title()}".upper().replace(' ', '-'),
+                                'tamanho': t_size.replace('_', ' ').title(),
+                                'preco': preco,
+                                'categoria': row.get('categoria', 'Serviço').strip(),
+                                'ativo': True,
+                                'created_at': datetime.now()
+                            })
+                        cs += 1
+        
         os.remove(fp)
-        return jsonify({'success': True, 'message': f'{cs} importados', 'count_success': cs, 'count_error': 0})
+        return jsonify({'success': True, 'message': f'{cs} registros importados', 'count_success': cs, 'count_error': 0})
+    
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
-
+    
 @app.route('/api/template/download/<tipo>')
 @login_required
 def download_template(tipo):
