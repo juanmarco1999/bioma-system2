@@ -7,11 +7,11 @@
     <meta name="description" content="Sistema de Gestão BIOMA Uberaba - Completo">
     <meta name="author" content="Juan Marco (@juanmarco1999)">
     
-    <title>BIOMA Uberaba - Sistema de Gestão v2.5</title>
+    <title>BIOMA Uberaba - Sistema de Gestão v2.5 Ultra Profissional</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
     
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -175,7 +175,7 @@
             transition: all 0.3s;
         }
 
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: #7C3AED;
             box-shadow: 0 0 0 5px rgba(124, 58, 237, 0.1);
             outline: none;
@@ -968,6 +968,10 @@
             border-top: 2px solid var(--border-color);
             padding: 20px 30px;
         }
+
+        .btn-close-white {
+            filter: brightness(0) invert(1);
+        }
     </style>
 </head>
 <body>
@@ -1326,6 +1330,7 @@
                             <thead>
                                 <tr>
                                     <th>Produto</th>
+                                    <th>Marca</th>
                                     <th>SKU</th>
                                     <th>Qtd</th>
                                     <th>Preço Unit.</th>
@@ -1335,11 +1340,11 @@
                                 </tr>
                             </thead>
                             <tbody id="produtosBody">
-                                <tr><td colspan="7" class="text-center text-muted">Nenhum produto adicionado</td></tr>
+                                <tr><td colspan="8" class="text-center text-muted">Nenhum produto adicionado</td></tr>
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <th colspan="5" class="text-end">SUBTOTAL</th>
+                                    <th colspan="6" class="text-end">SUBTOTAL</th>
                                     <th id="subtotalProdutos" colspan="2">R$ 0,00</th>
                                 </tr>
                             </tfoot>
@@ -1581,7 +1586,7 @@
             </div>
         </div>
 
-                <!-- ===== PROFISSIONAIS ===== -->
+        <!-- ===== PROFISSIONAIS ===== -->
         <div id="section-profissionais" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-person-workspace"></i> Profissionais</h1>
@@ -1669,6 +1674,7 @@
                             <thead>
                                 <tr>
                                     <th>Nome</th>
+                                    <th>Marca</th>
                                     <th>SKU</th>
                                     <th>Preço</th>
                                     <th>Custo</th>
@@ -1677,7 +1683,7 @@
                                 </tr>
                             </thead>
                             <tbody id="produtosListBody">
-                                <tr><td colspan="6" class="text-center text-muted">Carregando...</td></tr>
+                                <tr><td colspan="7" class="text-center text-muted">Carregando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1693,8 +1699,7 @@
 
             <div class="alert alert-info">
                 <i class="bi bi-lightbulb-fill"></i>
-                <strong>Dica:</strong> Importe seus produtos e serviços de uma planilha CSV ou XLSX. 
-                Baixe os templates de exemplo para garantir o formato correto.
+                <strong>Dica:</strong> O sistema identifica automaticamente as colunas do CSV/XLSX. Aceita diferentes formatos e encodings.
             </div>
 
             <div class="row g-4">
@@ -1713,19 +1718,20 @@
                             
                             <div class="mt-3">
                                 <a href="/api/template/download/produtos" class="btn btn-outline w-100">
-                                    <i class="bi bi-download"></i> Baixar Template de Exemplo
+                                    <i class="bi bi-download"></i> Baixar Template
                                 </a>
                             </div>
 
                             <div class="mt-3">
-                                <h6><i class="bi bi-info-circle"></i> Colunas Obrigatórias:</h6>
+                                <h6><i class="bi bi-info-circle"></i> Colunas (flexíveis):</h6>
                                 <ul class="small">
-                                    <li><code>nome</code> - Nome do produto</li>
-                                    <li><code>preco</code> - Preço de venda</li>
-                                    <li><code>sku</code> - Código (opcional)</li>
-                                    <li><code>custo</code> - Custo (opcional)</li>
-                                    <li><code>estoque</code> - Quantidade (opcional)</li>
-                                    <li><code>categoria</code> - Categoria (opcional)</li>
+                                    <li><code>nome/produto</code> - Nome *</li>
+                                    <li><code>marca/brand</code> - Marca</li>
+                                    <li><code>preco/preço/price</code> - Preço *</li>
+                                    <li><code>sku/codigo</code> - SKU</li>
+                                    <li><code>custo/cost</code> - Custo</li>
+                                    <li><code>estoque/qtd</code> - Quantidade</li>
+                                    <li><code>categoria/category</code> - Categoria</li>
                                 </ul>
                             </div>
                         </div>
@@ -1747,21 +1753,21 @@
                             
                             <div class="mt-3">
                                 <a href="/api/template/download/servicos" class="btn btn-outline w-100">
-                                    <i class="bi bi-download"></i> Baixar Template de Exemplo
+                                    <i class="bi bi-download"></i> Baixar Template
                                 </a>
                             </div>
 
                             <div class="mt-3">
-                                <h6><i class="bi bi-info-circle"></i> Colunas Obrigatórias:</h6>
+                                <h6><i class="bi bi-info-circle"></i> Colunas (flexíveis):</h6>
                                 <ul class="small">
-                                    <li><code>nome</code> - Nome do serviço</li>
-                                    <li><code>categoria</code> - Categoria (opcional)</li>
-                                    <li><code>kids</code> - Preço Kids (opcional)</li>
-                                    <li><code>masculino</code> - Preço Masculino (opcional)</li>
-                                    <li><code>curto</code> - Preço Curto (opcional)</li>
-                                    <li><code>médio</code> - Preço Médio (opcional)</li>
-                                    <li><code>longo</code> - Preço Longo (opcional)</li>
-                                    <li><code>extra_longo</code> - Preço Extra (opcional)</li>
+                                    <li><code>nome/servico</code> - Nome *</li>
+                                    <li><code>categoria/category</code> - Categoria</li>
+                                    <li><code>kids/infantil</code> - Preço Kids</li>
+                                    <li><code>masculino/male</code> - Preço Masc</li>
+                                    <li><code>curto/short</code> - Preço Curto</li>
+                                    <li><code>medio/médio/medium</code> - Preço Médio</li>
+                                    <li><code>longo/long</code> - Preço Longo</li>
+                                    <li><code>extra_longo/xl</code> - Preço XL</li>
                                 </ul>
                             </div>
                         </div>
@@ -1839,7 +1845,7 @@
                         </tr>
                         <tr>
                             <td><strong>Data/Hora Servidor:</strong></td>
-                            <td id="serverTime">2025-10-05 03:50:47 UTC</td>
+                            <td id="serverTime">2025-10-05 05:09:57 UTC</td>
                         </tr>
                         <tr>
                             <td><strong>Usuário Logado:</strong></td>
@@ -1851,39 +1857,9 @@
                         </tr>
                         <tr>
                             <td><strong>URL:</strong></td>
-                            <td><a href="https://bioma-system.onrender.com" target="_blank">bioma-system.onrender.com</a></td>
+                            <td><a href="https://bioma-system2.onrender.com" target="_blank">bioma-system2.onrender.com</a></td>
                         </tr>
                     </table>
-                </div>
-            </div>
-
-            <div class="card mt-4">
-                <div class="card-header">
-                    <i class="bi bi-plug"></i> Integrações Ativas
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center gap-3">
-                                <i class="bi bi-geo-alt-fill" style="font-size: 2rem; color: var(--primary);"></i>
-                                <div>
-                                    <h6 class="mb-1">ViaCEP</h6>
-                                    <p class="text-muted mb-0 small">Busca automática de endereços por CEP</p>
-                                </div>
-                                <span class="badge success ms-auto">Ativo</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center gap-3">
-                                <i class="bi bi-calendar-event" style="font-size: 2rem; color: var(--success);"></i>
-                                <div>
-                                    <h6 class="mb-1">BrasilAPI</h6>
-                                    <p class="text-muted mb-0 small">Feriados nacionais brasileiros</p>
-                                </div>
-                                <span class="badge success ms-auto">Ativo</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1912,13 +1888,13 @@
                     <div class="form-row">
                         <div class="col">
                             <label>Endereço Completo</label>
-                            <input type="text" id="cfgEndereco" value="Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG">
+                            <input type="text" id="cfgEndereco" value="Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG - CEP 38050-400">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="col">
                             <label>Telefone</label>
-                            <input type="text" id="cfgTelefone" value="(34) 99235-5890">
+                            <input type="text" id="cfgTelefone" value="34 99235-5890">
                         </div>
                         <div class="col">
                             <label>E-mail</label>
@@ -1995,6 +1971,83 @@
     </div>
 </div>
 
+<!-- Modal: Novo Cliente -->
+<div class="modal fade" id="modalCliente" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus"></i> Cadastrar Cliente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="col">
+                        <label>CPF *</label>
+                        <input type="text" class="form-control" id="clienteCPF" placeholder="000.000.000-00" maxlength="14">
+                    </div>
+                    <div class="col">
+                        <label>Nome Completo *</label>
+                        <input type="text" class="form-control" id="clienteNome" placeholder="Nome completo">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>RG</label>
+                        <input type="text" class="form-control" id="clienteRG" placeholder="00.000.000-0">
+                    </div>
+                    <div class="col">
+                        <label>E-mail</label>
+                        <input type="email" class="form-control" id="clienteEmail" placeholder="email@exemplo.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Telefone</label>
+                        <input type="text" class="form-control" id="clienteTelefone" placeholder="(34) 99999-9999">
+                    </div>
+                    <div class="col">
+                        <label>CEP</label>
+                        <input type="text" class="form-control" id="clienteCEP" placeholder="00000-000" maxlength="9" onblur="buscarCEP(this.value, 'cliente')">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Endereço</label>
+                        <input type="text" class="form-control" id="clienteEndereco" placeholder="Rua, número">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Bairro</label>
+                        <input type="text" class="form-control" id="clienteBairro">
+                    </div>
+                    <div class="col">
+                        <label>Cidade</label>
+                        <input type="text" class="form-control" id="clienteCidade">
+                    </div>
+                    <div class="col">
+                        <label>Estado</label>
+                        <select class="form-select" id="clienteEstado">
+                            <option value="">Selecione...</option>
+                            <option value="MG">MG</option>
+                            <option value="SP">SP</option>
+                            <option value="RJ">RJ</option>
+                            <option value="GO">GO</option>
+                            <option value="DF">DF</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="cadastrarCliente()">
+                    <i class="bi bi-save"></i> Cadastrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Novo Profissional -->
 <div class="modal fade" id="modalProfissional" tabindex="-1">
     <div class="modal-dialog">
@@ -2032,6 +2085,122 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" onclick="cadastrarProfissional()">
+                    <i class="bi bi-save"></i> Cadastrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Novo Serviço -->
+<div class="modal fade" id="modalServico" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-scissors"></i> Cadastrar Serviço</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Um serviço será criado com 6 variações de tamanho automaticamente.
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Nome do Serviço *</label>
+                        <input type="text" class="form-control" id="servicoNome" placeholder="Ex: Hidratação">
+                    </div>
+                    <div class="col">
+                        <label>Categoria</label>
+                        <input type="text" class="form-control" id="servicoCategoria" placeholder="Ex: Tratamento" value="Serviço">
+                    </div>
+                </div>
+                <h6 class="mt-4 mb-3">Preços por Tamanho:</h6>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Kids</label>
+                        <input type="number" class="form-control" id="servicoPrecoKids" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col">
+                        <label>Masculino</label>
+                        <input type="number" class="form-control" id="servicoPrecoMasculino" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col">
+                        <label>Curto</label>
+                        <input type="number" class="form-control" id="servicoPrecoCurto" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Médio</label>
+                        <input type="number" class="form-control" id="servicoPrecoMedio" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col">
+                        <label>Longo</label>
+                        <input type="number" class="form-control" id="servicoPrecoLongo" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col">
+                        <label>Extra Longo</label>
+                        <input type="number" class="form-control" id="servicoPrecoExtraLongo" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="cadastrarServico()">
+                    <i class="bi bi-save"></i> Cadastrar (6 SKUs)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Novo Produto -->
+<div class="modal fade" id="modalProduto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-box-seam"></i> Cadastrar Produto</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="col">
+                        <label>Nome do Produto *</label>
+                        <input type="text" class="form-control" id="produtoNome" placeholder="Ex: Shampoo 500ml">
+                    </div>
+                    <div class="col">
+                        <label>Marca</label>
+                        <input type="text" class="form-control" id="produtoMarca" placeholder="Ex: L'Oréal">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>SKU/Código</label>
+                        <input type="text" class="form-control" id="produtoSKU" placeholder="Ex: SHAMP-500">
+                    </div>
+                    <div class="col">
+                        <label>Categoria</label>
+                        <input type="text" class="form-control" id="produtoCategoria" placeholder="Ex: Shampoo" value="Produto">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="col">
+                        <label>Preço de Venda *</label>
+                        <input type="number" class="form-control" id="produtoPreco" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col">
+                        <label>Custo</label>
+                        <input type="number" class="form-control" id="produtoCusto" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="col">
+                        <label>Estoque</label>
+                        <input type="number" class="form-control" id="produtoEstoque" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="cadastrarProduto()">
                     <i class="bi bi-save"></i> Cadastrar
                 </button>
             </div>
@@ -2248,7 +2417,6 @@ function goTo(section) {
     const menu = document.getElementById('menu-' + section);
     if (menu) menu.classList.add('active');
     
-    // Carregar dados da seção
     if (section === 'dashboard') loadDashboard();
     if (section === 'fila') loadFila();
     if (section === 'consultar') loadConsultar();
@@ -2273,7 +2441,6 @@ async function loadDashboard() {
             document.getElementById('dashFaturamento').textContent = 'R$ ' + data.stats.faturamento.toFixed(0);
         }
         
-        // Carregar últimos orçamentos
         const orcRes = await fetch('/api/orcamentos', { credentials: 'include' });
         const orcData = await orcRes.json();
         
@@ -2294,7 +2461,7 @@ async function loadDashboard() {
     }
 }
 
-// ===== AUTOCOMPLETE CLIENTES (CPF) =====
+// ===== AUTOCOMPLETE CLIENTES =====
 let cpfTimeout;
 const cpfInput = document.getElementById('orcCPF');
 if (cpfInput) {
@@ -2512,7 +2679,7 @@ if (buscaProduto) {
                         const resultsDiv = document.getElementById('produtoResults');
                         const html = data.produtos.map(p => `
                             <div class="autocomplete-item" onclick='selecionarProduto(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
-                                <strong>${p.nome}</strong><br>
+                                <strong>${p.nome}</strong>${p.marca ? ' - ' + p.marca : ''}<br>
                                 <small>${p.sku} - R$ ${p.preco.toFixed(2)}</small>
                             </div>
                         `).join('');
@@ -2551,6 +2718,7 @@ function addProduto() {
     
     orcamento.produtos.push({
         nome: produtoSelecionado.nome,
+        marca: produtoSelecionado.marca || '',
         sku: produtoSelecionado.sku,
         qtd: qtd,
         preco_unit: precoUnit,
@@ -2572,13 +2740,14 @@ function atualizarTabelaProdutos() {
     const tbody = document.getElementById('produtosBody');
     
     if (orcamento.produtos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum produto adicionado</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum produto adicionado</td></tr>';
         return;
     }
     
     const html = orcamento.produtos.map((p, idx) => `
         <tr>
             <td><strong>${p.nome}</strong></td>
+            <td>${p.marca || '-'}</td>
             <td><code>${p.sku}</code></td>
             <td>${p.qtd}</td>
             <td>R$ ${p.preco_unit.toFixed(2)}</td>
@@ -2655,19 +2824,6 @@ async function salvarOrc(status) {
         return;
     }
     
-    // Salvar cliente
-    await fetch('/api/clientes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-            cpf: clienteCPF,
-            nome: clienteNome,
-            email: clienteEmail,
-            telefone: clienteTelefone
-        })
-    });
-    
     const descontoGlobal = parseFloat(document.getElementById('descontoGlobal').value) || 0;
     const cashbackPerc = parseFloat(document.getElementById('cashbackPerc').value) || 0;
     const pagamento = document.getElementById('pagamento').value;
@@ -2718,6 +2874,8 @@ async function salvarOrc(status) {
         Swal.fire('Erro', 'Não foi possível salvar orçamento', 'error');
     }
 }
+
+// Continua na próxima parte com FILA, MODALS, etc...
 
 // ===== FILA DE ATENDIMENTO =====
 async function loadFila() {
@@ -2960,6 +3118,72 @@ async function loadClientes() {
     }
 }
 
+function showModalCliente() {
+    const modal = new bootstrap.Modal(document.getElementById('modalCliente'));
+    modal.show();
+}
+
+async function cadastrarCliente() {
+    const cpf = document.getElementById('clienteCPF').value.trim();
+    const nome = document.getElementById('clienteNome').value.trim();
+    
+    if (!cpf || !nome) {
+        Swal.fire('Atenção', 'Preencha CPF e Nome', 'warning');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/clientes', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({
+                cpf: cpf,
+                nome: nome,
+                rg: document.getElementById('clienteRG').value.trim(),
+                email: document.getElementById('clienteEmail').value.trim(),
+                telefone: document.getElementById('clienteTelefone').value.trim(),
+                cep: document.getElementById('clienteCEP').value.trim(),
+                endereco: document.getElementById('clienteEndereco').value.trim(),
+                bairro: document.getElementById('clienteBairro').value.trim(),
+                cidade: document.getElementById('clienteCidade').value.trim(),
+                estado: document.getElementById('clienteEstado').value
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            Swal.fire('Sucesso!', 'Cliente cadastrado', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalCliente')).hide();
+            loadClientes();
+        } else {
+            Swal.fire('Erro', data.message || 'Erro ao cadastrar', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Erro', 'Erro na conexão', 'error');
+    }
+}
+
+async function buscarCEP(cep, prefix) {
+    cep = cep.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    
+    try {
+        const res = await fetch(`/api/cep/${cep}`);
+        const data = await res.json();
+        
+        if (data.success && data.endereco) {
+            document.getElementById(prefix + 'Endereco').value = data.endereco.logradouro;
+            document.getElementById(prefix + 'Bairro').value = data.endereco.bairro;
+            document.getElementById(prefix + 'Cidade').value = data.endereco.cidade;
+            document.getElementById(prefix + 'Estado').value = data.endereco.estado;
+        }
+    } catch (e) {
+        console.error('Erro buscar CEP:', e);
+    }
+}
+
 // ===== PROFISSIONAIS =====
 async function loadProfissionais() {
     try {
@@ -3009,7 +3233,7 @@ async function cadastrarProfissional() {
     try {
         const res = await fetch('/api/profissionais', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             credentials: 'include',
             body: JSON.stringify({
                 nome, cpf, email, telefone, especialidade,
@@ -3056,18 +3280,66 @@ async function loadServicosLista() {
     }
 }
 
+function showModalServico() {
+    const modal = new bootstrap.Modal(document.getElementById('modalServico'));
+    modal.show();
+}
+
+async function cadastrarServico() {
+    const nome = document.getElementById('servicoNome').value.trim();
+    
+    if (!nome) {
+        Swal.fire('Atenção', 'Digite o nome do serviço', 'warning');
+        return;
+    }
+    
+    const precos = {
+        preco_kids: parseFloat(document.getElementById('servicoPrecoKids').value) || 0,
+        preco_masculino: parseFloat(document.getElementById('servicoPrecoMasculino').value) || 0,
+        preco_curto: parseFloat(document.getElementById('servicoPrecoCurto').value) || 0,
+        preco_medio: parseFloat(document.getElementById('servicoPrecoMedio').value) || 0,
+        preco_longo: parseFloat(document.getElementById('servicoPrecoLongo').value) || 0,
+        preco_extra_longo: parseFloat(document.getElementById('servicoPrecoExtraLongo').value) || 0
+    };
+    
+    try {
+        const res = await fetch('/api/servicos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({
+                nome: nome,
+                categoria: document.getElementById('servicoCategoria').value.trim(),
+                ...precos
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            Swal.fire('Sucesso!', 'Serviço cadastrado (6 SKUs criados)', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalServico')).hide();
+            loadServicosLista();
+        } else {
+            Swal.fire('Erro', data.message || 'Erro ao cadastrar', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Erro', 'Erro na conexão', 'error');
+    }
+}
+
 // ===== PRODUTOS =====
 async function loadProdutosLista() {
     try {
         const res = await fetch('/api/produtos', { credentials: 'include' });
         const data = await res.json();
-        
-        const tbody = document.getElementById('produtosListBody');
+                const tbody = document.getElementById('produtosListBody');
         
         if (data.success && data.produtos.length > 0) {
             const html = data.produtos.map(p => `
                 <tr>
                     <td><strong>${p.nome}</strong></td>
+                    <td>${p.marca || '-'}</td>
                     <td><code>${p.sku}</code></td>
                     <td><strong>R$ ${p.preco.toFixed(2)}</strong></td>
                     <td>R$ ${p.custo ? p.custo.toFixed(2) : '0.00'}</td>
@@ -3077,14 +3349,58 @@ async function loadProdutosLista() {
             `).join('');
             tbody.innerHTML = html;
         } else {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum produto</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum produto</td></tr>';
         }
     } catch (e) {
         console.error('Erro carregar produtos:', e);
     }
 }
 
-// ===== IMPORTAR =====
+function showModalProduto() {
+    const modal = new bootstrap.Modal(document.getElementById('modalProduto'));
+    modal.show();
+}
+
+async function cadastrarProduto() {
+    const nome = document.getElementById('produtoNome').value.trim();
+    const preco = parseFloat(document.getElementById('produtoPreco').value) || 0;
+    
+    if (!nome || preco <= 0) {
+        Swal.fire('Atenção', 'Preencha nome e preço', 'warning');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({
+                nome: nome,
+                marca: document.getElementById('produtoMarca').value.trim(),
+                sku: document.getElementById('produtoSKU').value.trim(),
+                preco: preco,
+                custo: parseFloat(document.getElementById('produtoCusto').value) || 0,
+                estoque: parseInt(document.getElementById('produtoEstoque').value) || 0,
+                categoria: document.getElementById('produtoCategoria').value.trim()
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            Swal.fire('Sucesso!', 'Produto cadastrado', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalProduto')).hide();
+            loadProdutosLista();
+        } else {
+            Swal.fire('Erro', data.message || 'Erro ao cadastrar', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Erro', 'Erro na conexão', 'error');
+    }
+}
+
+// ===== IMPORTAR DADOS =====
 async function handleUpload(input, tipo) {
     const file = input.files[0];
     if (!file) return;
@@ -3117,7 +3433,7 @@ async function handleUpload(input, tipo) {
                 title: '✅ Importação Concluída!',
                 html: `
                     <p><strong>${data.count_success}</strong> registros importados</p>
-                    ${data.count_error > 0 ? `<p class="text-danger">${data.count_error} erros</p>` : ''}
+                    ${data.count_error > 0 ? `<p class="text-danger">${data.count_error} erros (linhas ignoradas)</p>` : ''}
                 `
             });
             
@@ -3213,7 +3529,7 @@ async function salvarConfig() {
     try {
         const res = await fetch('/api/config', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             credentials: 'include',
             body: JSON.stringify({ nome, cnpj, endereco, telefone, email })
         });
@@ -3236,6 +3552,16 @@ function initEventListeners() {
             document.querySelectorAll('.autocomplete-results').forEach(r => r.classList.remove('show'));
         }
     });
+    
+    // Prevenir envio de formulários em Enter (exceto login/register)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            const isAuthForm = e.target.closest('#loginForm, #registerForm');
+            if (!isAuthForm && e.target.type !== 'submit') {
+                e.preventDefault();
+            }
+        }
+    });
 }
 
 // ===== HELPER FUNCTIONS =====
@@ -3254,11 +3580,255 @@ function formatDateTime(date) {
     return new Date(date).toLocaleString('pt-BR');
 }
 
-// ===== LOG =====
-console.log('%c🌳 BIOMA UBERABA v2.5 ', 'background: #7C3AED; color: #fff; font-size: 20px; padding: 10px; border-radius: 5px;');
-console.log('%cSistema Ultra Profissional', 'color: #7C3AED; font-size: 14px;');
-console.log('%cDesenvolvido por: @juanmarco1999', 'color: #6B7280; font-size: 12px;');
-console.log('%cData: 2025-10-05 03:53:12 UTC', 'color: #6B7280; font-size: 12px;');
+// ===== MÁSCARAS =====
+function aplicarMascaras() {
+    // CPF
+    const cpfInputs = document.querySelectorAll('input[type="text"][placeholder*="CPF"], input[id*="CPF"]');
+    cpfInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            
+            if (value.length > 9) {
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            } else if (value.length > 6) {
+                value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+            } else if (value.length > 3) {
+                value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+            }
+            
+            e.target.value = value;
+        });
+    });
+    
+    // Telefone
+    const telInputs = document.querySelectorAll('input[type="text"][placeholder*="telefone"], input[id*="Telefone"]');
+    telInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            
+            if (value.length > 10) {
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            } else if (value.length > 6) {
+                value = value.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+            } else if (value.length > 2) {
+                value = value.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+            }
+            
+            e.target.value = value;
+        });
+    });
+    
+    // CEP
+    const cepInputs = document.querySelectorAll('input[id*="CEP"]');
+    cepInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 8) value = value.slice(0, 8);
+            
+            if (value.length > 5) {
+                value = value.replace(/(\d{5})(\d{1,3})/, '$1-$2');
+            }
+            
+            e.target.value = value;
+        });
+    });
+}
+
+// Aplicar máscaras ao carregar
+setTimeout(aplicarMascaras, 1000);
+
+// ===== ATALHOS DE TECLADO =====
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + N = Novo Orçamento
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        goTo('orcamento');
+    }
+    
+    // Ctrl/Cmd + F = Fila
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        goTo('fila');
+    }
+    
+    // Ctrl/Cmd + D = Dashboard
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        goTo('dashboard');
+    }
+    
+    // Ctrl/Cmd + T = Alternar Tema
+    if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        e.preventDefault();
+        toggleTheme();
+    }
+});
+
+// ===== NOTIFICAÇÕES =====
+function mostrarNotificacao(titulo, mensagem, tipo = 'info') {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(titulo, {
+            body: mensagem,
+            icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🌳</text></svg>',
+            badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🌳</text></svg>'
+        });
+    }
+}
+
+// Pedir permissão para notificações
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+
+// ===== ATUALIZAÇÃO AUTOMÁTICA =====
+let autoRefreshInterval = null;
+
+function iniciarAutoRefresh() {
+    // Atualizar dashboard a cada 30 segundos
+    autoRefreshInterval = setInterval(() => {
+        const dashboardAtivo = document.getElementById('section-dashboard').classList.contains('active');
+        if (dashboardAtivo && currentUser) {
+            loadDashboard();
+        }
+        
+        // Atualizar fila a cada 15 segundos se estiver na tela
+        const filaAtiva = document.getElementById('section-fila').classList.contains('active');
+        if (filaAtiva && currentUser) {
+            loadFila();
+        }
+    }, 30000);
+}
+
+// Iniciar auto refresh quando logar
+if (currentUser) {
+    iniciarAutoRefresh();
+}
+
+// ===== PERFORMANCE =====
+// Lazy loading de imagens
+if ('IntersectionObserver' in window) {
+    const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    imageObserver.unobserve(img);
+                }
+            }
+        });
+    });
+    
+    document.querySelectorAll('img[data-src]').forEach(img => imageObserver.observe(img));
+}
+
+// Service Worker (PWA - Progressive Web App)
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('Service Worker registrado:', reg);
+    }).catch(err => {
+        console.log('Service Worker erro:', err);
+    });
+}
+
+// ===== ANALYTICS =====
+function trackEvent(categoria, acao, label = '') {
+    console.log(`📊 Analytics: ${categoria} - ${acao} - ${label}`);
+    // Aqui você pode integrar com Google Analytics, Mixpanel, etc.
+}
+
+// Rastrear navegação
+const originalGoTo = goTo;
+goTo = function(section) {
+    trackEvent('Navegação', 'Trocar Seção', section);
+    return originalGoTo(section);
+};
+
+// ===== BACKUP AUTOMÁTICO =====
+function fazerBackupLocal() {
+    const backup = {
+        orcamento: orcamento,
+        timestamp: new Date().toISOString(),
+        user: currentUser?.username
+    };
+    
+    localStorage.setItem('bioma_backup_orcamento', JSON.stringify(backup));
+    console.log('💾 Backup local salvo');
+}
+
+// Salvar backup a cada mudança no orçamento
+const originalAddServico = addServico;
+addServico = function() {
+    originalAddServico();
+    fazerBackupLocal();
+};
+
+const originalAddProduto = addProduto;
+addProduto = function() {
+    originalAddProduto();
+    fazerBackupLocal();
+};
+
+// Restaurar backup ao carregar
+function restaurarBackupLocal() {
+    const backup = localStorage.getItem('bioma_backup_orcamento');
+    if (backup) {
+        try {
+            const data = JSON.parse(backup);
+            const dataBackup = new Date(data.timestamp);
+            const agora = new Date();
+            const diferencaHoras = (agora - dataBackup) / 1000 / 60 / 60;
+            
+            if (diferencaHoras < 24) {
+                Swal.fire({
+                    title: 'Backup Encontrado',
+                    text: `Deseja restaurar o orçamento de ${dataBackup.toLocaleString('pt-BR')}?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, restaurar',
+                    cancelButtonText: 'Não'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        orcamento = data.orcamento;
+                        atualizarTabelaServicos();
+                        atualizarTabelaProdutos();
+                        calcularTotais();
+                        goTo('orcamento');
+                        Swal.fire('Restaurado!', 'Orçamento restaurado com sucesso', 'success');
+                    } else {
+                        localStorage.removeItem('bioma_backup_orcamento');
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Erro ao restaurar backup:', e);
+        }
+    }
+}
+
+// Verificar backup ao carregar app
+if (currentUser) {
+    setTimeout(restaurarBackupLocal, 2000);
+}
+
+// ===== LOGS E DEBUG =====
+console.log('%c🌳 BIOMA UBERABA v2.5 ', 'background: #7C3AED; color: #fff; font-size: 24px; padding: 15px; border-radius: 8px; font-weight: 900;');
+console.log('%cSistema Ultra Profissional de Gestão', 'color: #7C3AED; font-size: 16px; font-weight: 700;');
+console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #6B7280;');
+console.log('%cDesenvolvedor: @juanmarco1999', 'color: #6B7280; font-size: 12px;');
+console.log('%cEmail: 180147064@aluno.unb.br', 'color: #6B7280; font-size: 12px;');
+console.log('%cData: 2025-10-05 05:15:21 UTC', 'color: #6B7280; font-size: 12px;');
+console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #6B7280;');
+console.log('%c💡 Dicas:', 'color: #F59E0B; font-size: 14px; font-weight: 700;');
+console.log('%c   Ctrl+N → Novo Orçamento', 'color: #6B7280;');
+console.log('%c   Ctrl+F → Fila de Atendimento', 'color: #6B7280;');
+console.log('%c   Ctrl+D → Dashboard', 'color: #6B7280;');
+console.log('%c   Ctrl+T → Alternar Tema', 'color: #6B7280;');
+console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #6B7280;');
+
+// ===== FIM DO SCRIPT =====
 </script>
 
 </body>
