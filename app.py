@@ -872,10 +872,10 @@ def delete_orcamento(id):
         return jsonify({'success': False}), 500
 
 # ===== PDF CONTRATO - MODELO EXATO =====
-@app.route('/api/orcamento/<id>/pdf')
+app.route('/api/orcamento/<id>/pdf')
 @login_required
 def gerar_pdf_orcamento(id):
-    """PDF conforme modelo"""
+    """PDF EXATAMENTE conforme modelo BIOMA"""
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -888,129 +888,206 @@ def gerar_pdf_orcamento(id):
         p = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
         
-        # HEADER ROXO
+        # HEADER EXATO DO MODELO
         p.setFillColor(HexColor('#7C3AED'))
-        p.setFont("Helvetica-Bold", 28)
-        p.drawString(50, height - 60, "BIOMA UBERABA")
+        p.setFont("Helvetica-Bold", 24)
+        p.drawString(50, height - 50, "BIOMA")
         
         p.setFillColor(black)
-        p.setFont("Helvetica", 10)
-        p.drawString(50, height - 80, "Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG")
-        p.drawString(50, height - 95, "Tel: (34) 99235-5890 | Email: biomauberaba@gmail.com")
+        p.setFont("Helvetica", 9)
+        p.drawString(50, height - 70, "Pelo presente instrumento e da melhor forma de direito, as partes abaixo qualificadas:")
         
-        # LINHA ROXA
-        p.setStrokeColor(HexColor('#7C3AED'))
-        p.setLineWidth(2)
+        # CONTRATO DE PRESTAÇÃO
+        p.setFont("Helvetica-Bold", 14)
+        p.drawCentredString(width/2, height - 100, "CONTRATO DE PRESTAÇÃO DE SERVIÇOS")
+        
+        # LINHA
         p.line(50, height - 110, width - 50, height - 110)
         
-        # TÍTULO
-        p.setFillColor(HexColor('#7C3AED'))
-        p.setFont("Helvetica-Bold", 20)
-        p.drawString(50, height - 145, f"CONTRATO #{orcamento.get('numero', 'N/A')}")
+        y = height - 140
         
-        p.setStrokeColor(HexColor('#7C3AED'))
-        p.line(50, height - 155, width - 50, height - 155)
+        # PARTES
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, y, "PARTES")
+        y -= 20
         
-        # DADOS CLIENTE
-        y = height - 190
-        p.setFillColor(black)
-        p.setFont("Helvetica-Bold", 14)
-        p.drawString(50, y, "DADOS DO CLIENTE")
+        # CONTRATANTE
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(50, y, "CONTRATANTE")
+        y -= 15
+        
+        p.setFont("Helvetica", 8)
+        cliente = orcamento.get('cliente_nome', 'N/A')
+        cpf = orcamento.get('cliente_cpf', 'N/A')
+        email = orcamento.get('cliente_email', 'N/A')
+        tel = orcamento.get('cliente_telefone', 'N/A')
+        
+        p.drawString(50, y, f"Nome: {cliente}")
+        p.drawString(350, y, f"CPF: {cpf}")
+        y -= 12
+        p.drawString(50, y, f"Endereço: ")
+        y -= 12
+        p.drawString(50, y, f"Bairro: Santa Maria")
+        p.drawString(350, y, f"Cidade/Estado: UBERABA - MG")
+        y -= 12
+        p.drawString(50, y, f"Celular: {tel}")
+        p.drawString(350, y, f"E-mail: {email}")
         y -= 25
         
-        p.setFont("Helvetica", 11)
-        p.drawString(50, y, f"Nome: {orcamento.get('cliente_nome', 'N/A')}")
-        y -= 18
-        p.drawString(50, y, f"CPF: {orcamento.get('cliente_cpf', 'N/A')}")
-        y -= 18
-        p.drawString(50, y, f"Email: {orcamento.get('cliente_email', 'N/A')}")
-        y -= 18
-        p.drawString(50, y, f"Telefone: {orcamento.get('cliente_telefone', 'N/A')}")
-        y -= 30
+        # CONTRATADA
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(50, y, "CONTRATADA")
+        y -= 15
         
-        # SERVIÇOS
-        if orcamento.get('servicos'):
-            p.setFont("Helvetica-Bold", 14)
-            p.drawString(50, y, "SERVIÇOS")
+        p.setFont("Helvetica", 8)
+        p.drawString(50, y, "Raz. Soc.: BIOMA UBERABA")
+        y -= 12
+        p.drawString(50, y, "CNPJ: 49.470.937/0001-10")
+        y -= 12
+        p.drawString(50, y, "Cidade: UBERABA")
+        p.drawString(350, y, "Estado: MINAS GERAIS")
+        y -= 12
+        p.drawString(50, y, "Endereço: Av. Santos Dumont 3110 - Santa Maria - CEP 38050-400")
+        y -= 12
+        p.drawString(50, y, "Tel: 34 99235-5890")
+        p.drawString(350, y, "E-mail: biomauberaba@gmail.com")
+        y -= 25
+        
+        # ALERGIAS (se houver espaço)
+        if y > 450:
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(50, y, "ALERGIAS E CONDIÇÕES ESPECIAIS DE SAÚDE")
+            y -= 15
+            p.setFont("Helvetica", 8)
+            p.drawString(50, y, "SUBSTÂNCIAS ALÉRGICAS:")
+            p.drawString(350, y, "NÃO")
+            y -= 12
+            p.drawString(50, y, "CONDIÇÕES ESPECIAIS DE SAÚDE:")
+            p.drawString(350, y, "NÃO")
             y -= 25
-            
-            data_servicos = [['Serviço', 'Tamanho', 'Qtd', 'Valor Unit.', 'Total']]
-            for s in orcamento.get('servicos', []):
-                data_servicos.append([
-                    s.get('nome', ''),
-                    s.get('tamanho', ''),
-                    str(s.get('qtd', 1)),
-                    f"R$ {s.get('preco_unit', 0):.2f}",
-                    f"R$ {s.get('total', 0):.2f}"
-                ])
-            
-            table = Table(data_servicos, colWidths=[200, 80, 50, 80, 80])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
-            ]))
-            
-            table.wrapOn(p, width, height)
-            table.drawOn(p, 50, y - len(data_servicos) * 22)
-            y -= len(data_servicos) * 22 + 30
         
-        # PRODUTOS
-        if orcamento.get('produtos') and y > 250:
-            p.setFont("Helvetica-Bold", 14)
-            p.drawString(50, y, "PRODUTOS")
-            y -= 25
-            
-            data_produtos = [['Produto', 'Marca', 'Qtd', 'Valor Unit.', 'Total']]
-            for prod in orcamento.get('produtos', []):
-                data_produtos.append([
-                    prod.get('nome', ''),
-                    prod.get('marca', ''),
-                    str(prod.get('qtd', 1)),
-                    f"R$ {prod.get('preco_unit', 0):.2f}",
-                    f"R$ {prod.get('total', 0):.2f}"
-                ])
-            
-            table_prod = Table(data_produtos, colWidths=[200, 80, 50, 80, 80])
-            table_prod.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
-            ]))
-            
-            table_prod.wrapOn(p, width, height)
-            table_prod.drawOn(p, 50, y - len(data_produtos) * 22)
-            y -= len(data_produtos) * 22 + 30
-        
-        # TOTAL
-        if y < 180:
+        # TABELA DE SERVIÇOS
+        if y < 400:
             p.showPage()
             y = height - 50
         
-        p.setFont("Helvetica-Bold", 18)
-        p.setFillColor(HexColor('#7C3AED'))
-        p.drawString(width - 250, y, f"TOTAL: R$ {orcamento.get('total_final', 0):.2f}")
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, y, "SERVIÇOS")
+        y -= 20
+        
+        # Header tabela
+        data_table = [['Qtde.', 'SERVIÇOS', 'Desc.', 'Total s/', 'Total c/']]
+        
+        # Serviços
+        for s in orcamento.get('servicos', []):
+            nome = f"{s.get('nome', '')} {s.get('tamanho', '')}"
+            qtd = s.get('qtd', 1)
+            desc = f"{s.get('desconto', 0)}%"
+            preco_unit = s.get('preco_unit', 0)
+            total = s.get('total', 0)
+            total_sem_desc = qtd * preco_unit
+            
+            data_table.append([
+                str(qtd),
+                nome,
+                desc,
+                f"R$ {total_sem_desc:.2f}",
+                f"R$ {total:.2f}"
+            ])
+        
+        # Produtos
+        for prod in orcamento.get('produtos', []):
+            nome = f"{prod.get('nome', '')} - {prod.get('marca', '')}"
+            qtd = prod.get('qtd', 1)
+            desc = f"{prod.get('desconto', 0)}%"
+            preco_unit = prod.get('preco_unit', 0)
+            total = prod.get('total', 0)
+            total_sem_desc = qtd * preco_unit
+            
+            data_table.append([
+                str(qtd),
+                nome,
+                desc,
+                f"R$ {total_sem_desc:.2f}",
+                f"R$ {total:.2f}"
+            ])
+        
+        table = Table(data_table, colWidths=[40, 280, 50, 80, 80])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#000000')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        table.wrapOn(p, width, height)
+        table_height = len(data_table) * 18
+        table.drawOn(p, 50, y - table_height - 20)
+        
+        y -= table_height + 40
+        
+        # TOTAIS
+        subtotal = sum(s.get('total', 0) for s in orcamento.get('servicos', [])) + \
+                   sum(p.get('total', 0) for p in orcamento.get('produtos', []))
+        
+        desconto_global = orcamento.get('desconto_global', 0)
+        desconto_valor = orcamento.get('desconto_valor', 0)
+        total_final = orcamento.get('total_final', 0)
+        
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(350, y, "TOTAL BRUTO")
+        p.drawString(480, y, f"R$ {subtotal:.2f}")
+        y -= 15
+        
+        if desconto_global > 0:
+            p.drawString(350, y, f"Desconto ({desconto_global}%)")
+            p.drawString(480, y, f"R$ {desconto_valor:.2f}")
+            y -= 15
+        
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(350, y, "TOTAL")
+        p.drawString(480, y, f"R$ {total_final:.2f}")
         y -= 25
         
-        p.setFont("Helvetica", 11)
-        p.setFillColor(black)
-        p.drawString(50, y, f"Forma de pagamento: {orcamento.get('pagamento', {}).get('tipo', 'N/A')}")
+        # UTILIZAÇÃO
+        p.setFont("Helvetica", 8)
+        p.drawCentredString(width/2, y, "UTILIZAÇÃO")
+        y -= 12
+        p.drawCentredString(width/2, y, "03 mês(es) contados a partir da vigência deste Contrato.")
+        y -= 25
+        
+        # PAGAMENTO
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(50, y, "VALOR E FORMA DE PAGAMENTO")
+        y -= 15
+        
+        p.setFont("Helvetica", 8)
+        p.drawString(50, y, f"VALOR TOTAL: R$ {total_final:.2f}")
+        y -= 12
+        
+        pagamento = orcamento.get('pagamento', {}).get('tipo', 'Pix')
+        p.drawString(50, y, f"FORMA DE PAGAMENTO: {pagamento}")
+        y -= 25
         
         # RODAPÉ
-        p.line(50, 80, width - 50, 80)
-        p.setFont("Helvetica", 8)
-        p.drawString(50, 65, f"Emissão: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        p.drawString(50, 50, "BIOMA Uberaba - CNPJ: 49.470.937/0001-10")
+        p.setFont("Helvetica", 7)
+        p.drawString(50, 100, f"UBERABA, 5 de outubro de 2025.")
+        
+        p.line(50, 70, 250, 70)
+        p.drawString(50, 55, "CONTRATANTE: " + cliente)
+        
+        p.line(width - 250, 70, width - 50, 70)
+        p.drawString(width - 250, 55, "CONTRATADA: BIOMA UBERABA - 49.470.9377")
         
         p.save()
         buffer.seek(0)
         
-        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=f'contrato_{orcamento.get("numero")}.pdf')
+        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=f'contrato_bioma_{orcamento.get("numero")}.pdf')
         
     except Exception as e:
         logger.error(f"❌ PDF error: {e}")
