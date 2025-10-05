@@ -1908,9 +1908,26 @@ function showAuth() {
 }
 
 function showApp() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    loadDashboard();
+    console.log('✅ Mostrando aplicação');
+    
+    try {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        
+        // Aguardar renderização do DOM
+        setTimeout(() => {
+            try {
+                loadDashboard();
+            } catch (e) {
+                console.error('❌ Erro ao carregar dashboard inicial:', e);
+                Swal.fire('Aviso', 'Dashboard com erro. Tente recarregar.', 'warning');
+            }
+        }, 100);
+        
+    } catch (e) {
+        console.error('❌ Erro crítico ao mostrar app:', e);
+        Swal.fire('Erro', 'Erro ao iniciar aplicação', 'error');
+    }
 }
 
 function switchTab(tab) {
@@ -2120,102 +2137,151 @@ async function toggleTheme() {
 
 // ===== NAVEGAÇÃO =====
 function goTo(section) {
-    console.log('🔄 Navegando:', section);
+    console.log('🔄 Navegando para:', section);
     
-    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('section-' + section).classList.add('active');
-    
-    document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
-    const menu = document.getElementById('menu-' + section);
-    if (menu) menu.classList.add('active');
-    
-    document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Carregar dados da seção
-    if (section === 'dashboard') loadDashboard();
-    if (section === 'clientes') loadClientes();
-    if (section === 'profissionais') loadProfissionais();
-    if (section === 'servicos') loadServicosLista();
-    if (section === 'produtos') loadProdutosLista();
-    if (section === 'consultar') loadConsultar();
-    if (section === 'contratos') loadContratos();
-    if (section === 'fila') loadFila();
-    if (section === 'sistema') verificarStatus();
-    if (section === 'estoque') loadEstoqueBaixo();
-    if (section === 'agendamentos') loadAgendamentos();
+    try {
+        // Esconder todas as seções
+        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+        
+        // Mostrar seção solicitada
+        const sectionElement = document.getElementById('section-' + section);
+        if (sectionElement) {
+            sectionElement.classList.add('active');
+        } else {
+            console.error('❌ Seção não encontrada:', section);
+            return;
+        }
+        
+        // Remover active de todos os menus
+        document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+        
+        // Ativar menu correspondente
+        const menu = document.getElementById('menu-' + section);
+        if (menu) menu.classList.add('active');
+        
+        // Scroll para o topo
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // Carregar dados da seção
+        try {
+            if (section === 'dashboard') loadDashboard();
+            else if (section === 'clientes') loadClientes();
+            else if (section === 'profissionais') loadProfissionais();
+            else if (section === 'servicos') loadServicosLista();
+            else if (section === 'produtos') loadProdutosLista();
+            else if (section === 'consultar') loadConsultar();
+            else if (section === 'contratos') loadContratos();
+            else if (section === 'fila') loadFila();
+            else if (section === 'sistema') verificarStatus();
+            else if (section === 'estoque') loadEstoqueBaixo();
+            else if (section === 'agendamentos') loadAgendamentos();
+            else if (section === 'relatorios') {
+                // Relatórios: carregar apenas se usuário clicar
+                console.log('📊 Relatórios: clique em "Atualizar" para carregar dados');
+            }
+        } catch (e) {
+            console.error('❌ Erro ao carregar seção:', section, e);
+        }
+        
+    } catch (e) {
+        console.error('❌ Erro crítico na navegação:', e);
+        Swal.fire('Erro', 'Erro ao navegar. Recarregue a página.', 'error');
+    }
 }
 
 // ===== DASHBOARD =====
 async function loadDashboard() {
-    console.log('📊 Dashboard');
+    console.log('📊 Carregando dashboard');
+    
     try {
         const res = await fetch('/api/dashboard/stats', { credentials: 'include' });
         const data = await res.json();
         
         if (data.success) {
-            document.getElementById('dashOrcamentos').textContent = data.stats.total_orcamentos;
-            document.getElementById('dashClientes').textContent = data.stats.total_clientes;
+            document.getElementById('dashOrcamentos').textContent = data.stats.total_orcamentos || 0;
+            document.getElementById('dashClientes').textContent = data.stats.total_clientes || 0;
             document.getElementById('dashAgendamentos').textContent = data.stats.agendamentos_hoje || 0;
             document.getElementById('dashFaturamento').textContent = 'R$ ' + (data.stats.faturamento || 0).toFixed(0);
+            console.log('✅ Stats carregadas');
         }
         
         // Estoque
-        const estoqueRes = await fetch('/api/estoque/alerta', { credentials: 'include' });
-        const estoqueData = await estoqueRes.json();
-        
-        if (estoqueData.success && estoqueData.produtos.length > 0) {
-            const html = estoqueData.produtos.slice(0, 5).map(p => `
-                <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                    <strong>${p.nome}</strong><br>
-                    <small>Estoque: ${p.estoque} | Mínimo: ${p.estoque_minimo}</small>
-                </div>
-            `).join('');
-            document.getElementById('alertasEstoque').innerHTML = html;
-        } else {
-            document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-success">✅ OK</p>';
+        try {
+            const estoqueRes = await fetch('/api/estoque/alerta', { credentials: 'include' });
+            const estoqueData = await estoqueRes.json();
+            
+            if (estoqueData.success && estoqueData.produtos && estoqueData.produtos.length > 0) {
+                const html = estoqueData.produtos.slice(0, 5).map(p => `
+                    <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                        <strong>${p.nome}</strong><br>
+                        <small>Estoque: ${p.estoque} | Mínimo: ${p.estoque_minimo}</small>
+                    </div>
+                `).join('');
+                document.getElementById('alertasEstoque').innerHTML = html;
+            } else {
+                document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-success">✅ Estoque OK</p>';
+            }
+        } catch (e) {
+            console.error('⚠️ Erro estoque:', e);
+            document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-muted">Erro ao carregar</p>';
         }
         
         // Agendamentos
-        const agendRes = await fetch('/api/agendamentos', { credentials: 'include' });
-        const agendData = await agendRes.json();
-        
-        if (agendData.success && agendData.agendamentos && agendData.agendamentos.length > 0) {
-            const html = agendData.agendamentos.map(a => {
-                const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
-                return `
-                    <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                        <strong>${a.cliente_nome || 'Cliente'}</strong><br>
-                        <small>${dataFormatada} às ${a.horario}</small>
-                    </div>
-                `;
-            }).join('');
-            document.getElementById('proximosAgendamentos').innerHTML = html;
-        } else {
-            document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">📅 Nenhum agendamento</p>';
+        try {
+            const agendRes = await fetch('/api/agendamentos', { credentials: 'include' });
+            const agendData = await agendRes.json();
+            
+            if (agendData.success && agendData.agendamentos && agendData.agendamentos.length > 0) {
+                const html = agendData.agendamentos.map(a => {
+                    const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
+                    return `
+                        <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                            <strong>${a.cliente_nome || 'Cliente'}</strong><br>
+                            <small>${dataFormatada} às ${a.horario}</small>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('proximosAgendamentos').innerHTML = html;
+            } else {
+                document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">📅 Nenhum agendamento</p>';
+            }
+        } catch (e) {
+            console.error('⚠️ Erro agendamentos:', e);
+            document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">Erro ao carregar</p>';
         }
         
         // Últimos orçamentos
-        const orcRes = await fetch('/api/orcamentos', { credentials: 'include' });
-        const orcData = await orcRes.json();
-        
-        if (orcData.success && orcData.orcamentos.length > 0) {
-            const html = orcData.orcamentos.slice(0, 10).map(o => `
-                <tr>
-                    <td><strong>#${o.numero}</strong></td>
-                    <td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
-                    <td>${o.cliente_nome}</td>
-                    <td><strong>R$ ${o.total_final.toFixed(2)}</strong></td>
-                    <td><span class="badge ${o.status === 'Aprovado' ? 'success' : 'warning'}">${o.status}</span></td>
-                </tr>
-            `).join('');
-            document.getElementById('ultimosOrcamentosBody').innerHTML = html;
-        } else {
-            document.getElementById('ultimosOrcamentosBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+        try {
+            const orcRes = await fetch('/api/orcamentos', { credentials: 'include' });
+            const orcData = await orcRes.json();
+            
+            if (orcData.success && orcData.orcamentos && orcData.orcamentos.length > 0) {
+                const html = orcData.orcamentos.slice(0, 10).map(o => `
+                    <tr>
+                        <td><strong>#${o.numero}</strong></td>
+                        <td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                        <td>${o.cliente_nome}</td>
+                        <td><strong>R$ ${o.total_final.toFixed(2)}</strong></td>
+                        <td><span class="badge ${o.status === 'Aprovado' ? 'success' : 'warning'}">${o.status}</span></td>
+                    </tr>
+                `).join('');
+                document.getElementById('ultimosOrcamentosBody').innerHTML = html;
+            } else {
+                document.getElementById('ultimosOrcamentosBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+            }
+        } catch (e) {
+            console.error('⚠️ Erro orçamentos:', e);
+            document.getElementById('ultimosOrcamentosBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Erro</td></tr>';
         }
         
+        console.log('✅ Dashboard completo');
+        
     } catch (e) {
-        console.error('❌ Dashboard error:', e);
-        document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-danger">Erro</p>';
+        console.error('❌ Erro CRÍTICO dashboard:', e);
+        Swal.fire('Erro', 'Erro ao carregar dashboard. Verifique a conexão.', 'error');
     }
 }
 
