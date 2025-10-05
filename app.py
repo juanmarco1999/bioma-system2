@@ -76,6 +76,7 @@ CORS(app, supports_credentials=True)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # ===== MONGODB =====
+# ===== CONEXÃO MONGODB - CORREÇÃO CRÍTICA =====
 def get_db():
     try:
         u = urllib.parse.quote_plus(os.getenv('MONGO_USERNAME', ''))
@@ -83,15 +84,19 @@ def get_db():
         c = os.getenv('MONGO_CLUSTER', '')
         
         if not all([u, p, c]):
-            logger.error("❌ Credenciais MongoDB ausentes")
+            logger.error("❌ Credenciais MongoDB não encontradas no .env")
             return None
         
         uri = f"mongodb+srv://{u}:{p}@{c}/bioma_db?retryWrites=true&w=majority"
         client = MongoClient(uri, serverSelectionTimeoutMS=5000)
-        client.server_info()
         
+        # CORREÇÃO: Testar conexão de verdade
+        client.admin.command('ping')
+        
+        db = client.bioma_db
         logger.info("✅ MongoDB CONECTADO")
-        return client.bioma_db
+        return db
+        
     except Exception as e:
         logger.error(f"❌ MongoDB FALHOU: {e}")
         return None
@@ -196,24 +201,29 @@ def health():
 def system_status():
     logger.info("📊 Verificando status")
     
-    # CORREÇÃO: Testar MongoDB de verdade
+    # CORREÇÃO: Verificação segura do MongoDB
     mongo_ok = False
     mongo_msg = 'Desconectado'
+    last_check = datetime.now().isoformat()
+    
     try:
-        if db:
+        if db is not None:  # CORREÇÃO: Comparar com None explicitamente
             db.command('ping')
             mongo_ok = True
             mongo_msg = 'Conectado e operacional'
             logger.info("✅ MongoDB ping OK")
+        else:
+            mongo_msg = 'Banco de dados não inicializado'
+            logger.warning("⚠️ MongoDB não inicializado (db is None)")
     except Exception as e:
         logger.error(f"❌ MongoDB ping FALHOU: {e}")
-        mongo_msg = f'Erro: {str(e)}'
+        mongo_msg = f'Erro: {str(e)[:100]}'
     
     status = {
         'mongodb': {
             'operational': mongo_ok,
             'message': mongo_msg,
-            'last_check': datetime.now().isoformat()
+            'last_check': last_check
         },
         'mailersend': {
             'operational': bool(os.getenv('MAILERSEND_API_KEY')),
@@ -222,11 +232,11 @@ def system_status():
         'server': {
             'time': datetime.now().isoformat(),
             'environment': os.getenv('FLASK_ENV', 'development'),
-            'version': '3.0.0'
+            'version': '3.0.1'
         }
     }
     
-    logger.info(f"📊 Status retornado: MongoDB={mongo_ok}")
+    logger.info(f"📊 Status: MongoDB={mongo_ok}")
     return jsonify({'success': True, 'status': status})
 
 # ===== AUTENTICAÇÃO =====

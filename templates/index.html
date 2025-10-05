@@ -1597,19 +1597,245 @@
             </div>
         </div>
 
-        <!-- SEÇÃO DE NOVO ORÇAMENTO (simplificada para exemplo) -->
+                <!-- ===== NOVO ORÇAMENTO COMPLETO ===== -->
         <div id="section-orcamento" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-file-earmark-plus"></i> Novo Orçamento</h1>
             </div>
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Funcionalidade completa de orçamento disponível. Use a versão anterior completa ou solicite expansão.
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-person-badge"></i> Dados do Cliente
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">CPF *</label>
+                            <div style="position: relative;">
+                                <input type="text" id="orcCPF" placeholder="Digite o CPF..." maxlength="14" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px; font-size: 1rem; background: var(--bg-card); color: var(--text-primary);" onkeyup="buscarClientePorCPF()">
+                                <div id="cpfResults" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 14px; margin-top: 5px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: var(--shadow); display: none;"></div>
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Nome Completo *</label>
+                            <input type="text" id="orcNomeCliente" placeholder="Nome do cliente" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px; font-size: 1rem; background: var(--bg-card); color: var(--text-primary);">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">E-mail</label>
+                            <input type="email" id="orcEmail" placeholder="email@exemplo.com" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px; font-size: 1rem; background: var(--bg-card); color: var(--text-primary);">
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-weight: 700; margin-bottom: 10px; color: var(--text-primary); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Telefone (com DDD)</label>
+                            <input type="text" id="orcTelefone" placeholder="(34) 99999-9999" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px; font-size: 1rem; background: var(--bg-card); color: var(--text-primary);">
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" onclick="limparCliente()">
+                        <i class="bi bi-x-circle"></i> Limpar Dados
+                    </button>
+                </div>
+            </div>
+
+            <h2 style="margin: 40px 0 20px; color: var(--text-primary); padding-left: 20px; border-left: 6px solid var(--primary);">
+                <i class="bi bi-scissors"></i> SERVIÇOS
+            </h2>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-plus-circle"></i> Adicionar Serviço
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px; position: relative;">
+                            <label>Buscar Serviço</label>
+                            <input type="text" id="buscaServico" placeholder="Digite para buscar..." style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onkeyup="buscarServicos()">
+                            <div id="servicoResults" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 14px; margin-top: 5px; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label>Tamanho</label>
+                            <select id="servicoTamanho" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div style="flex: 0.5; min-width: 80px;">
+                            <label>Qtd</label>
+                            <input type="number" id="servicoQtd" value="1" min="1" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onchange="calcularTotalServico()">
+                        </div>
+                        <div style="flex: 0.8; min-width: 100px;">
+                            <label>Preço</label>
+                            <input type="number" id="servicoPreco" step="0.01" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onchange="calcularTotalServico()">
+                        </div>
+                        <div style="flex: 0.5; min-width: 80px;">
+                            <label>Desc %</label>
+                            <input type="number" id="servicoDesconto" value="0" min="0" max="100" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onchange="calcularTotalServico()">
+                        </div>
+                        <div style="flex: 0; min-width: 100px;">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="addServico()">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list-check"></i> Serviços Adicionados
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Serviço</th>
+                                    <th>Tamanho</th>
+                                    <th>Qtd</th>
+                                    <th>Preço Unit.</th>
+                                    <th>Desc %</th>
+                                    <th>Total</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="servicosBody">
+                                <tr><td colspan="7" class="text-center text-muted">Nenhum serviço adicionado</td></tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="5" style="text-align: right; padding: 20px 18px; background: var(--bg-main); font-weight: 800; border-top: 4px solid var(--primary);">SUBTOTAL SERVIÇOS</th>
+                                    <th id="subtotalServicos" colspan="2" style="padding: 20px 18px; background: var(--bg-main); font-weight: 800; border-top: 4px solid var(--primary);">R$ 0,00</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin: 40px 0 20px; color: var(--text-primary); padding-left: 20px; border-left: 6px solid var(--primary);">
+                <i class="bi bi-box-seam"></i> PRODUTOS
+            </h2>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-plus-circle"></i> Adicionar Produto
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 250px; position: relative;">
+                            <label>Buscar Produto</label>
+                            <input type="text" id="buscaProduto" placeholder="Digite para buscar..." style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onkeyup="buscarProdutos()">
+                            <div id="produtoResults" style="position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 2px solid var(--border-color); border-radius: 14px; margin-top: 5px; max-height: 300px; overflow-y: auto; z-index: 1000; display: none;"></div>
+                        </div>
+                        <div style="flex: 0.5; min-width: 80px;">
+                            <label>Qtd</label>
+                            <input type="number" id="produtoQtd" value="1" min="1" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onchange="calcularTotalProduto()">
+                        </div>
+                        <div style="flex: 0.8; min-width: 100px;">
+                            <label>Preço</label>
+                            <input type="number" id="produtoPreco" step="0.01" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onchange="calcularTotalProduto()">
+                        </div>
+                        <div style="flex: 0.5; min-width: 80px;">
+                            <label>Desc %</label>
+                            <input type="number" id="produtoDesconto" value="0" min="0" max="100" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;" onchange="calcularTotalProduto()">
+                        </div>
+                        <div style="flex: 0; min-width: 100px;">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="addProduto()">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list-check"></i> Produtos Adicionados
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Marca</th>
+                                    <th>SKU</th>
+                                    <th>Qtd</th>
+                                    <th>Preço Unit.</th>
+                                    <th>Desc %</th>
+                                    <th>Total</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="produtosBody">
+                                <tr><td colspan="8" class="text-center text-muted">Nenhum produto adicionado</td></tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="6" style="text-align: right; padding: 20px 18px; background: var(--bg-main); font-weight: 800; border-top: 4px solid var(--primary);">SUBTOTAL PRODUTOS</th>
+                                    <th id="subtotalProdutos" colspan="2" style="padding: 20px 18px; background: var(--bg-main); font-weight: 800; border-top: 4px solid var(--primary);">R$ 0,00</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-calculator"></i> Resumo e Pagamento
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label>Desconto Global %</label>
+                            <input type="number" id="descontoGlobal" value="0" min="0" max="100" onchange="calcularTotais()" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label>Cashback %</label>
+                            <input type="number" id="cashbackPerc" value="0" min="0" max="100" onchange="calcularTotais()" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label>Forma de Pagamento</label>
+                            <select id="pagamento" style="width: 100%; padding: 14px 18px; border: 2px solid var(--border-color); border-radius: 14px;">
+                                <option>Pix</option>
+                                <option>Débito</option>
+                                <option>Crédito à Vista</option>
+                                <option>Crédito Parcelado</option>
+                                <option>Dinheiro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; padding: 40px; border-radius: 22px; margin: 30px 0; box-shadow: 0 15px 40px rgba(124, 58, 237, 0.4);">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h3 id="totalFinal" style="font-size: 3.5rem; font-weight: 900; margin: 0; text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);">R$ 0,00</h3>
+                                <p style="font-size: 1.3rem; margin: 10px 0 0; opacity: 0.95;">TOTAL</p>
+                            </div>
+                            <div class="col-md-6" style="text-align: right;">
+                                <p id="cashbackValor" style="font-size: 1.5rem; margin: 0; font-weight: 700;">
+                                    🎁 Cashback: R$ 0,00
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button class="btn btn-secondary" onclick="cancelarOrc()">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button class="btn btn-outline" onclick="salvarOrc('Pendente')">
+                            <i class="bi bi-save"></i> Salvar Rascunho
+                        </button>
+                        <button class="btn btn-success" onclick="salvarOrc('Aprovado')">
+                            <i class="bi bi-check-circle"></i> Gerar Contrato e Enviar
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-
-    </div>
-</div>
-
 <!-- ===== MODALS (Simplificados - Bootstrap) ===== -->
 
 <!-- Modal: Agendamento -->
@@ -2173,6 +2399,453 @@ function filtrarClientes() { console.log('🔍 Filtrar clientes'); }
 function adicionarFila() { console.log('➕ Adicionar fila'); }
 function criarAgendamento() { console.log('📅 Criar agendamento'); }
 function registrarMovimentacao() { console.log('📦 Registrar movimentação'); }
+
+// ===== NOVO ORÇAMENTO - VARIÁVEIS GLOBAIS =====
+let orcamento = { servicos: [], produtos: [] };
+let servicosDisponiveis = [];
+let produtosDisponiveis = [];
+let servicoSelecionado = null;
+let produtoSelecionado = null;
+
+// ===== BUSCAR CLIENTE POR CPF =====
+async function buscarClientePorCPF() {
+    const cpf = document.getElementById('orcCPF').value.trim();
+    
+    if (cpf.length < 3) {
+        document.getElementById('cpfResults').style.display = 'none';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/clientes/buscar?termo=${cpf}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (data.success && data.clientes.length > 0) {
+            const html = data.clientes.map(c => `
+                <div style="padding: 12px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background='transparent'" onclick="selecionarCliente('${c._id}', '${c.cpf}', '${c.nome}', '${c.email || ''}', '${c.telefone || ''}')">
+                    <strong>${c.nome}</strong><br>
+                    <small>${c.cpf} | ${c.telefone || 'Sem telefone'}</small>
+                </div>
+            `).join('');
+            
+            document.getElementById('cpfResults').innerHTML = html;
+            document.getElementById('cpfResults').style.display = 'block';
+        } else {
+            document.getElementById('cpfResults').style.display = 'none';
+        }
+    } catch (e) {
+        console.error('❌ Erro buscar cliente:', e);
+    }
+}
+
+function selecionarCliente(id, cpf, nome, email, telefone) {
+    document.getElementById('orcCPF').value = cpf;
+    document.getElementById('orcNomeCliente').value = nome;
+    document.getElementById('orcEmail').value = email;
+    document.getElementById('orcTelefone').value = telefone;
+    document.getElementById('cpfResults').style.display = 'none';
+    console.log('✅ Cliente selecionado:', nome);
+}
+
+function limparCliente() {
+    document.getElementById('orcCPF').value = '';
+    document.getElementById('orcNomeCliente').value = '';
+    document.getElementById('orcEmail').value = '';
+    document.getElementById('orcTelefone').value = '';
+    console.log('🧹 Dados do cliente limpos');
+}
+
+// ===== BUSCAR SERVIÇOS =====
+async function buscarServicos() {
+    const termo = document.getElementById('buscaServico').value.trim();
+    
+    if (termo.length < 2) {
+        document.getElementById('servicoResults').style.display = 'none';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/servicos/buscar?termo=${termo}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (data.success && data.servicos.length > 0) {
+            servicosDisponiveis = data.servicos;
+            
+            // Agrupar por nome
+            const servicosAgrupados = {};
+            data.servicos.forEach(s => {
+                if (!servicosAgrupados[s.nome]) {
+                    servicosAgrupados[s.nome] = [];
+                }
+                servicosAgrupados[s.nome].push(s);
+            });
+            
+            const html = Object.keys(servicosAgrupados).map(nome => `
+                <div style="padding: 12px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background='transparent'" onclick="selecionarServico('${nome}')">
+                    <strong>${nome}</strong><br>
+                    <small>${servicosAgrupados[nome].length} tamanhos disponíveis</small>
+                </div>
+            `).join('');
+            
+            document.getElementById('servicoResults').innerHTML = html;
+            document.getElementById('servicoResults').style.display = 'block';
+        } else {
+            document.getElementById('servicoResults').style.display = 'none';
+        }
+    } catch (e) {
+        console.error('❌ Erro buscar serviços:', e);
+    }
+}
+
+function selecionarServico(nome) {
+    document.getElementById('buscaServico').value = nome;
+    document.getElementById('servicoResults').style.display = 'none';
+    
+    const servicosFiltrados = servicosDisponiveis.filter(s => s.nome === nome);
+    
+    const selectTamanho = document.getElementById('servicoTamanho');
+    selectTamanho.innerHTML = '<option value="">Selecione...</option>';
+    
+    servicosFiltrados.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s._id;
+        option.textContent = `${s.tamanho} - R$ ${s.preco.toFixed(2)}`;
+        option.dataset.preco = s.preco;
+        option.dataset.nome = s.nome;
+        option.dataset.tamanho = s.tamanho;
+        selectTamanho.appendChild(option);
+    });
+    
+    selectTamanho.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.dataset.preco) {
+            document.getElementById('servicoPreco').value = selected.dataset.preco;
+            servicoSelecionado = {
+                id: this.value,
+                nome: selected.dataset.nome,
+                tamanho: selected.dataset.tamanho,
+                preco: parseFloat(selected.dataset.preco)
+            };
+            calcularTotalServico();
+        }
+    });
+    
+    console.log('✅ Serviço selecionado:', nome);
+}
+
+function calcularTotalServico() {
+    if (!servicoSelecionado) return;
+    
+    const qtd = parseInt(document.getElementById('servicoQtd').value) || 1;
+    const preco = parseFloat(document.getElementById('servicoPreco').value) || 0;
+    const desconto = parseInt(document.getElementById('servicoDesconto').value) || 0;
+    
+    const subtotal = qtd * preco;
+    const total = subtotal - (subtotal * desconto / 100);
+    
+    console.log(`🧮 Serviço: ${qtd}x R$${preco} - ${desconto}% = R$${total.toFixed(2)}`);
+}
+
+function addServico() {
+    if (!servicoSelecionado) {
+        Swal.fire('Atenção', 'Selecione um serviço e tamanho', 'warning');
+        return;
+    }
+    
+    const qtd = parseInt(document.getElementById('servicoQtd').value) || 1;
+    const preco = parseFloat(document.getElementById('servicoPreco').value) || 0;
+    const desconto = parseInt(document.getElementById('servicoDesconto').value) || 0;
+    
+    if (preco <= 0) {
+        Swal.fire('Atenção', 'Preço inválido', 'warning');
+        return;
+    }
+    
+    const subtotal = qtd * preco;
+    const total = subtotal - (subtotal * desconto / 100);
+    
+    orcamento.servicos.push({
+        id: servicoSelecionado.id,
+        nome: servicoSelecionado.nome,
+        tamanho: servicoSelecionado.tamanho,
+        qtd: qtd,
+        preco_unit: preco,
+        desconto: desconto,
+        total: total
+    });
+    
+    atualizarTabelaServicos();
+    
+    // Limpar campos
+    document.getElementById('buscaServico').value = '';
+    document.getElementById('servicoTamanho').innerHTML = '<option value="">Selecione...</option>';
+    document.getElementById('servicoQtd').value = '1';
+    document.getElementById('servicoPreco').value = '';
+    document.getElementById('servicoDesconto').value = '0';
+    servicoSelecionado = null;
+    
+    console.log('✅ Serviço adicionado ao orçamento');
+    calcularTotais();
+}
+
+function atualizarTabelaServicos() {
+    const tbody = document.getElementById('servicosBody');
+    
+    if (orcamento.servicos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum serviço adicionado</td></tr>';
+        return;
+    }
+    
+    const html = orcamento.servicos.map((s, idx) => `
+        <tr>
+            <td><strong>${s.nome}</strong></td>
+            <td>${s.tamanho}</td>
+            <td>${s.qtd}</td>
+            <td>R$ ${s.preco_unit.toFixed(2)}</td>
+            <td>${s.desconto}%</td>
+            <td><strong>R$ ${s.total.toFixed(2)}</strong></td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removerServico(${idx})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    
+    tbody.innerHTML = html;
+}
+
+function removerServico(idx) {
+    orcamento.servicos.splice(idx, 1);
+    atualizarTabelaServicos();
+    calcularTotais();
+    console.log('🗑️ Serviço removido');
+}
+
+// ===== BUSCAR PRODUTOS =====
+async function buscarProdutos() {
+    const termo = document.getElementById('buscaProduto').value.trim();
+    
+    if (termo.length < 2) {
+        document.getElementById('produtoResults').style.display = 'none';
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/produtos/buscar?termo=${termo}`, { credentials: 'include' });
+        const data = await res.json();
+        
+        if (data.success && data.produtos.length > 0) {
+            produtosDisponiveis = data.produtos;
+            
+            const html = data.produtos.map(p => `
+                <div style="padding: 12px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background='transparent'" onclick="selecionarProduto('${p._id}', '${p.nome}', '${p.marca || ''}', '${p.sku}', ${p.preco})">
+                    <strong>${p.nome}</strong> <small>${p.marca ? '- ' + p.marca : ''}</small><br>
+                    <small>R$ ${p.preco.toFixed(2)} | Estoque: ${p.estoque || 0}</small>
+                </div>
+            `).join('');
+            
+            document.getElementById('produtoResults').innerHTML = html;
+            document.getElementById('produtoResults').style.display = 'block';
+        } else {
+            document.getElementById('produtoResults').style.display = 'none';
+        }
+    } catch (e) {
+        console.error('❌ Erro buscar produtos:', e);
+    }
+}
+
+function selecionarProduto(id, nome, marca, sku, preco) {
+    document.getElementById('buscaProduto').value = nome;
+    document.getElementById('produtoResults').style.display = 'none';
+    document.getElementById('produtoPreco').value = preco.toFixed(2);
+    
+    produtoSelecionado = { id, nome, marca, sku, preco };
+    calcularTotalProduto();
+    console.log('✅ Produto selecionado:', nome);
+}
+
+function calcularTotalProduto() {
+    if (!produtoSelecionado) return;
+    
+    const qtd = parseInt(document.getElementById('produtoQtd').value) || 1;
+    const preco = parseFloat(document.getElementById('produtoPreco').value) || 0;
+    const desconto = parseInt(document.getElementById('produtoDesconto').value) || 0;
+    
+    const subtotal = qtd * preco;
+    const total = subtotal - (subtotal * desconto / 100);
+    
+    console.log(`🧮 Produto: ${qtd}x R$${preco} - ${desconto}% = R$${total.toFixed(2)}`);
+}
+
+function addProduto() {
+    if (!produtoSelecionado) {
+        Swal.fire('Atenção', 'Selecione um produto', 'warning');
+        return;
+    }
+    
+    const qtd = parseInt(document.getElementById('produtoQtd').value) || 1;
+    const preco = parseFloat(document.getElementById('produtoPreco').value) || 0;
+    const desconto = parseInt(document.getElementById('produtoDesconto').value) || 0;
+    
+    if (preco <= 0) {
+        Swal.fire('Atenção', 'Preço inválido', 'warning');
+        return;
+    }
+    
+    const subtotal = qtd * preco;
+    const total = subtotal - (subtotal * desconto / 100);
+    
+    orcamento.produtos.push({
+        id: produtoSelecionado.id,
+        nome: produtoSelecionado.nome,
+        marca: produtoSelecionado.marca,
+        sku: produtoSelecionado.sku,
+        qtd: qtd,
+        preco_unit: preco,
+        desconto: desconto,
+        total: total
+    });
+    
+    atualizarTabelaProdutos();
+    
+    // Limpar
+    document.getElementById('buscaProduto').value = '';
+    document.getElementById('produtoQtd').value = '1';
+    document.getElementById('produtoPreco').value = '';
+    document.getElementById('produtoDesconto').value = '0';
+    produtoSelecionado = null;
+    
+    console.log('✅ Produto adicionado');
+    calcularTotais();
+}
+
+function atualizarTabelaProdutos() {
+    const tbody = document.getElementById('produtosBody');
+    
+    if (orcamento.produtos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum produto adicionado</td></tr>';
+        return;
+    }
+    
+    const html = orcamento.produtos.map((p, idx) => `
+        <tr>
+            <td><strong>${p.nome}</strong></td>
+            <td>${p.marca || '-'}</td>
+            <td><code>${p.sku}</code></td>
+            <td>${p.qtd}</td>
+            <td>R$ ${p.preco_unit.toFixed(2)}</td>
+            <td>${p.desconto}%</td>
+            <td><strong>R$ ${p.total.toFixed(2)}</strong></td>
+            <td>
+                <button class="btn btn-sm btn-danger" onclick="removerProduto(${idx})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    
+    tbody.innerHTML = html;
+}
+
+function removerProduto(idx) {
+    orcamento.produtos.splice(idx, 1);
+    atualizarTabelaProdutos();
+    calcularTotais();
+    console.log('🗑️ Produto removido');
+}
+
+// ===== CALCULAR TOTAIS =====
+function calcularTotais() {
+    const subtotalServicos = orcamento.servicos.reduce((acc, s) => acc + s.total, 0);
+    const subtotalProdutos = orcamento.produtos.reduce((acc, p) => acc + p.total, 0);
+    const subtotal = subtotalServicos + subtotalProdutos;
+    
+    const descontoGlobal = parseFloat(document.getElementById('descontoGlobal').value) || 0;
+    const descontoValor = subtotal * (descontoGlobal / 100);
+    const totalComDesconto = subtotal - descontoValor;
+    
+    const cashbackPerc = parseFloat(document.getElementById('cashbackPerc').value) || 0;
+    const cashbackValor = totalComDesconto * (cashbackPerc / 100);
+    
+    document.getElementById('subtotalServicos').textContent = `R$ ${subtotalServicos.toFixed(2)}`;
+    document.getElementById('subtotalProdutos').textContent = `R$ ${subtotalProdutos.toFixed(2)}`;
+    document.getElementById('totalFinal').textContent = `R$ ${totalComDesconto.toFixed(2)}`;
+    document.getElementById('cashbackValor').textContent = `🎁 Cashback: R$ ${cashbackValor.toFixed(2)}`;
+    
+    console.log(`💰 Total: R$ ${totalComDesconto.toFixed(2)} | Cashback: R$ ${cashbackValor.toFixed(2)}`);
+}
+
+// ===== SALVAR ORÇAMENTO =====
+async function salvarOrc(status) {
+    const cpf = document.getElementById('orcCPF').value.trim();
+    const nome = document.getElementById('orcNomeCliente').value.trim();
+    
+    if (!cpf || !nome) {
+        Swal.fire('Atenção', 'Preencha CPF e Nome do cliente', 'warning');
+        return;
+    }
+    
+    if (orcamento.servicos.length === 0 && orcamento.produtos.length === 0) {
+        Swal.fire('Atenção', 'Adicione pelo menos um serviço ou produto', 'warning');
+        return;
+    }
+    
+    const data = {
+        cliente_cpf: cpf,
+        cliente_nome: nome,
+        cliente_email: document.getElementById('orcEmail').value.trim(),
+        cliente_telefone: document.getElementById('orcTelefone').value.trim(),
+        servicos: orcamento.servicos,
+        produtos: orcamento.produtos,
+        desconto_global: parseFloat(document.getElementById('descontoGlobal').value) || 0,
+        cashback_perc: parseFloat(document.getElementById('cashbackPerc').value) || 0,
+        pagamento: { tipo: document.getElementById('pagamento').value },
+        status: status
+    };
+    
+    console.log('💾 Salvando orçamento:', status);
+    
+    try {
+        const res = await fetch('/api/orcamentos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: status === 'Aprovado' ? '✅ Contrato Gerado!' : '✅ Orçamento Salvo!',
+                text: `Orçamento #${result.numero}`,
+                timer: 2000
+            }).then(() => {
+                cancelarOrc();
+                goTo('consultar');
+            });
+        } else {
+            Swal.fire('Erro', result.message, 'error');
+        }
+    } catch (e) {
+        console.error('❌ Erro salvar orçamento:', e);
+        Swal.fire('Erro', 'Erro ao salvar orçamento', 'error');
+    }
+}
+
+function cancelarOrc() {
+    orcamento = { servicos: [], produtos: [] };
+    limparCliente();
+    document.getElementById('descontoGlobal').value = '0';
+    document.getElementById('cashbackPerc').value = '0';
+    document.getElementById('pagamento').value = 'Pix';
+    atualizarTabelaServicos();
+    atualizarTabelaProdutos();
+    calcularTotais();
+    console.log('🧹 Orçamento cancelado');
+}
 
 console.log('%c✅ SISTEMA v3.0 CARREGADO', 'color: #10B981; font-size: 16px; font-weight: 900;');
 </script>
