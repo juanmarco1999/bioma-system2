@@ -622,7 +622,6 @@ def servicos():
             'Longo': data.get('preco_longo', 0),
             'Extra Longo': data.get('preco_extra_longo', 0)
         }
-        
         count = 0
         for tam, preco in tamanhos.items():
             preco_float = float(preco) if preco else 0
@@ -640,6 +639,8 @@ def servicos():
                 count += 1
         
         return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -872,7 +873,7 @@ def delete_orcamento(id):
         return jsonify({'success': False}), 500
 
 # ===== PDF CONTRATO - MODELO EXATO =====
-app.route('/api/orcamento/<id>/pdf')
+@app.route('/api/orcamento/<id>/pdf')
 @login_required
 def gerar_pdf_orcamento(id):
     """PDF EXATAMENTE conforme modelo BIOMA"""

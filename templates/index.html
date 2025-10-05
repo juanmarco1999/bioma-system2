@@ -1908,26 +1908,9 @@ function showAuth() {
 }
 
 function showApp() {
-    console.log('✅ Mostrando aplicação');
-    
-    try {
-        document.getElementById('authScreen').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        
-        // Aguardar renderização do DOM
-        setTimeout(() => {
-            try {
-                loadDashboard();
-            } catch (e) {
-                console.error('❌ Erro ao carregar dashboard inicial:', e);
-                Swal.fire('Aviso', 'Dashboard com erro. Tente recarregar.', 'warning');
-            }
-        }, 100);
-        
-    } catch (e) {
-        console.error('❌ Erro crítico ao mostrar app:', e);
-        Swal.fire('Erro', 'Erro ao iniciar aplicação', 'error');
-    }
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadDashboard();
 }
 
 function switchTab(tab) {
@@ -2137,151 +2120,102 @@ async function toggleTheme() {
 
 // ===== NAVEGAÇÃO =====
 function goTo(section) {
-    console.log('🔄 Navegando para:', section);
+    console.log('🔄 Navegando:', section);
     
-    try {
-        // Esconder todas as seções
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        
-        // Mostrar seção solicitada
-        const sectionElement = document.getElementById('section-' + section);
-        if (sectionElement) {
-            sectionElement.classList.add('active');
-        } else {
-            console.error('❌ Seção não encontrada:', section);
-            return;
-        }
-        
-        // Remover active de todos os menus
-        document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
-        
-        // Ativar menu correspondente
-        const menu = document.getElementById('menu-' + section);
-        if (menu) menu.classList.add('active');
-        
-        // Scroll para o topo
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) {
-            mainContent.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        // Carregar dados da seção
-        try {
-            if (section === 'dashboard') loadDashboard();
-            else if (section === 'clientes') loadClientes();
-            else if (section === 'profissionais') loadProfissionais();
-            else if (section === 'servicos') loadServicosLista();
-            else if (section === 'produtos') loadProdutosLista();
-            else if (section === 'consultar') loadConsultar();
-            else if (section === 'contratos') loadContratos();
-            else if (section === 'fila') loadFila();
-            else if (section === 'sistema') verificarStatus();
-            else if (section === 'estoque') loadEstoqueBaixo();
-            else if (section === 'agendamentos') loadAgendamentos();
-            else if (section === 'relatorios') {
-                // Relatórios: carregar apenas se usuário clicar
-                console.log('📊 Relatórios: clique em "Atualizar" para carregar dados');
-            }
-        } catch (e) {
-            console.error('❌ Erro ao carregar seção:', section, e);
-        }
-        
-    } catch (e) {
-        console.error('❌ Erro crítico na navegação:', e);
-        Swal.fire('Erro', 'Erro ao navegar. Recarregue a página.', 'error');
-    }
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + section).classList.add('active');
+    
+    document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+    const menu = document.getElementById('menu-' + section);
+    if (menu) menu.classList.add('active');
+    
+    document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Carregar dados da seção
+    if (section === 'dashboard') loadDashboard();
+    if (section === 'clientes') loadClientes();
+    if (section === 'profissionais') loadProfissionais();
+    if (section === 'servicos') loadServicosLista();
+    if (section === 'produtos') loadProdutosLista();
+    if (section === 'consultar') loadConsultar();
+    if (section === 'contratos') loadContratos();
+    if (section === 'fila') loadFila();
+    if (section === 'sistema') verificarStatus();
+    if (section === 'estoque') loadEstoqueBaixo();
+    if (section === 'agendamentos') loadAgendamentos();
 }
 
 // ===== DASHBOARD =====
 async function loadDashboard() {
-    console.log('📊 Carregando dashboard');
-    
+    console.log('📊 Dashboard');
     try {
         const res = await fetch('/api/dashboard/stats', { credentials: 'include' });
         const data = await res.json();
         
         if (data.success) {
-            document.getElementById('dashOrcamentos').textContent = data.stats.total_orcamentos || 0;
-            document.getElementById('dashClientes').textContent = data.stats.total_clientes || 0;
+            document.getElementById('dashOrcamentos').textContent = data.stats.total_orcamentos;
+            document.getElementById('dashClientes').textContent = data.stats.total_clientes;
             document.getElementById('dashAgendamentos').textContent = data.stats.agendamentos_hoje || 0;
             document.getElementById('dashFaturamento').textContent = 'R$ ' + (data.stats.faturamento || 0).toFixed(0);
-            console.log('✅ Stats carregadas');
         }
         
         // Estoque
-        try {
-            const estoqueRes = await fetch('/api/estoque/alerta', { credentials: 'include' });
-            const estoqueData = await estoqueRes.json();
-            
-            if (estoqueData.success && estoqueData.produtos && estoqueData.produtos.length > 0) {
-                const html = estoqueData.produtos.slice(0, 5).map(p => `
-                    <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                        <strong>${p.nome}</strong><br>
-                        <small>Estoque: ${p.estoque} | Mínimo: ${p.estoque_minimo}</small>
-                    </div>
-                `).join('');
-                document.getElementById('alertasEstoque').innerHTML = html;
-            } else {
-                document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-success">✅ Estoque OK</p>';
-            }
-        } catch (e) {
-            console.error('⚠️ Erro estoque:', e);
-            document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-muted">Erro ao carregar</p>';
+        const estoqueRes = await fetch('/api/estoque/alerta', { credentials: 'include' });
+        const estoqueData = await estoqueRes.json();
+        
+        if (estoqueData.success && estoqueData.produtos.length > 0) {
+            const html = estoqueData.produtos.slice(0, 5).map(p => `
+                <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                    <strong>${p.nome}</strong><br>
+                    <small>Estoque: ${p.estoque} | Mínimo: ${p.estoque_minimo}</small>
+                </div>
+            `).join('');
+            document.getElementById('alertasEstoque').innerHTML = html;
+        } else {
+            document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-success">✅ OK</p>';
         }
         
         // Agendamentos
-        try {
-            const agendRes = await fetch('/api/agendamentos', { credentials: 'include' });
-            const agendData = await agendRes.json();
-            
-            if (agendData.success && agendData.agendamentos && agendData.agendamentos.length > 0) {
-                const html = agendData.agendamentos.map(a => {
-                    const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
-                    return `
-                        <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-                            <strong>${a.cliente_nome || 'Cliente'}</strong><br>
-                            <small>${dataFormatada} às ${a.horario}</small>
-                        </div>
-                    `;
-                }).join('');
-                document.getElementById('proximosAgendamentos').innerHTML = html;
-            } else {
-                document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">📅 Nenhum agendamento</p>';
-            }
-        } catch (e) {
-            console.error('⚠️ Erro agendamentos:', e);
-            document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">Erro ao carregar</p>';
+        const agendRes = await fetch('/api/agendamentos', { credentials: 'include' });
+        const agendData = await agendRes.json();
+        
+        if (agendData.success && agendData.agendamentos && agendData.agendamentos.length > 0) {
+            const html = agendData.agendamentos.map(a => {
+                const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
+                return `
+                    <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                        <strong>${a.cliente_nome || 'Cliente'}</strong><br>
+                        <small>${dataFormatada} às ${a.horario}</small>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('proximosAgendamentos').innerHTML = html;
+        } else {
+            document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">📅 Nenhum agendamento</p>';
         }
         
         // Últimos orçamentos
-        try {
-            const orcRes = await fetch('/api/orcamentos', { credentials: 'include' });
-            const orcData = await orcRes.json();
-            
-            if (orcData.success && orcData.orcamentos && orcData.orcamentos.length > 0) {
-                const html = orcData.orcamentos.slice(0, 10).map(o => `
-                    <tr>
-                        <td><strong>#${o.numero}</strong></td>
-                        <td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
-                        <td>${o.cliente_nome}</td>
-                        <td><strong>R$ ${o.total_final.toFixed(2)}</strong></td>
-                        <td><span class="badge ${o.status === 'Aprovado' ? 'success' : 'warning'}">${o.status}</span></td>
-                    </tr>
-                `).join('');
-                document.getElementById('ultimosOrcamentosBody').innerHTML = html;
-            } else {
-                document.getElementById('ultimosOrcamentosBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
-            }
-        } catch (e) {
-            console.error('⚠️ Erro orçamentos:', e);
-            document.getElementById('ultimosOrcamentosBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Erro</td></tr>';
+        const orcRes = await fetch('/api/orcamentos', { credentials: 'include' });
+        const orcData = await orcRes.json();
+        
+        if (orcData.success && orcData.orcamentos.length > 0) {
+            const html = orcData.orcamentos.slice(0, 10).map(o => `
+                <tr>
+                    <td><strong>#${o.numero}</strong></td>
+                    <td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td>${o.cliente_nome}</td>
+                    <td><strong>R$ ${o.total_final.toFixed(2)}</strong></td>
+                    <td><span class="badge ${o.status === 'Aprovado' ? 'success' : 'warning'}">${o.status}</span></td>
+                </tr>
+            `).join('');
+            document.getElementById('ultimosOrcamentosBody').innerHTML = html;
+        } else {
+            document.getElementById('ultimosOrcamentosBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
         }
         
-        console.log('✅ Dashboard completo');
-        
     } catch (e) {
-        console.error('❌ Erro CRÍTICO dashboard:', e);
-        Swal.fire('Erro', 'Erro ao carregar dashboard. Verifique a conexão.', 'error');
+        console.error('❌ Dashboard error:', e);
+        document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-danger">Erro</p>';
     }
 }
 
@@ -3413,220 +3347,123 @@ let chartServicos = null;
 let chartFaturamento = null;
 
 async function loadRelatorios() {
-   // ===== RELATÓRIOS EM TEMPO REAL - CORRIGIDO SEM SPINNER =====
-let chartServicos = null;
-let chartFaturamento = null;
-
-async function loadRelatorios() {
-    console.log('📊 Carregando relatórios em tempo real');
-    
     try {
         const res = await fetch('/api/orcamentos', { credentials: 'include' });
-        const data = await res.json();
-        
-        if (!data.success || !data.orcamentos) {
-            console.warn('⚠️ Nenhum orçamento encontrado');
-            document.getElementById('relFaturamentoTotal').textContent = 'R$ 0';
-            document.getElementById('relFaturamentoMes').textContent = 'R$ 0';
-            document.getElementById('relCashbackTotal').textContent = 'R$ 0';
-            document.getElementById('relTicketMedio').textContent = 'R$ 0';
-            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum dado disponível</td></tr>';
-            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum dado disponível</td></tr>';
+        const payload = await res.json();
+
+        const elFaturamentoTotal = document.getElementById('relFaturamentoTotal');
+        const elFaturamentoMes   = document.getElementById('relFaturamentoMes');
+        const elCashbackTotal    = document.getElementById('relCashbackTotal');
+        const elTicketMedio      = document.getElementById('relTicketMedio');
+
+        if (!payload.success || !payload.orcamentos || payload.orcamentos.length === 0) {
+            elFaturamentoTotal.textContent = 'R$ 0';
+            elFaturamentoMes.textContent   = 'R$ 0';
+            elCashbackTotal.textContent    = 'R$ 0';
+            elTicketMedio.textContent      = 'R$ 0';
+            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum dado</td></tr>';
+            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum dado</td></tr>';
             return;
         }
-        
-        const orcamentos = data.orcamentos.filter(o => o.status === 'Aprovado');
-        
-        if (orcamentos.length === 0) {
-            console.warn('⚠️ Nenhum orçamento aprovado');
-            document.getElementById('relFaturamentoTotal').textContent = 'R$ 0';
-            document.getElementById('relFaturamentoMes').textContent = 'R$ 0';
-            document.getElementById('relCashbackTotal').textContent = 'R$ 0';
-            document.getElementById('relTicketMedio').textContent = 'R$ 0';
-            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum orçamento aprovado ainda</td></tr>';
-            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum produto vendido</td></tr>';
-            return;
-        }
-        
-        // Faturamento total
-        const faturamentoTotal = orcamentos.reduce((acc, o) => acc + (o.total_final || 0), 0);
-        document.getElementById('relFaturamentoTotal').textContent = `R$ ${faturamentoTotal.toFixed(0)}`;
-        
-        // Faturamento mês atual
-        const mesAtual = new Date().getMonth();
-        const anoAtual = new Date().getFullYear();
-        const faturamentoMes = orcamentos
-            .filter(o => {
-                const d = new Date(o.created_at);
-                return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
-            })
-            .reduce((acc, o) => acc + o.total_final, 0);
-        document.getElementById('relFaturamentoMes').textContent = `R$ ${faturamentoMes.toFixed(0)}`;
-        
-        // Cashback total
-        const cashbackTotal = orcamentos.reduce((acc, o) => acc + (o.cashback_valor || 0), 0);
-        document.getElementById('relCashbackTotal').textContent = `R$ ${cashbackTotal.toFixed(0)}`;
-        
-        // Ticket médio
-        const ticketMedio = orcamentos.length > 0 ? faturamentoTotal / orcamentos.length : 0;
-        document.getElementById('relTicketMedio').textContent = `R$ ${ticketMedio.toFixed(0)}`;
-        
-        // Top Serviços
-        const servicosCount = {};
-        orcamentos.forEach(o => {
-            (o.servicos || []).forEach(s => {
-                const key = s.nome;
-                if (!servicosCount[key]) {
-                    servicosCount[key] = { total: 0, qtd: 0 };
-                }
-                servicosCount[key].total += s.total || 0;
-                servicosCount[key].qtd += s.qtd || 1;
-            });
+
+        const aprovados = payload.orcamentos.filter(o => o.status === 'Aprovado');
+
+        // Totais
+        const totalGeral = aprovados.reduce((acc, o) => acc + (o.total_final || 0), 0);
+        const totalCash  = aprovados.reduce((acc, o) => acc + (o.cashback_valor || 0), 0);
+        const mesAtual   = new Date().getMonth();
+        const totalMes   = aprovados
+            .filter(o => (new Date(o.created_at)).getMonth() === mesAtual)
+            .reduce((acc, o) => acc + (o.total_final || 0), 0);
+        const ticket     = aprovados.length ? (totalGeral / aprovados.length) : 0;
+
+        elFaturamentoTotal.textContent = `R$ ${totalGeral.toFixed(2)}`;
+        elFaturamentoMes.textContent   = `R$ ${totalMes.toFixed(2)}`;
+        elCashbackTotal.textContent    = `R$ ${totalCash.toFixed(2)}`;
+        elTicketMedio.textContent      = `R$ ${ticket.toFixed(2)}`;
+
+        // Top clientes
+        const gastoPorCliente = {};
+        aprovados.forEach(o => {
+            const key = `${o.cliente_nome}||${o.cliente_cpf || ''}`;
+            gastoPorCliente[key] = (gastoPorCliente[key] || 0) + (o.total_final || 0);
         });
-        
-        const topServicos = Object.entries(servicosCount)
-            .sort((a, b) => b[1].total - a[1].total)
+        const topClientes = Object.entries(gastoPorCliente)
+            .map(([k, v]) => ({ nome: k.split('||')[0], cpf: k.split('||')[1], total: v }))
+            .sort((a, b) => b.total - a.total)
             .slice(0, 5);
-        
-        // Gráfico Serviços
-        const ctxServicos = document.getElementById('chartServicos');
-        if (chartServicos) chartServicos.destroy();
-        
-        if (topServicos.length > 0) {
-            chartServicos = new Chart(ctxServicos, {
-                type: 'bar',
-                data: {
-                    labels: topServicos.map(s => s[0]),
-                    datasets: [{
-                        label: 'Faturamento (R$)',
-                        data: topServicos.map(s => s[1].total),
-                        backgroundColor: 'rgba(124, 58, 237, 0.8)',
-                        borderColor: 'rgba(124, 58, 237, 1)',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-        }
-        
-        // Faturamento Mensal (últimos 6 meses)
-        const meses = [];
-        const faturamentoMensal = [];
-        
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            const mes = d.getMonth();
-            const ano = d.getFullYear();
-            
-            meses.push(d.toLocaleDateString('pt-BR', { month: 'short' }));
-            
-            const fat = orcamentos
-                .filter(o => {
-                    const od = new Date(o.created_at);
-                    return od.getMonth() === mes && od.getFullYear() === ano;
-                })
-                .reduce((acc, o) => acc + o.total_final, 0);
-            
-            faturamentoMensal.push(fat);
-        }
-        
-        const ctxFaturamento = document.getElementById('chartFaturamento');
-        if (chartFaturamento) chartFaturamento.destroy();
-        
-        chartFaturamento = new Chart(ctxFaturamento, {
-            type: 'line',
-            data: {
-                labels: meses,
-                datasets: [{
-                    label: 'Faturamento (R$)',
-                    data: faturamentoMensal,
-                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                    borderColor: 'rgba(16, 185, 129, 1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-        
-        // Top Clientes
-        const resClientes = await fetch('/api/clientes', { credentials: 'include' });
-        const dataClientes = await resClientes.json();
-        
-        if (dataClientes.success && dataClientes.clientes && dataClientes.clientes.length > 0) {
-            const topClientes = dataClientes.clientes
-                .sort((a, b) => (b.total_gasto || 0) - (a.total_gasto || 0))
-                .slice(0, 10);
-            
-            const htmlClientes = topClientes.map((c, idx) => `
-                <tr>
-                    <td><strong style="font-size: 1.5rem; color: ${idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : 'var(--text-primary)'}">${idx + 1}º</strong></td>
-                    <td><strong>${c.nome}</strong></td>
-                    <td><strong style="color: var(--success);">R$ ${(c.total_gasto || 0).toFixed(2)}</strong></td>
-                    <td>${c.total_visitas || 0}</td>
-                    <td>${c.ultima_visita ? new Date(c.ultima_visita).toLocaleDateString('pt-BR') : '-'}</td>
-                </tr>
-            `).join('');
-            
-            document.getElementById('topClientesBody').innerHTML = htmlClientes;
-        } else {
-            document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente encontrado</td></tr>';
-        }
-        
-        // Top Produtos
-        const produtosCount = {};
-        orcamentos.forEach(o => {
+
+        document.getElementById('topClientesBody').innerHTML = topClientes.map((c, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${c.nome}</td>
+                <td>${c.cpf || '-'}</td>
+                <td><strong>R$ ${c.total.toFixed(2)}</strong></td>
+                <td><span class="badge success">VIP</span></td>
+            </tr>
+        `).join('');
+
+        // Top produtos (contagem de nomes)
+        const contagemProdutos = {};
+        aprovados.forEach(o => {
             (o.produtos || []).forEach(p => {
-                const key = p.nome;
-                if (!produtosCount[key]) {
-                    produtosCount[key] = { total: 0, qtd: 0 };
-                }
-                produtosCount[key].total += p.total || 0;
-                produtosCount[key].qtd += p.qtd || 1;
+                contagemProdutos[p.nome] = (contagemProdutos[p.nome] || 0) + (p.qtd || 1);
             });
         });
-        
-        const topProdutos = Object.entries(produtosCount)
-            .sort((a, b) => b[1].qtd - a[1].qtd)
-            .slice(0, 10);
-        
-        if (topProdutos.length > 0) {
-            const htmlProdutos = topProdutos.map(p => `
-                <tr>
-                    <td><strong>${p[0]}</strong></td>
-                    <td>${p[1].qtd}</td>
-                    <td><strong>R$ ${p[1].total.toFixed(2)}</strong></td>
-                </tr>
-            `).join('');
-            
-            document.getElementById('topProdutosBody').innerHTML = htmlProdutos;
-        } else {
-            document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum produto vendido</td></tr>';
-        }
-        
-        console.log('✅ Relatórios carregados com sucesso');
-        
+        const topProdutos = Object.entries(contagemProdutos)
+            .map(([nome, qtd]) => ({ nome, qtd }))
+            .sort((a, b) => b.qtd - a.qtd)
+            .slice(0, 5);
+
+        document.getElementById('topProdutosBody').innerHTML = topProdutos.map((p, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${p.nome}</td>
+                <td><strong>${p.qtd}</strong></td>
+            </tr>
+        `).join('');
+
+        // Gráfico faturamento por mês (ano corrente)
+        const meses = Array.from({length:12}, (_,i)=>i);
+        const somaPorMes = meses.map(m => aprovados
+            .filter(o => (new Date(o.created_at)).getMonth() === m)
+            .reduce((acc, o) => acc + (o.total_final || 0), 0)
+        );
+
+        if (chartFaturamento) chartFaturamento.destroy();
+        const ctxF = document.getElementById('chartFaturamento').getContext('2d');
+        chartFaturamento = new Chart(ctxF, {
+            type: 'bar',
+            data: {
+                labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+                datasets: [{ label: 'Faturamento', data: somaPorMes }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // Gráfico serviços (quantidade por serviço)
+        const contagemServ = {};
+        aprovados.forEach(o => (o.servicos || []).forEach(s => {
+            const key = `${s.nome} - ${s.tamanho || ''}`.trim();
+            contagemServ[key] = (contagemServ[key] || 0) + 1;
+        }));
+        const servLabels = Object.keys(contagemServ);
+        const servValues = servLabels.map(k => contagemServ[k]);
+
+        if (chartServicos) chartServicos.destroy();
+        const ctxS = document.getElementById('chartServicos').getContext('2d');
+        chartServicos = new Chart(ctxS, {
+            type: 'pie',
+            data: { labels: servLabels, datasets: [{ data: servValues }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
     } catch (e) {
-        console.error('❌ Erro ao carregar relatórios:', e);
-        document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados</td></tr>';
-        document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+        console.error('Erro ao carregar relatórios:', e);
+        document.getElementById('topClientesBody').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar</td></tr>';
+        document.getElementById('topProdutosBody').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Erro ao carregar</td></tr>';
     }
 }
-
 // ===== CLUBE BIOMA =====
 function assinarPlano(plano) {
     const planos = {
