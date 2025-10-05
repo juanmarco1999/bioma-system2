@@ -1099,184 +1099,188 @@ console.log('%c⏳ Carregando sistema...', 'color: #F59E0B; font-size: 14px;');
 </script>
 
 <!-- ===== APLICAÇÃO PRINCIPAL ===== -->
-<div id="app">
-    <nav class="sidebar">
-        <div class="sidebar-logo">
-            <h1>BIOMA</h1>
-            <p>Uberaba v3.2</p>
-        </div>
-
-        <ul class="sidebar-menu">
-            <li><a href="#" onclick="goTo('dashboard')" class="active" id="menu-dashboard">
-                <i class="bi bi-speedometer2"></i> Dashboard
-            </a></li>
-            <li><a href="#" onclick="goTo('agendamentos')" id="menu-agendamentos">
-                <i class="bi bi-calendar-check"></i> Agendamentos
-            </a></li>
-            <li><a href="#" onclick="goTo('orcamento')" id="menu-orcamento">
-                <i class="bi bi-file-earmark-text"></i> Novo Orçamento
-            </a></li>
-            <li><a href="#" onclick="goTo('fila')" id="menu-fila">
-                <i class="bi bi-people-fill"></i> Fila Atendimento
-            </a></li>
-            <li><a href="#" onclick="goTo('consultar')" id="menu-consultar">
-                <i class="bi bi-search"></i> Consultar
-            </a></li>
-            <li><a href="#" onclick="goTo('contratos')" id="menu-contratos">
-                <i class="bi bi-file-earmark-check"></i> Contratos
-            </a></li>
-            <li><a href="#" onclick="goTo('relatorios')" id="menu-relatorios">
-                <i class="bi bi-bar-chart-line"></i> Relatórios
-            </a></li>
-            <li><a href="#" onclick="goTo('estoque')" id="menu-estoque">
-                <i class="bi bi-box-seam-fill"></i> Estoque
-            </a></li>
-            <li><a href="#" onclick="goTo('clube')" id="menu-clube">
-                <i class="bi bi-award"></i> Clube BIOMA
-            </a></li>
-            <li><a href="#" onclick="goTo('clientes')" id="menu-clientes">
-                <i class="bi bi-people"></i> Clientes
-            </a></li>
-            <li><a href="#" onclick="goTo('profissionais')" id="menu-profissionais">
-                <i class="bi bi-person-workspace"></i> Profissionais
-            </a></li>
-            <li><a href="#" onclick="goTo('servicos')" id="menu-servicos">
-                <i class="bi bi-scissors"></i> Serviços
-            </a></li>
-            <li><a href="#" onclick="goTo('produtos')" id="menu-produtos">
-                <i class="bi bi-box-seam"></i> Produtos
-            </a></li>
-            <li><a href="#" onclick="goTo('importar')" id="menu-importar">
-                <i class="bi bi-cloud-upload"></i> Importar Dados
-            </a></li>
-            <li><a href="#" onclick="goTo('sistema')" id="menu-sistema">
-                <i class="bi bi-activity"></i> Status Sistema
-            </a></li>
-            <li><a href="#" onclick="goTo('configuracoes')" id="menu-configuracoes">
-                <i class="bi bi-gear"></i> Configurações
-            </a></li>
-            <li><a href="#" onclick="doLogout()">
-                <i class="bi bi-box-arrow-right"></i> Sair
-            </a></li>
-        </ul>
-
-        <div class="theme-toggle">
-            <button onclick="toggleTheme()">
-                <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
-                <span id="themeText">Modo Escuro</span>
-            </button>
-        </div>
-    </nav>
-
-    <div class="main-content">
-        
-        <!-- ===== DASHBOARD ===== -->
-        <div id="section-dashboard" class="content-section active">
-            <div class="page-header">
-                <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+<!-- MODAL AGENDAMENTO -->
+<div class="modal fade" id="modalAgendamento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--bg-card); border-radius: 20px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> Novo Agendamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: brightness(0) invert(1);"></button>
             </div>
-
-            <div class="row g-4 mb-4">
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card">
-                        <div class="icon"><i class="bi bi-file-earmark-text"></i></div>
-                        <h3 id="dashOrcamentos">0</h3>
-                        <p>Orçamentos</p>
-                    </div>
+            <div class="modal-body" style="padding: 30px;">
+                <div class="mb-3">
+                    <label>Cliente *</label>
+                    <input type="text" class="form-control" id="agendClienteNome" placeholder="Nome do cliente">
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card">
-                        <div class="icon"><i class="bi bi-people"></i></div>
-                        <h3 id="dashClientes">0</h3>
-                        <p>Clientes</p>
-                    </div>
+                <div class="mb-3">
+                    <label>Telefone (com DDD)</label>
+                    <input type="text" class="form-control" id="agendClienteTel" placeholder="(34) 99999-9999">
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card">
-                        <div class="icon"><i class="bi bi-calendar-check"></i></div>
-                        <h3 id="dashAgendamentos">0</h3>
-                        <p>Agendamentos Hoje</p>
-                    </div>
+                <div class="mb-3">
+                    <label>Serviço *</label>
+                    <input type="text" class="form-control" id="agendServico" placeholder="Ex: Corte, Hidratação">
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card">
-                        <div class="icon"><i class="bi bi-currency-dollar"></i></div>
-                        <h3 id="dashFaturamento">R$ 0</h3>
-                        <p>Faturamento</p>
-                    </div>
+                <div class="mb-3">
+                    <label>Profissional</label>
+                    <input type="text" class="form-control" id="agendProf" placeholder="Nome do profissional">
+                </div>
+                <div class="mb-3">
+                    <label>Data *</label>
+                    <input type="date" class="form-control" id="agendData">
+                </div>
+                <div class="mb-3">
+                    <label>Horário *</label>
+                    <select class="form-select" id="agendHorario">
+                        <option value="">Selecione...</option>
+                        <option value="08:00">08:00</option>
+                        <option value="09:00">09:00</option>
+                        <option value="10:00">10:00</option>
+                        <option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option>
+                        <option value="14:00">14:00</option>
+                        <option value="15:00">15:00</option>
+                        <option value="16:00">16:00</option>
+                        <option value="17:00">17:00</option>
+                        <option value="18:00">18:00</option>
+                        <option value="19:00">19:00</option>
+                    </select>
                 </div>
             </div>
-
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="bi bi-exclamation-triangle"></i> Alertas de Estoque
-                        </div>
-                        <div class="card-body">
-                            <div id="alertasEstoque">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="bi bi-calendar-event"></i> Próximos Agendamentos
-                        </div>
-                        <div class="card-body">
-                            <div id="proximosAgendamentos">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mt-4">
-                <div class="card-header">
-                    <i class="bi bi-clock-history"></i> Últimos Orçamentos
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nº</th>
-                                    <th>Data</th>
-                                    <th>Cliente</th>
-                                    <th>Valor</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ultimosOrcamentosBody">
-                                <tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== AGENDAMENTOS ===== -->
-        <div id="section-agendamentos" class="content-section">
-            <div class="page-header">
-                <h1><i class="bi bi-calendar-check"></i> Agendamentos</h1>
-                <button class="btn btn-primary" onclick="alert('Em desenvolvimento')">
-                    <i class="bi bi-plus-circle"></i> Novo Agendamento
+            <div class="modal-footer" style="border-top: 2px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="criarAgendamento()">
+                    <i class="bi bi-check"></i> Agendar
                 </button>
             </div>
+        </div>
+    </div>
+</div>
 
+        <!-- ===== DASHBOARD ===== -->
+        <div id="section-dashboard" class="content-section active">
+    <div class="page-header">
+        <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="icon"><i class="bi bi-file-earmark-text"></i></div>
+                <h3 id="dashOrcamentos">0</h3>
+                <p>Orçamentos</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="icon"><i class="bi bi-people"></i></div>
+                <h3 id="dashClientes">0</h3>
+                <p>Clientes</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="icon"><i class="bi bi-calendar-check"></i></div>
+                <h3 id="dashAgendamentos">0</h3>
+                <p>Agendamentos Hoje</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <div class="icon"><i class="bi bi-currency-dollar"></i></div>
+                <h3 id="dashFaturamento">R$ 0</h3>
+                <p>Faturamento</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <i class="bi bi-calendar3"></i> Calendário de Agendamentos
+                    <i class="bi bi-exclamation-triangle"></i> Alertas de Estoque
                 </div>
                 <div class="card-body">
-                    <p class="text-center text-muted">Funcionalidade em desenvolvimento</p>
+                    <div id="alertasEstoque">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
             </div>
         </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-calendar-event"></i> Próximos Agendamentos
+                </div>
+                <div class="card-body">
+                    <div id="proximosAgendamentos">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <i class="bi bi-clock-history"></i> Últimos Orçamentos
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nº</th>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ultimosOrcamentosBody">
+                        <tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+        <!-- ===== AGENDAMENTOS ===== -->
+        <!-- ===== AGENDAMENTOS ===== -->
+<div id="section-agendamentos" class="content-section">
+    <div class="page-header">
+        <h1><i class="bi bi-calendar-check"></i> Agendamentos</h1>
+        <button class="btn btn-primary" onclick="showModalAgendamento()">
+            <i class="bi bi-plus-circle"></i> Novo Agendamento
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-calendar3"></i> Calendário de Agendamentos
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Cliente</th>
+                            <th>Profissional</th>
+                            <th>Serviço</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agendamentosBody">
+                        <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- ===== RELATÓRIOS ===== -->
         <div id="section-relatorios" class="content-section">
@@ -1626,6 +1630,69 @@ console.log('%c⏳ Carregando sistema...', 'color: #F59E0B; font-size: 14px;');
 <!-- [CONTINUA NA PARTE 3/4 - NOVO ORÇAMENTO + IMPORTAR + STATUS + CONFIGURAÇÕES] -->
 
 <script>
+
+// ===== AGENDAMENTOS =====
+function showModalAgendamento() {
+    const modal = new bootstrap.Modal(document.getElementById('modalAgendamento'));
+    
+    // Definir data mínima como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('agendData').setAttribute('min', hoje);
+    document.getElementById('agendData').value = hoje;
+    
+    modal.show();
+}
+
+async function criarAgendamento() {
+    const cliente_nome = document.getElementById('agendClienteNome').value.trim();
+    const cliente_telefone = document.getElementById('agendClienteTel').value.trim();
+    const servico_nome = document.getElementById('agendServico').value.trim();
+    const profissional_nome = document.getElementById('agendProf').value.trim();
+    const data = document.getElementById('agendData').value;
+    const horario = document.getElementById('agendHorario').value;
+    
+    if (!cliente_nome || !data || !horario) {
+        Swal.fire('Atenção', 'Preencha Cliente, Data e Horário', 'warning');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/agendamentos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                cliente_nome,
+                cliente_telefone,
+                servico_nome,
+                profissional_nome,
+                data: new Date(data + 'T12:00:00').toISOString(),
+                horario
+            })
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalAgendamento')).hide();
+            
+            Swal.fire({
+                icon: 'success',
+                title: '✅ Agendado!',
+                html: `<p>Agendamento confirmado para <strong>${new Date(data).toLocaleDateString('pt-BR')}</strong> às <strong>${horario}</strong></p>${cliente_telefone ? '<p>📱 SMS de confirmação enviado!</p>' : ''}`,
+                timer: 2000
+            });
+            
+            loadDashboard();
+        } else {
+            Swal.fire('Erro', result.message, 'error');
+        }
+    } catch (e) {
+        console.error('❌ Erro agendamento:', e);
+        Swal.fire('Erro', 'Erro ao criar agendamento', 'error');
+    }
+}
+
 // ===== TEMA =====
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -1697,6 +1764,7 @@ async function loadDashboard() {
             console.log('✅ Dashboard OK');
         }
         
+        // Alertas de estoque
         const estoqueRes = await fetch('/api/estoque/alerta', { credentials: 'include' });
         const estoqueData = await estoqueRes.json();
         
@@ -1712,6 +1780,26 @@ async function loadDashboard() {
             document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-success">✅ Todos os estoques OK</p>';
         }
         
+        // CORREÇÃO: Próximos Agendamentos
+        const agendRes = await fetch('/api/agendamentos', { credentials: 'include' });
+        const agendData = await agendRes.json();
+        
+        if (agendData.success && agendData.agendamentos && agendData.agendamentos.length > 0) {
+            const html = agendData.agendamentos.map(a => {
+                const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
+                return `
+                    <div style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                        <strong>${a.cliente_nome || 'Cliente'}</strong><br>
+                        <small>${dataFormatada} às ${a.horario} | ${a.servico_nome || 'Serviço'}</small>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('proximosAgendamentos').innerHTML = html;
+        } else {
+            document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-muted">📅 Nenhum agendamento próximo</p>';
+        }
+        
+        // Últimos orçamentos
         const orcRes = await fetch('/api/orcamentos', { credentials: 'include' });
         const orcData = await orcRes.json();
         
@@ -1732,6 +1820,8 @@ async function loadDashboard() {
         
     } catch (e) {
         console.error('❌ Erro dashboard:', e);
+        document.getElementById('proximosAgendamentos').innerHTML = '<p class="text-center text-danger">Erro ao carregar</p>';
+        document.getElementById('alertasEstoque').innerHTML = '<p class="text-center text-danger">Erro ao carregar</p>';
     }
 }
 

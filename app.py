@@ -25,6 +25,8 @@ import re
 import requests
 import logging
 import random
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, black
@@ -120,14 +122,17 @@ def login_required(f):
 def send_email(to, name, subject, html_content, pdf=None):
     """Envia email via MailerSend"""
     api_key = os.getenv('MAILERSEND_API_KEY')
-    if not api_key:
-        logger.warning("⚠️ MailerSend API Key not configured")
-        return {'success': False, 'message': 'Email not configured'}
+    from_email = os.getenv('MAILERSEND_FROM_EMAIL')
+    from_name = os.getenv('MAILERSEND_FROM_NAME', 'BIOMA Uberaba')
+    
+    if not api_key or not from_email:
+        logger.warning("⚠️ MailerSend não configurado")
+        return {'success': False, 'message': 'Email não configurado'}
     
     data = {
         "from": {
-            "email": os.getenv('MAILERSEND_FROM_EMAIL', 'noreply@trial-3vz9dlezk6r4kj50.mlsender.net'),
-            "name": "BIOMA Uberaba"
+            "email": from_email,
+            "name": from_name
         },
         "to": [{"email": to, "name": name}],
         "subject": subject,
@@ -143,6 +148,7 @@ def send_email(to, name, subject, html_content, pdf=None):
         }]
     
     try:
+        logger.info(f"📧 Enviando email para: {to}")
         r = requests.post(
             "https://api.mailersend.com/v1/email",
             headers={
@@ -154,11 +160,11 @@ def send_email(to, name, subject, html_content, pdf=None):
         )
         
         if r.status_code == 202:
-            logger.info(f"📧 Email sent successfully to: {to}")
-            return {'success': True, 'message': 'Email sent'}
+            logger.info(f"✅ Email enviado: {to}")
+            return {'success': True, 'message': 'Email enviado'}
         else:
-            logger.error(f"❌ Email failed: {r.status_code} - {r.text}")
-            return {'success': False, 'message': f'Failed: {r.status_code}'}
+            logger.error(f"❌ Email falhou: {r.status_code} - {r.text}")
+            return {'success': False, 'message': f'Erro {r.status_code}'}
     except Exception as e:
         logger.error(f"❌ Email exception: {e}")
         return {'success': False, 'message': str(e)}
@@ -587,6 +593,20 @@ def dashboard_stats():
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
     try:
+        # CORREÇÃO: Agendamentos hoje
+        hoje_inicio = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        hoje_fim = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0)
+        
+        agendamentos_hoje = 0
+        if 'agendamentos' in db.list_collection_names():
+            agendamentos_hoje = db.agendamentos.count_documents({
+                'data': {
+                    '$gte': hoje_inicio,
+                    '$lte': hoje_fim
+                },
+                'status': {'$in': ['confirmado', 'em_andamento']}
+            })
+        
         stats = {
             'total_orcamentos': db.orcamentos.count_documents({}),
             'total_clientes': db.clientes.count_documents({}),
@@ -598,13 +618,7 @@ def dashboard_stats():
             'produtos_estoque_baixo': db.produtos.count_documents({
                 '$expr': {'$lte': ['$estoque', '$estoque_minimo']}
             }),
-            'agendamentos_hoje': db.agendamentos.count_documents({
-                'data': {
-                    '$gte': datetime.now().replace(hour=0, minute=0, second=0),
-                    '$lt': datetime.now().replace(hour=23, minute=59, second=59)
-                },
-                'status': {'$in': ['confirmado', 'em_andamento']}
-            }) if 'agendamentos' in db.list_collection_names() else 0
+            'agendamentos_hoje': agendamentos_hoje
         }
         
         logger.info(f"✅ Stats: {stats['total_orcamentos']} orçamentos, R$ {stats['faturamento']:.2f}")
@@ -613,7 +627,8 @@ def dashboard_stats():
     except Exception as e:
         logger.error(f"❌ Dashboard error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
-
+    
+    
 # ===== CLIENTES =====
 @app.route('/api/clientes', methods=['GET', 'POST'])
 @login_required
@@ -1537,28 +1552,77 @@ def importar():
 @app.route('/api/template/download/<tipo>')
 @login_required
 def download_template(tipo):
-    """Download template CSV"""
-    output = io.StringIO()
-    writer = csv.writer(output)
+    """Download template XLSX profissional"""
+    wb = Workbook()
+    ws = wb.active
+    
+    # Estilos
+    header_fill = PatternFill(start_color='7C3AED', end_color='7C3AED', fill_type='solid')
+    header_font = Font(color='FFFFFF', bold=True, size=12)
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
     
     if tipo == 'produtos':
-        writer.writerow(['nome', 'marca', 'sku', 'preco', 'custo', 'estoque', 'categoria'])
-        writer.writerow(['Shampoo 500ml', 'Loreal', 'SHAMP-500', '49,90', '20,00', '50', 'SHAMPOO'])
-        writer.writerow(['Condicionador 500ml', 'Loreal', 'COND-500', '49,90', '20,00', '50', 'CONDICIONADOR'])
-    else:
-        writer.writerow(['nome', 'categoria', 'kids', 'masculino', 'curto', 'medio', 'longo', 'extra_longo'])
-        writer.writerow(['Hidratação', 'Tratamento', '50', '60', '80', '100', '120', '150'])
-        writer.writerow(['Corte', 'Cabelo', '40', '50', '60', '80', '100', '120'])
+        ws.title = 'Produtos BIOMA'
+        headers = ['nome', 'marca', 'sku', 'preco', 'custo', 'estoque', 'categoria']
+        ws.append(headers)
+        
+        # Aplicar estilo ao header
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        # Exemplos
+        ws.append(['Shampoo 500ml', 'Loreal', 'SHAMP-500', 49.90, 20.00, 50, 'SHAMPOO'])
+        ws.append(['Condicionador 500ml', 'Loreal', 'COND-500', 49.90, 20.00, 50, 'CONDICIONADOR'])
+        ws.append(['Máscara Hidratante 250g', 'Kerastase', 'MASK-250', 89.90, 35.00, 30, 'TRATAMENTO'])
+        
+        # Ajustar largura das colunas
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 15
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['E'].width = 12
+        ws.column_dimensions['F'].width = 12
+        ws.column_dimensions['G'].width = 18
+        
+    else:  # servicos
+        ws.title = 'Serviços BIOMA'
+        headers = ['nome', 'categoria', 'kids', 'masculino', 'curto', 'medio', 'longo', 'extra_longo']
+        ws.append(headers)
+        
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        ws.append(['Hidratação', 'Tratamento', 50, 60, 80, 100, 120, 150])
+        ws.append(['Corte', 'Cabelo', 40, 50, 60, 80, 100, 120])
+        ws.append(['Escova', 'Cabelo', 35, 45, 55, 70, 85, 100])
+        
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
+            ws.column_dimensions[col].width = 15
     
+    # Salvar
+    output = io.BytesIO()
+    wb.save(output)
     output.seek(0)
     
     return send_file(
-        io.BytesIO(output.getvalue().encode('utf-8-sig')),
-        mimetype='text/csv',
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f'template_{tipo}_bioma.csv'
+        download_name=f'template_{tipo}_bioma.xlsx'
     )
-
+    
+    
 # ===== CONFIGURAÇÕES =====
 @app.route('/api/config', methods=['GET', 'POST'])
 @login_required
@@ -1588,7 +1652,7 @@ def config():
 @app.route('/api/orcamento/<id>/pdf')
 @login_required
 def gerar_pdf_orcamento(id):
-    """Gera PDF do orçamento/contrato"""
+    """Gera PDF do contrato EXATAMENTE conforme modelo"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
@@ -1597,53 +1661,63 @@ def gerar_pdf_orcamento(id):
         if not orcamento:
             return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
         
-        # Criar PDF
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
         
-        # Header
-        p.setFont("Helvetica-Bold", 24)
+        # HEADER COM LOGO
         p.setFillColor(HexColor('#7C3AED'))
-        p.drawString(50, height - 50, "BIOMA UBERABA")
+        p.setFont("Helvetica-Bold", 28)
+        p.drawString(50, height - 60, "BIOMA UBERABA")
         
-        p.setFont("Helvetica", 10)
         p.setFillColor(black)
-        p.drawString(50, height - 70, "Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG")
-        p.drawString(50, height - 85, "Tel: (34) 99235-5890 | Email: biomauberaba@gmail.com")
-        
-        # Título do documento
-        p.setFont("Helvetica-Bold", 18)
-        status_text = "CONTRATO" if orcamento.get('status') == 'Aprovado' else "ORÇAMENTO"
-        p.drawString(50, height - 120, f"{status_text} #{orcamento.get('numero', 'N/A')}")
-        
-        # Linha separadora
-        p.line(50, height - 130, width - 50, height - 130)
-        
-        # Dados do cliente
-        y = height - 160
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(50, y, "DADOS DO CLIENTE")
-        y -= 20
-        
         p.setFont("Helvetica", 10)
-        p.drawString(50, y, f"Nome: {orcamento.get('cliente_nome', 'N/A')}")
-        y -= 15
-        p.drawString(50, y, f"CPF: {orcamento.get('cliente_cpf', 'N/A')}")
-        y -= 15
-        p.drawString(50, y, f"Email: {orcamento.get('cliente_email', 'N/A')}")
-        y -= 15
-        p.drawString(50, y, f"Telefone: {orcamento.get('cliente_telefone', 'N/A')}")
+        p.drawString(50, height - 80, "Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG")
+        p.drawString(50, height - 95, "Tel: (34) 99235-5890 | Email: biomauberaba@gmail.com")
+        
+        # LINHA SEPARADORA
+        p.setStrokeColor(HexColor('#7C3AED'))
+        p.setLineWidth(2)
+        p.line(50, height - 110, width - 50, height - 110)
+        
+        # TÍTULO CONTRATO
+        p.setFillColor(HexColor('#7C3AED'))
+        p.setFont("Helvetica-Bold", 20)
+        p.drawString(50, height - 145, f"CONTRATO #{orcamento.get('numero', 'N/A')}")
+        
+        # LINHA ABAIXO DO TÍTULO
+        p.setStrokeColor(HexColor('#7C3AED'))
+        p.setLineWidth(1)
+        p.line(50, height - 155, width - 50, height - 155)
+        
+        # DADOS DO CLIENTE
+        y = height - 190
+        p.setFillColor(black)
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y, "DADOS DO CLIENTE")
         y -= 25
         
-        # Serviços
+        p.setFont("Helvetica", 11)
+        p.drawString(50, y, f"Nome: {orcamento.get('cliente_nome', 'N/A')}")
+        y -= 18
+        p.drawString(50, y, f"CPF: {orcamento.get('cliente_cpf', 'N/A')}")
+        y -= 18
+        p.drawString(50, y, f"Email: {orcamento.get('cliente_email', 'N/A')}")
+        y -= 18
+        p.drawString(50, y, f"Telefone: {orcamento.get('cliente_telefone', 'N/A')}")
+        y -= 30
+        
+        # SERVIÇOS
         if orcamento.get('servicos'):
-            p.setFont("Helvetica-Bold", 12)
+            p.setFont("Helvetica-Bold", 14)
             p.drawString(50, y, "SERVIÇOS")
-            y -= 20
+            y -= 25
             
-            # Tabela de serviços
-            data_servicos = [['Serviço', 'Tamanho', 'Qtd', 'Valor Unit.', 'Total']]
+            # TABELA DE SERVIÇOS COM COR ROXA
+            data_servicos = [
+                ['Serviço', 'Tamanho', 'Qtd', 'Valor Unit.', 'Total']
+            ]
+            
             for s in orcamento.get('servicos', []):
                 data_servicos.append([
                     s.get('nome', ''),
@@ -1653,33 +1727,37 @@ def gerar_pdf_orcamento(id):
                     f"R$ {s.get('total', 0):.2f}"
                 ])
             
-            table = Table(data_servicos, colWidths=[200, 80, 40, 80, 80])
-            table.setStyle(TableStyle([
+            table_servicos = Table(data_servicos, colWidths=[200, 80, 50, 80, 80])
+            table_servicos.setStyle(TableStyle([
+                # HEADER ROXO
                 ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                # CORPO
                 ('BACKGROUND', (0, 1), (-1, -1), HexColor('#F3F4F6')),
-                ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F9FAFB')])
             ]))
             
-            table.wrapOn(p, width, height)
-            table.drawOn(p, 50, y - len(data_servicos) * 20)
-            y -= len(data_servicos) * 20 + 30
+            table_servicos.wrapOn(p, width, height)
+            table_servicos.drawOn(p, 50, y - len(data_servicos) * 22)
+            y -= len(data_servicos) * 22 + 30
         
-        # Produtos
-        if orcamento.get('produtos'):
-            if y < 200:  # Nova página se necessário
-                p.showPage()
-                y = height - 50
-            
-            p.setFont("Helvetica-Bold", 12)
+        # PRODUTOS (SE HOUVER)
+        if orcamento.get('produtos') and y > 250:
+            p.setFont("Helvetica-Bold", 14)
             p.drawString(50, y, "PRODUTOS")
-            y -= 20
+            y -= 25
             
-            data_produtos = [['Produto', 'Marca', 'Qtd', 'Valor Unit.', 'Total']]
+            data_produtos = [
+                ['Produto', 'Marca', 'Qtd', 'Valor Unit.', 'Total']
+            ]
+            
             for prod in orcamento.get('produtos', []):
                 data_produtos.append([
                     prod.get('nome', ''),
@@ -1689,63 +1767,60 @@ def gerar_pdf_orcamento(id):
                     f"R$ {prod.get('total', 0):.2f}"
                 ])
             
-            table_prod = Table(data_produtos, colWidths=[200, 80, 40, 80, 80])
-            table_prod.setStyle(TableStyle([
+            table_produtos = Table(data_produtos, colWidths=[200, 80, 50, 80, 80])
+            table_produtos.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), HexColor('#F3F4F6')),
-                ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+                ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F9FAFB')])
             ]))
             
-            table_prod.wrapOn(p, width, height)
-            table_prod.drawOn(p, 50, y - len(data_produtos) * 20)
-            y -= len(data_produtos) * 20 + 30
+            table_produtos.wrapOn(p, width, height)
+            table_produtos.drawOn(p, 50, y - len(data_produtos) * 22)
+            y -= len(data_produtos) * 22 + 30
         
-        # Totais
-        if y < 150:
+        # TOTAL
+        if y < 180:
             p.showPage()
             y = height - 50
         
-        p.setFont("Helvetica-Bold", 14)
         total_final = orcamento.get('total_final', 0)
-        cashback = orcamento.get('cashback_valor', 0)
         
+        p.setFont("Helvetica-Bold", 18)
+        p.setFillColor(HexColor('#7C3AED'))
         p.drawString(width - 250, y, f"TOTAL: R$ {total_final:.2f}")
-        y -= 20
-        if cashback > 0:
-            p.setFont("Helvetica", 12)
-            p.drawString(width - 250, y, f"Cashback: R$ {cashback:.2f}")
-            y -= 20
+        y -= 25
         
-        # Forma de pagamento
-        p.setFont("Helvetica", 10)
+        # FORMA DE PAGAMENTO
+        p.setFont("Helvetica", 11)
+        p.setFillColor(black)
         pagamento = orcamento.get('pagamento', {}).get('tipo', 'N/A')
         p.drawString(50, y, f"Forma de pagamento: {pagamento}")
-        y -= 30
         
-        # Rodapé
+        # RODAPÉ
         p.line(50, 80, width - 50, 80)
         p.setFont("Helvetica", 8)
         p.drawString(50, 65, f"Data de emissão: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
         p.drawString(50, 50, "BIOMA Uberaba - CNPJ: 49.470.937/0001-10")
         
-        # Assinatura (se aprovado)
+        # ASSINATURA (SE APROVADO)
         if orcamento.get('status') == 'Aprovado':
             p.setFont("Helvetica", 10)
-            p.drawString(50, 130, "_" * 40)
-            p.drawString(50, 115, "Assinatura do Cliente")
+            p.line(50, 135, 250, 135)
+            p.drawString(50, 120, "Assinatura do Cliente")
             
-            p.drawString(width - 250, 130, "_" * 40)
-            p.drawString(width - 250, 115, "BIOMA Uberaba")
+            p.line(width - 250, 135, width - 50, 135)
+            p.drawString(width - 250, 120, "BIOMA Uberaba")
         
         p.save()
-        
         buffer.seek(0)
-        logger.info(f"✅ PDF generated for budget #{orcamento.get('numero')}")
+        
+        logger.info(f"✅ PDF gerado: Contrato #{orcamento.get('numero')}")
         
         return send_file(
             buffer,
@@ -1755,7 +1830,7 @@ def gerar_pdf_orcamento(id):
         )
         
     except Exception as e:
-        logger.error(f"❌ PDF generation error: {e}")
+        logger.error(f"❌ Erro PDF: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # ===== AGENDAMENTOS =====
