@@ -700,13 +700,14 @@ def gerar_pdf_orcamento(id):
         for i, clausula in enumerate(clausulas):
             story.append(Paragraph(f"<b>{i+1}.</b> {clausula}", styles['Clause']))
             story.append(Spacer(1, 0.2*cm))
-
-        story.append(Spacer(1, 2*cm))
+        
+        story.append(PageBreak())
         story.append(Paragraph("ASSINATURAS", styles['MainTitle']))
+        story.append(Spacer(1, 2*cm))
 
         assinaturas_data = [
-            [Paragraph("________________________________<br/><b>CONTRATANTE</b><br/>" + orcamento.get('cliente_nome', 'N/A'), styles['Body']),
-             Paragraph("________________________________<br/><b>CONTRATADA</b><br/>BIOMA UBERABA", styles['Body'])]
+            [Paragraph("<br/><br/>_________________________________<br/><b>CONTRATANTE</b><br/>" + orcamento.get('cliente_nome', 'N/A'), styles['Body']),
+             Paragraph("<br/><br/>_________________________________<br/><b>CONTRATADA</b><br/>BIOMA UBERABA", styles['Body'])]
         ]
         assinaturas_table = Table(assinaturas_data, colWidths=['*', '*'])
         assinaturas_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
