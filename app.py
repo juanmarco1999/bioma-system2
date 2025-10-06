@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BIOMA UBERABA v3.4 FINAL - Sistema Ultra Profissional COMPLETO
+BIOMA UBERABA v3.7 COMPLETO - Sistema Ultra Profissional
 Desenvolvedor: Juan Marco (@juanmarco1999)
 Email: 180147064@aluno.unb.br
-Data: 2025-10-05
+Data: 2025-10-05 21:57:49 UTC
 """
 
 from flask import Flask, render_template, request, jsonify, session, send_file
@@ -26,30 +26,23 @@ import requests
 import logging
 import random
 
-# ReportLab para PDF
+# Importações para o gerador de PDF
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor, black
 from reportlab.lib.units import cm
 from reportlab.platypus import Table, TableStyle
 
-# OpenPyXL para Excel
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-# ===== LOGGING =====
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# ===== FLASK CONFIG =====
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'bioma-2025-v3-4-ultra-secure-key-final')
+app.secret_key = os.getenv('SECRET_KEY', 'bioma-2025-v3-7-ultra-secure-key-final-definitivo-completo')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -59,9 +52,7 @@ app.config['UPLOAD_FOLDER'] = '/tmp'
 
 CORS(app, supports_credentials=True)
 
-# ===== MONGODB CONNECTION =====
 def get_db():
-    """Conecta ao MongoDB"""
     try:
         username = urllib.parse.quote_plus(os.getenv('MONGO_USERNAME', ''))
         password = urllib.parse.quote_plus(os.getenv('MONGO_PASSWORD', ''))
@@ -72,23 +63,18 @@ def get_db():
             return None
         
         uri = f"mongodb+srv://{username}:{password}@{cluster}/bioma_db?retryWrites=true&w=majority&appName=Juan-Analytics-DBServer"
-        
         client = MongoClient(uri, serverSelectionTimeoutMS=5000)
         client.admin.command('ping')
-        
         db_instance = client.bioma_db
         logger.info("✅ MongoDB Connected")
         return db_instance
-        
     except Exception as e:
         logger.error(f"❌ MongoDB Failed: {e}")
         return None
 
 db = get_db()
 
-# ===== HELPERS =====
 def convert_objectid(obj):
-    """Convert ObjectId to string"""
     if isinstance(obj, list):
         return [convert_objectid(item) for item in obj]
     elif isinstance(obj, dict):
@@ -111,7 +97,6 @@ def convert_objectid(obj):
         return obj
 
 def login_required(f):
-    """Decorator autenticação"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
@@ -120,9 +105,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ===== EMAIL =====
 def send_email(to, name, subject, html_content, pdf=None):
-    """Envia email via MailerSend"""
     api_key = os.getenv('MAILERSEND_API_KEY')
     from_email = os.getenv('MAILERSEND_FROM_EMAIL')
     from_name = os.getenv('MAILERSEND_FROM_NAME', 'BIOMA Uberaba')
@@ -131,36 +114,15 @@ def send_email(to, name, subject, html_content, pdf=None):
         logger.warning("⚠️ MailerSend não configurado")
         return {'success': False, 'message': 'Email não configurado'}
     
-    data = {
-        "from": {
-            "email": from_email,
-            "name": from_name
-        },
-        "to": [{"email": to, "name": name}],
-        "subject": subject,
-        "html": html_content
-    }
+    data = {"from": {"email": from_email, "name": from_name}, "to": [{"email": to, "name": name}], "subject": subject, "html": html_content}
     
     if pdf:
         import base64
-        data['attachments'] = [{
-            "filename": pdf['filename'], 
-            "content": base64.b64encode(pdf['content']).decode(),
-            "disposition": "attachment"
-        }]
+        data['attachments'] = [{"filename": pdf['filename'], "content": base64.b64encode(pdf['content']).decode(), "disposition": "attachment"}]
     
     try:
         logger.info(f"📧 Enviando para: {to}")
-        r = requests.post(
-            "https://api.mailersend.com/v1/email",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            },
-            json=data,
-            timeout=10
-        )
-        
+        r = requests.post("https://api.mailersend.com/v1/email", headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}, json=data, timeout=10)
         if r.status_code == 202:
             logger.info(f"✅ Email enviado: {to}")
             return {'success': True}
@@ -171,190 +133,100 @@ def send_email(to, name, subject, html_content, pdf=None):
         logger.error(f"❌ Email exception: {e}")
         return {'success': False}
 
-# ===== ROUTES =====
 @app.route('/')
 def index():
-    """Página inicial"""
     return render_template('index.html')
 
 @app.route('/health')
 def health():
-    """Health check"""
     db_status = 'connected' if db is not None else 'disconnected'
-    
     if db is not None:
         try:
             db.command('ping')
         except:
             db_status = 'error'
-    
-    return jsonify({
-        'status': 'healthy',
-        'time': datetime.now().isoformat(),
-        'database': db_status,
-        'version': '3.4.0'
-    }), 200
+    return jsonify({'status': 'healthy', 'time': datetime.now().isoformat(), 'database': db_status, 'version': '3.7.0'}), 200
 
-# ===== AUTH =====
 @app.route('/api/login', methods=['POST'])
 def login():
-    """Login"""
     data = request.json
-    logger.info(f"🔐 Login: {data.get('username')}")
+    logger.info(f"🔐 Login attempt: {data.get('username')}")
     
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
-    user = db.users.find_one({
-        '$or': [
-            {'username': data['username']},
-            {'email': data['username']}
-        ]
-    })
-    
-    if user and check_password_hash(user['password'], data['password']):
+    try:
+        user = db.users.find_one({'$or': [{'username': data['username']}, {'email': data['username']}]})
         
-        if not user.get('verified', True):
-            logger.warning(f"⚠️ Unverified: {data.get('username')}")
+        if user and check_password_hash(user['password'], data['password']):
+            session.permanent = True
+            session['user_id'] = str(user['_id'])
+            session['username'] = user['username']
+            session['role'] = user.get('role', 'admin')
+            
+            logger.info(f"✅ Login SUCCESS: {user['username']} (role: {session['role']})")
+            
             return jsonify({
-                'success': False,
-                'message': 'Conta não verificada',
-                'verification_required': True,
-                'username': user['username']
+                'success': True,
+                'user': {
+                    'id': str(user['_id']),
+                    'name': user['name'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'role': user.get('role', 'admin'),
+                    'theme': user.get('theme', 'light')
+                }
             })
         
-        session.permanent = True
-        session['user_id'] = str(user['_id'])
-        session['username'] = user['username']
+        logger.warning(f"❌ Login FAILED: {data.get('username')}")
+        return jsonify({'success': False, 'message': 'Usuário ou senha inválidos'})
         
-        logger.info(f"✅ Login OK: {user['username']}")
-        
-        return jsonify({
-            'success': True,
-            'user': {
-                'id': str(user['_id']),
-                'name': user['name'],
-                'username': user['username'],
-                'email': user['email'],
-                'theme': user.get('theme', 'light')
-            }
-        })
-    
-    logger.warning(f"❌ Login failed: {data.get('username')}")
-    return jsonify({'success': False, 'message': 'Usuário ou senha inválidos'})
+    except Exception as e:
+        logger.error(f"❌ Login ERROR: {e}")
+        return jsonify({'success': False, 'message': 'Erro no servidor'}), 500
 
 @app.route('/api/register', methods=['POST'])
 def register():
-    """Registro com verificação"""
     data = request.json
-    logger.info(f"👤 Register: {data.get('username')}")
+    logger.info(f"👤 Register attempt: {data.get('username')}")
     
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
-    if db.users.find_one({'$or': [
-        {'username': data['username']},
-        {'email': data['email']}
-    ]}):
-        return jsonify({'success': False, 'message': 'Usuário ou email já existe'})
-    
-    verification_code = str(random.randint(100000, 999999))
-    
-    user_data = {
-        'name': data['name'],
-        'username': data['username'],
-        'email': data['email'],
-        'telefone': data.get('telefone', ''),
-        'password': generate_password_hash(data['password']),
-        'role': 'user',
-        'theme': 'light',
-        'verified': False,
-        'verification_code': verification_code,
-        'verification_code_expires': datetime.now() + timedelta(hours=24),
-        'created_at': datetime.now()
-    }
-    
     try:
+        if db.users.find_one({'$or': [{'username': data['username']}, {'email': data['email']}]}):
+            return jsonify({'success': False, 'message': 'Usuário ou email já existe'})
+        
+        user_data = {
+            'name': data['name'],
+            'username': data['username'],
+            'email': data['email'],
+            'telefone': data.get('telefone', ''),
+            'password': generate_password_hash(data['password']),
+            'role': 'admin',
+            'theme': 'light',
+            'created_at': datetime.now()
+        }
+        
         db.users.insert_one(user_data)
-        logger.info(f"✅ User created: {data['username']}")
+        logger.info(f"✅ User registered: {data['username']} with ADMIN role")
         
-        send_email(
-            data['email'],
-            data['name'],
-            '🔐 Código de Verificação BIOMA',
-            f"""
-            <div style="font-family: Arial; max-width: 600px; margin: 0 auto; padding: 40px; background: #f9fafb;">
-                <div style="background: white; padding: 40px; border-radius: 15px;">
-                    <h1 style="color: #7C3AED; text-align: center;">🌳 BIOMA UBERABA</h1>
-                    <h2 style="color: #1F2937;">Bem-vindo, {data['name']}!</h2>
-                    <p>Seu código de verificação é:</p>
-                    <div style="background: linear-gradient(135deg, #7C3AED, #EC4899); color: white; font-size: 3rem; font-weight: 900; padding: 30px; border-radius: 15px; text-align: center; letter-spacing: 10px;">
-                        {verification_code}
-                    </div>
-                    <p style="color: #9CA3AF; margin-top: 20px;">Este código expira em 24 horas.</p>
-                </div>
-            </div>
-            """
-        )
-        
-        return jsonify({
-            'success': True,
-            'message': 'Conta criada! Verifique seu email.',
-            'verification_required': True
-        })
+        return jsonify({'success': True, 'message': 'Conta criada com sucesso! Faça login.'})
         
     except Exception as e:
-        logger.error(f"❌ Register error: {e}")
+        logger.error(f"❌ Register ERROR: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/verify', methods=['POST'])
-def verify():
-    """Verifica código"""
-    data = request.json
-    username = data.get('username')
-    code = data.get('code')
-    
-    if db is None:
-        return jsonify({'success': False}), 500
-    
-    user = db.users.find_one({'username': username})
-    
-    if not user:
-        return jsonify({'success': False, 'message': 'Usuário não encontrado'})
-    
-    if user.get('verified'):
-        return jsonify({'success': False, 'message': 'Já verificado'})
-    
-    if 'verification_code_expires' in user:
-        if datetime.now() > user['verification_code_expires']:
-            return jsonify({'success': False, 'message': 'Código expirado'})
-    
-    if user.get('verification_code') == code:
-        db.users.update_one(
-            {'username': username},
-            {
-                '$set': {'verified': True},
-                '$unset': {'verification_code': '', 'verification_code_expires': ''}
-            }
-        )
-        logger.info(f"✅ Verified: {username}")
-        return jsonify({'success': True, 'message': 'Conta ativada!'})
-    
-    return jsonify({'success': False, 'message': 'Código inválido'})
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
-    """Logout"""
+    username = session.get('username', 'Unknown')
     session.clear()
+    logger.info(f"🚪 Logout: {username}")
     return jsonify({'success': True})
 
 @app.route('/api/current-user')
 def current_user():
-    """Usuário logado"""
-    if 'user_id' in session:
-        if db is None:
-            return jsonify({'success': False})
-        
+    if 'user_id' in session and db is not None:
         try:
             user = db.users.find_one({'_id': ObjectId(session['user_id'])})
             if user:
@@ -365,36 +237,30 @@ def current_user():
                         'name': user['name'],
                         'username': user['username'],
                         'email': user['email'],
+                        'role': user.get('role', 'admin'),
                         'theme': user.get('theme', 'light')
                     }
                 })
-        except:
-            pass
-    
+        except Exception as e:
+            logger.error(f"❌ Current user error: {e}")
     return jsonify({'success': False})
 
 @app.route('/api/update-theme', methods=['POST'])
 @login_required
 def update_theme():
-    """Atualiza tema"""
     if db is None:
         return jsonify({'success': False}), 500
-    
-    theme = request.json['theme']
-    db.users.update_one(
-        {'_id': ObjectId(session['user_id'])},
-        {'$set': {'theme': theme}}
-    )
-    return jsonify({'success': True})
+    try:
+        db.users.update_one({'_id': ObjectId(session['user_id'])}, {'$set': {'theme': request.json['theme']}})
+        return jsonify({'success': True})
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== SYSTEM =====
 @app.route('/api/system/status')
 @login_required
 def system_status():
-    """Status"""
     mongo_ok = False
     mongo_msg = 'Desconectado'
-    
     try:
         if db is not None:
             db.command('ping')
@@ -403,32 +269,18 @@ def system_status():
     except Exception as e:
         mongo_msg = f'Erro: {str(e)[:100]}'
     
-    mailersend_ok = bool(os.getenv('MAILERSEND_API_KEY'))
-    
     return jsonify({
         'success': True,
         'status': {
-            'mongodb': {
-                'operational': mongo_ok,
-                'message': mongo_msg,
-                'last_check': datetime.now().isoformat()
-            },
-            'mailersend': {
-                'operational': mailersend_ok,
-                'message': 'Configurado' if mailersend_ok else 'Não configurado'
-            },
-            'server': {
-                'time': datetime.now().isoformat(),
-                'version': '3.4.0'
-            }
+            'mongodb': {'operational': mongo_ok, 'message': mongo_msg, 'last_check': datetime.now().isoformat()},
+            'mailersend': {'operational': bool(os.getenv('MAILERSEND_API_KEY')), 'message': 'Configurado' if bool(os.getenv('MAILERSEND_API_KEY')) else 'Não configurado'},
+            'server': {'time': datetime.now().isoformat(), 'version': '3.7.0'}
         }
     })
 
-# ===== DASHBOARD =====
 @app.route('/api/dashboard/stats')
 @login_required
 def dashboard_stats():
-    """Stats"""
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -438,124 +290,79 @@ def dashboard_stats():
         
         agendamentos_hoje = 0
         if 'agendamentos' in db.list_collection_names():
-            agendamentos_hoje = db.agendamentos.count_documents({
-                'data': {'$gte': hoje_inicio, '$lte': hoje_fim}
-            })
+            agendamentos_hoje = db.agendamentos.count_documents({'data': {'$gte': hoje_inicio, '$lte': hoje_fim}})
         
         stats = {
             'total_orcamentos': db.orcamentos.count_documents({}),
             'total_clientes': db.clientes.count_documents({}),
             'total_servicos': db.servicos.count_documents({}),
-            'faturamento': sum(
-                o.get('total_final', 0) 
-                for o in db.orcamentos.find({'status': 'Aprovado'})
-            ),
+            'faturamento': sum(o.get('total_final', 0) for o in db.orcamentos.find({'status': 'Aprovado'})),
             'agendamentos_hoje': agendamentos_hoje
         }
-        
         return jsonify({'success': True, 'stats': stats})
-        
     except Exception as e:
+        logger.error(f"❌ Dashboard stats error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# ===== CLIENTES =====
 @app.route('/api/clientes', methods=['GET', 'POST'])
 @login_required
 def clientes():
-    """CRUD clientes"""
     if db is None:
         return jsonify({'success': False}), 500
     
     if request.method == 'GET':
         try:
             clientes_list = list(db.clientes.find({}).sort('nome', ASCENDING))
-            
             for cliente in clientes_list:
                 cliente_cpf = cliente.get('cpf')
-                
-                cliente['total_gasto'] = sum(
-                    o.get('total_final', 0)
-                    for o in db.orcamentos.find({
-                        'cliente_cpf': cliente_cpf,
-                        'status': 'Aprovado'
-                    })
-                )
-                
-                ultimo_orc = db.orcamentos.find_one(
-                    {'cliente_cpf': cliente_cpf},
-                    sort=[('created_at', DESCENDING)]
-                )
+                cliente['total_gasto'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
+                ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
                 cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
                 cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
-            
-            result = convert_objectid(clientes_list)
-            return jsonify({'success': True, 'clientes': result})
-            
+            return jsonify({'success': True, 'clientes': convert_objectid(clientes_list)})
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
     
-    # POST
     data = request.json
     try:
         existing = db.clientes.find_one({'cpf': data['cpf']})
-        
-        cliente_data = {
-            'nome': data['nome'],
-            'cpf': data['cpf'],
-            'email': data.get('email', ''),
-            'telefone': data.get('telefone', ''),
-            'updated_at': datetime.now()
-        }
-        
+        cliente_data = {'nome': data['nome'], 'cpf': data['cpf'], 'email': data.get('email', ''), 'telefone': data.get('telefone', ''), 'updated_at': datetime.now()}
         if existing:
             db.clientes.update_one({'cpf': data['cpf']}, {'$set': cliente_data})
         else:
             cliente_data['created_at'] = datetime.now()
             db.clientes.insert_one(cliente_data)
-        
         return jsonify({'success': True})
-        
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/clientes/<id>', methods=['DELETE'])
 @login_required
 def delete_cliente(id):
-    """Deleta cliente"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         result = db.clientes.delete_one({'_id': ObjectId(id)})
-        if result.deleted_count > 0:
-            return jsonify({'success': True})
-        return jsonify({'success': False})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': result.deleted_count > 0})
+    except:
+        return jsonify({'success': False}), 500
 
 @app.route('/api/clientes/buscar')
 @login_required
 def buscar_clientes():
-    """Busca clientes"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     termo = request.args.get('termo', '')
     try:
         regex = {'$regex': termo, '$options': 'i'}
-        clientes = list(db.clientes.find({
-            '$or': [{'nome': regex}, {'cpf': regex}]
-        }).limit(10))
-        
+        clientes = list(db.clientes.find({'$or': [{'nome': regex}, {'cpf': regex}]}).limit(10))
         return jsonify({'success': True, 'clientes': convert_objectid(clientes)})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== PROFISSIONAIS =====
 @app.route('/api/profissionais', methods=['GET', 'POST'])
 @login_required
 def profissionais():
-    """CRUD profissionais"""
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -563,44 +370,30 @@ def profissionais():
         try:
             profs = list(db.profissionais.find({}).sort('nome', ASCENDING))
             return jsonify({'success': True, 'profissionais': convert_objectid(profs)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
+        except:
+            return jsonify({'success': False}), 500
     
-    # POST
     data = request.json
     try:
-        db.profissionais.insert_one({
-            'nome': data['nome'],
-            'cpf': data['cpf'],
-            'email': data.get('email', ''),
-            'telefone': data.get('telefone', ''),
-            'especialidade': data.get('especialidade', ''),
-            'comissao_perc': float(data.get('comissao_perc', 0)),
-            'ativo': True,
-            'created_at': datetime.now()
-        })
+        db.profissionais.insert_one({'nome': data['nome'], 'cpf': data['cpf'], 'email': data.get('email', ''), 'telefone': data.get('telefone', ''), 'especialidade': data.get('especialidade', ''), 'comissao_perc': float(data.get('comissao_perc', 0)), 'ativo': True, 'created_at': datetime.now()})
         return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
 @app.route('/api/profissionais/<id>', methods=['DELETE'])
 @login_required
 def delete_profissional(id):
-    """Deleta profissional"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         result = db.profissionais.delete_one({'_id': ObjectId(id)})
         return jsonify({'success': result.deleted_count > 0})
-    except Exception as e:
+    except:
         return jsonify({'success': False}), 500
 
-# ===== SERVIÇOS =====
 @app.route('/api/servicos', methods=['GET', 'POST'])
 @login_required
 def servicos():
-    """CRUD serviços"""
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -608,73 +401,48 @@ def servicos():
         try:
             servs = list(db.servicos.find({}).sort('nome', ASCENDING))
             return jsonify({'success': True, 'servicos': convert_objectid(servs)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
+        except:
+            return jsonify({'success': False}), 500
     
-    # POST
     data = request.json
     try:
-        tamanhos = {
-            'Kids': data.get('preco_kids', 0),
-            'Masculino': data.get('preco_masculino', 0),
-            'Curto': data.get('preco_curto', 0),
-            'Médio': data.get('preco_medio', 0),
-            'Longo': data.get('preco_longo', 0),
-            'Extra Longo': data.get('preco_extra_longo', 0)
-        }
-        
+        tamanhos = {'Kids': data.get('preco_kids', 0), 'Masculino': data.get('preco_masculino', 0), 'Curto': data.get('preco_curto', 0), 'Médio': data.get('preco_medio', 0), 'Longo': data.get('preco_longo', 0), 'Extra Longo': data.get('preco_extra_longo', 0)}
         count = 0
         for tam, preco in tamanhos.items():
             preco_float = float(preco) if preco else 0
             if preco_float > 0:
-                db.servicos.insert_one({
-                    'nome': data['nome'],
-                    'sku': f"{data['nome'].upper().replace(' ', '-')}-{tam.upper().replace(' ', '-')}",
-                    'tamanho': tam,
-                    'preco': preco_float,
-                    'categoria': data.get('categoria', 'Serviço'),
-                    'duracao': int(data.get('duracao', 60)),
-                    'ativo': True,
-                    'created_at': datetime.now()
-                })
+                db.servicos.insert_one({'nome': data['nome'], 'sku': f"{data['nome'].upper().replace(' ', '-')}-{tam.upper().replace(' ', '-')}", 'tamanho': tam, 'preco': preco_float, 'categoria': data.get('categoria', 'Serviço'), 'duracao': int(data.get('duracao', 60)), 'ativo': True, 'created_at': datetime.now()})
                 count += 1
-        
         return jsonify({'success': True, 'count': count})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
 @app.route('/api/servicos/<id>', methods=['DELETE'])
 @login_required
 def delete_servico(id):
-    """Deleta serviço"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         result = db.servicos.delete_one({'_id': ObjectId(id)})
         return jsonify({'success': result.deleted_count > 0})
-    except Exception as e:
+    except:
         return jsonify({'success': False}), 500
 
 @app.route('/api/servicos/buscar')
 @login_required
 def buscar_servicos():
-    """Busca serviços"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     termo = request.args.get('termo', '')
     try:
         servicos = list(db.servicos.find({'nome': {'$regex': termo, '$options': 'i'}}).limit(20))
         return jsonify({'success': True, 'servicos': convert_objectid(servicos)})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== PRODUTOS =====
 @app.route('/api/produtos', methods=['GET', 'POST'])
 @login_required
 def produtos():
-    """CRUD produtos"""
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -682,71 +450,44 @@ def produtos():
         try:
             prods = list(db.produtos.find({}).sort('nome', ASCENDING))
             return jsonify({'success': True, 'produtos': convert_objectid(prods)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
+        except:
+            return jsonify({'success': False}), 500
     
-    # POST
     data = request.json
     try:
-        produto_id = db.produtos.insert_one({
-            'nome': data['nome'],
-            'marca': data.get('marca', ''),
-            'sku': data.get('sku', f"PROD-{datetime.now().timestamp()}"),
-            'preco': float(data.get('preco', 0)),
-            'custo': float(data.get('custo', 0)),
-            'estoque': int(data.get('estoque', 0)),
-            'estoque_minimo': int(data.get('estoque_minimo', 5)),
-            'categoria': data.get('categoria', 'Produto'),
-            'ativo': True,
-            'created_at': datetime.now()
-        }).inserted_id
-        
+        produto_id = db.produtos.insert_one({'nome': data['nome'], 'marca': data.get('marca', ''), 'sku': data.get('sku', f"PROD-{datetime.now().timestamp()}"), 'preco': float(data.get('preco', 0)), 'custo': float(data.get('custo', 0)), 'estoque': int(data.get('estoque', 0)), 'estoque_minimo': int(data.get('estoque_minimo', 5)), 'categoria': data.get('categoria', 'Produto'), 'ativo': True, 'created_at': datetime.now()}).inserted_id
         if int(data.get('estoque', 0)) > 0:
-            db.estoque_movimentacoes.insert_one({
-                'produto_id': produto_id,
-                'tipo': 'entrada',
-                'quantidade': int(data.get('estoque', 0)),
-                'motivo': 'Cadastro inicial',
-                'usuario': session.get('username', 'system'),
-                'data': datetime.now()
-            })
-        
+            db.estoque_movimentacoes.insert_one({'produto_id': produto_id, 'tipo': 'entrada', 'quantidade': int(data.get('estoque', 0)), 'motivo': 'Cadastro inicial', 'usuario': session.get('username', 'system'), 'data': datetime.now()})
         return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
 @app.route('/api/produtos/<id>', methods=['DELETE'])
 @login_required
 def delete_produto(id):
-    """Deleta produto"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         result = db.produtos.delete_one({'_id': ObjectId(id)})
         return jsonify({'success': result.deleted_count > 0})
-    except Exception as e:
+    except:
         return jsonify({'success': False}), 500
 
 @app.route('/api/produtos/buscar')
 @login_required
 def buscar_produtos():
-    """Busca produtos"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     termo = request.args.get('termo', '')
     try:
         produtos = list(db.produtos.find({'nome': {'$regex': termo, '$options': 'i'}}).limit(20))
         return jsonify({'success': True, 'produtos': convert_objectid(produtos)})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== ORÇAMENTOS =====
 @app.route('/api/orcamentos', methods=['GET', 'POST'])
 @login_required
 def orcamentos():
-    """CRUD orçamentos"""
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -754,106 +495,37 @@ def orcamentos():
         try:
             orcs = list(db.orcamentos.find({}).sort('created_at', DESCENDING))
             return jsonify({'success': True, 'orcamentos': convert_objectid(orcs)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
+        except:
+            return jsonify({'success': False}), 500
     
-    # POST
     data = request.json
     try:
-        # Salvar cliente
-        db.clientes.update_one(
-            {'cpf': data['cliente_cpf']},
-            {'$set': {
-                'cpf': data['cliente_cpf'],
-                'nome': data['cliente_nome'],
-                'email': data.get('cliente_email', ''),
-                'telefone': data.get('cliente_telefone', ''),
-                'updated_at': datetime.now()
-            }},
-            upsert=True
-        )
+        db.clientes.update_one({'cpf': data['cliente_cpf']}, {'$set': {'cpf': data['cliente_cpf'], 'nome': data['cliente_nome'], 'email': data.get('cliente_email', ''), 'telefone': data.get('cliente_telefone', ''), 'updated_at': datetime.now()}}, upsert=True)
         
-        # Calcular totais
-        subtotal = sum(s['total'] for s in data.get('servicos', [])) + \
-                   sum(p['total'] for p in data.get('produtos', []))
-        
+        subtotal = sum(s['total'] for s in data.get('servicos', [])) + sum(p['total'] for p in data.get('produtos', []))
         desconto_global = float(data.get('desconto_global', 0))
         desconto_valor = subtotal * (desconto_global / 100)
         total_com_desconto = subtotal - desconto_valor
-        
         cashback_perc = float(data.get('cashback_perc', 0))
         cashback_valor = total_com_desconto * (cashback_perc / 100)
         
-        # Número sequencial
         ultimo = db.orcamentos.find_one(sort=[('numero', DESCENDING)])
         numero = (ultimo['numero'] + 1) if ultimo and 'numero' in ultimo else 1
         
-        # Salvar
-        orc_id = db.orcamentos.insert_one({
-            'numero': numero,
-            'cliente_cpf': data['cliente_cpf'],
-            'cliente_nome': data['cliente_nome'],
-            'cliente_email': data.get('cliente_email', ''),
-            'cliente_telefone': data.get('cliente_telefone', ''),
-            'servicos': data.get('servicos', []),
-            'produtos': data.get('produtos', []),
-            'subtotal': subtotal,
-            'desconto_global': desconto_global,
-            'desconto_valor': desconto_valor,
-            'total_com_desconto': total_com_desconto,
-            'cashback_perc': cashback_perc,
-            'cashback_valor': cashback_valor,
-            'total_final': total_com_desconto,
-            'pagamento': data.get('pagamento', {}),
-            'status': data.get('status', 'Pendente'),
-            'created_at': datetime.now(),
-            'user_id': session['user_id']
-        }).inserted_id
+        orc_id = db.orcamentos.insert_one({'numero': numero, 'cliente_cpf': data['cliente_cpf'], 'cliente_nome': data['cliente_nome'], 'cliente_email': data.get('cliente_email', ''), 'cliente_telefone': data.get('cliente_telefone', ''), 'servicos': data.get('servicos', []), 'produtos': data.get('produtos', []), 'subtotal': subtotal, 'desconto_global': desconto_global, 'desconto_valor': desconto_valor, 'total_com_desconto': total_com_desconto, 'cashback_perc': cashback_perc, 'cashback_valor': cashback_valor, 'total_final': total_com_desconto, 'pagamento': data.get('pagamento', {}), 'status': data.get('status', 'Pendente'), 'created_at': datetime.now(), 'user_id': session['user_id']}).inserted_id
         
-        # Atualizar estoque
         for produto in data.get('produtos', []):
             if 'id' in produto:
                 prod = db.produtos.find_one({'_id': ObjectId(produto['id'])})
                 if prod:
                     novo_estoque = prod.get('estoque', 0) - produto.get('qtd', 1)
-                    db.produtos.update_one(
-                        {'_id': ObjectId(produto['id'])},
-                        {'$set': {'estoque': novo_estoque}}
-                    )
-                    
-                    db.estoque_movimentacoes.insert_one({
-                        'produto_id': ObjectId(produto['id']),
-                        'tipo': 'saida',
-                        'quantidade': produto.get('qtd', 1),
-                        'motivo': f"Orçamento #{numero}",
-                        'usuario': session.get('username'),
-                        'data': datetime.now()
-                    })
+                    db.produtos.update_one({'_id': ObjectId(produto['id'])}, {'$set': {'estoque': novo_estoque}})
+                    db.estoque_movimentacoes.insert_one({'produto_id': ObjectId(produto['id']), 'tipo': 'saida', 'quantidade': produto.get('qtd', 1), 'motivo': f"Orçamento #{numero}", 'usuario': session.get('username'), 'data': datetime.now()})
         
-        # Email se aprovado
         if data.get('status') == 'Aprovado' and data.get('cliente_email'):
-            send_email(
-                data['cliente_email'],
-                data['cliente_nome'],
-                f'✅ Contrato BIOMA #{numero}',
-                f"""
-                <div style="font-family: Arial; padding: 40px; background: #f9fafb;">
-                    <div style="background: white; padding: 40px; border-radius: 15px;">
-                        <h1 style="color: #10B981;">✅ Contrato Aprovado!</h1>
-                        <h2>Olá {data['cliente_nome']},</h2>
-                        <p>Contrato <strong>#{numero}</strong> aprovado!</p>
-                        <h3 style="color: #7C3AED;">Total: R$ {total_com_desconto:.2f}</h3>
-                        <p>Cashback: R$ {cashback_valor:.2f}</p>
-                        <p>Pagamento: {data.get('pagamento', {}).get('tipo', 'N/A')}</p>
-                        <p style="margin-top: 30px;">Obrigado!</p>
-                        <p><strong>BIOMA Uberaba</strong></p>
-                    </div>
-                </div>
-                """
-            )
+            send_email(data['cliente_email'], data['cliente_nome'], f'✅ Contrato BIOMA #{numero}', f'<div style="font-family: Arial; padding: 40px; background: #f9fafb;"><div style="background: white; padding: 40px; border-radius: 15px;"><h1 style="color: #10B981;">✅ Contrato Aprovado!</h1><h2>Olá {data["cliente_nome"]},</h2><p>Contrato <strong>#{numero}</strong> aprovado!</p><h3 style="color: #7C3AED;">Total: R$ {total_com_desconto:.2f}</h3><p>Cashback: R$ {cashback_valor:.2f}</p><p>Pagamento: {data.get("pagamento", {}).get("tipo", "N/A")}</p><p style="margin-top: 30px;">Obrigado!</p><p><strong>BIOMA Uberaba</strong></p></div></div>')
         
         return jsonify({'success': True, 'numero': numero, 'id': str(orc_id)})
-        
     except Exception as e:
         logger.error(f"❌ Orçamento error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -861,534 +533,489 @@ def orcamentos():
 @app.route('/api/orcamentos/<id>', methods=['DELETE'])
 @login_required
 def delete_orcamento(id):
-    """Deleta orçamento"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         result = db.orcamentos.delete_one({'_id': ObjectId(id)})
         return jsonify({'success': result.deleted_count > 0})
-    except Exception as e:
+    except:
         return jsonify({'success': False}), 500
 
-# ===== PDF CONTRATO - MODELO EXATO =====
-app.route('/api/orcamento/<id>/pdf')
+# --- INÍCIO DA SEÇÃO MODIFICADA ---
+@app.route('/api/orcamento/<id>/pdf')
 @login_required
 def gerar_pdf_orcamento(id):
-    """PDF EXATAMENTE conforme modelo BIOMA"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         orcamento = db.orcamentos.find_one({'_id': ObjectId(id)})
         if not orcamento:
-            return jsonify({'success': False}), 404
-        
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+            
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
-        
-        # HEADER EXATO DO MODELO
-        p.setFillColor(HexColor('#7C3AED'))
-        p.setFont("Helvetica-Bold", 24)
-        p.drawString(50, height - 50, "BIOMA")
-        
-        p.setFillColor(black)
-        p.setFont("Helvetica", 9)
-        p.drawString(50, height - 70, "Pelo presente instrumento e da melhor forma de direito, as partes abaixo qualificadas:")
-        
-        # CONTRATO DE PRESTAÇÃO
-        p.setFont("Helvetica-Bold", 14)
-        p.drawCentredString(width/2, height - 100, "CONTRATO DE PRESTAÇÃO DE SERVIÇOS")
-        
-        # LINHA
-        p.line(50, height - 110, width - 50, height - 110)
-        
-        y = height - 140
-        
-        # PARTES
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(50, y, "PARTES")
-        y -= 20
-        
-        # CONTRATANTE
-        p.setFont("Helvetica-Bold", 9)
-        p.drawString(50, y, "CONTRATANTE")
-        y -= 15
-        
-        p.setFont("Helvetica", 8)
-        cliente = orcamento.get('cliente_nome', 'N/A')
-        cpf = orcamento.get('cliente_cpf', 'N/A')
-        email = orcamento.get('cliente_email', 'N/A')
-        tel = orcamento.get('cliente_telefone', 'N/A')
-        
-        p.drawString(50, y, f"Nome: {cliente}")
-        p.drawString(350, y, f"CPF: {cpf}")
-        y -= 12
-        p.drawString(50, y, f"Endereço: ")
-        y -= 12
-        p.drawString(50, y, f"Bairro: Santa Maria")
-        p.drawString(350, y, f"Cidade/Estado: UBERABA - MG")
-        y -= 12
-        p.drawString(50, y, f"Celular: {tel}")
-        p.drawString(350, y, f"E-mail: {email}")
-        y -= 25
-        
-        # CONTRATADA
-        p.setFont("Helvetica-Bold", 9)
-        p.drawString(50, y, "CONTRATADA")
-        y -= 15
-        
-        p.setFont("Helvetica", 8)
-        p.drawString(50, y, "Raz. Soc.: BIOMA UBERABA")
-        y -= 12
-        p.drawString(50, y, "CNPJ: 49.470.937/0001-10")
-        y -= 12
-        p.drawString(50, y, "Cidade: UBERABA")
-        p.drawString(350, y, "Estado: MINAS GERAIS")
-        y -= 12
-        p.drawString(50, y, "Endereço: Av. Santos Dumont 3110 - Santa Maria - CEP 38050-400")
-        y -= 12
-        p.drawString(50, y, "Tel: 34 99235-5890")
-        p.drawString(350, y, "E-mail: biomauberaba@gmail.com")
-        y -= 25
-        
-        # ALERGIAS (se houver espaço)
-        if y > 450:
-            p.setFont("Helvetica-Bold", 9)
-            p.drawString(50, y, "ALERGIAS E CONDIÇÕES ESPECIAIS DE SAÚDE")
-            y -= 15
+
+        # --- FUNÇÃO HELPER PARA O RODAPÉ ---
+        def draw_footer(page_num):
+            p.saveState()
             p.setFont("Helvetica", 8)
-            p.drawString(50, y, "SUBSTÂNCIAS ALÉRGICAS:")
-            p.drawString(350, y, "NÃO")
-            y -= 12
-            p.drawString(50, y, "CONDIÇÕES ESPECIAIS DE SAÚDE:")
-            p.drawString(350, y, "NÃO")
-            y -= 25
+            p.drawString(width - 4*cm, 1.5*cm, f"Pág. {page_num}/3")
+            p.drawString(2*cm, 1.5*cm, "Visto Cliente")
+            p.line(2*cm, 1.4*cm, 5*cm, 1.4*cm)
+            p.restoreState()
+
+        # --- PÁGINA 1 ---
+        # Cabeçalho
+        p.setFont("Helvetica-Bold", 24)
+        p.drawString(2*cm, height - 2*cm, "BIOMA")
         
-        # TABELA DE SERVIÇOS
-        if y < 400:
-            p.showPage()
-            y = height - 50
+        p.setFont("Helvetica", 9)
+        p.drawString(2*cm, height - 3.5*cm, "Pelo presente Instrumento Particular e na melhor forma de direito, as partes abaixo qualificadas:")
         
+        p.setFont("Helvetica-Bold", 14)
+        p.drawCentredString(width/2, height - 4.5*cm, "CONTRATO DE PRESTAÇÃO DE SERVIÇOS")
+        p.line(2*cm, height - 4.7*cm, width - 2*cm, height - 4.7*cm)
+
+        # Partes
+        y = height - 5.5*cm
         p.setFont("Helvetica-Bold", 10)
-        p.drawString(50, y, "SERVIÇOS")
-        y -= 20
+        p.drawString(2*cm, y, "PARTES")
+        y -= 0.8*cm
         
-        # Header tabela
-        data_table = [['Qtde.', 'SERVIÇOS', 'Desc.', 'Total s/', 'Total c/']]
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "CONTRATANTE")
+        y -= 0.6*cm
+        p.setFont("Helvetica", 8)
+        p.drawString(2*cm, y, f"Nome: {orcamento.get('cliente_nome', '')}")
+        p.drawString(10*cm, y, "RG:")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, f"CPF: {orcamento.get('cliente_cpf', '')}")
+        p.drawString(10*cm, y, "CEP:")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "Endereço:")
+        p.drawString(10*cm, y, "Bairro:")
+        y -= 0.5*cm
+        p.drawString(10*cm, y, "Cidade/Estado")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, f"Celular: {orcamento.get('cliente_telefone', '')}")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, f"E-mail: {orcamento.get('cliente_email', '')}")
         
-        # Serviços
+        y -= 1*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "CONTRATADA")
+        y -= 0.6*cm
+        p.setFont("Helvetica", 8)
+        p.drawString(2*cm, y, "Raz. Soc:")
+        p.drawString(4*cm, y, "BIOMA UBERABA")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "CNPJ:")
+        p.drawString(4*cm, y, "49.470.937/0001-10")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "END.:")
+        p.drawString(4*cm, y, "Av. Santos Dumont 3110 - Santa Maria - CEP 38050-400")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "Cidade")
+        p.drawString(4*cm, y, "UBERABA")
+        p.drawString(10*cm, y, "Estado")
+        p.drawString(12*cm, y, "MINAS GERAIS")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "Tel.:")
+        p.drawString(4*cm, y, "34 99235-5890")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "E-mail:")
+        p.drawString(4*cm, y, "biomauberaba@gmail.com")
+
+        # Alergias
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "ALERGIAS E CONDIÇÕES ESPECIAIS DE SAÚDE")
+        y -= 0.6*cm
+        p.setFont("Helvetica", 8)
+        p.drawString(2*cm, y, "SUBSTÂNCIAS ALÉRGENAS:")
+        p.drawString(12*cm, y, "SIM")
+        p.drawString(12.5*cm, y, "☐")
+        p.drawString(13.5*cm, y, "NÃO")
+        p.drawString(14.2*cm, y, "☑")
+        y -= 0.5*cm
+        p.drawString(2*cm, y, "CONDIÇÕES ESPECIAIS DE SAÚDE:")
+        p.drawString(12*cm, y, "SIM")
+        p.drawString(12.5*cm, y, "☐")
+        p.drawString(13.5*cm, y, "NÃO")
+        p.drawString(14.2*cm, y, "☑")
+
+        # Tabela de Serviços
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(2*cm, y, "SERVIÇOS CONTRATADOS")
+        y -= 0.2*cm
+
+        table_data = [['Qtde.', 'SERVIÇOS', 'Desc.', 'Total s/ Desc.', 'Total c/ Desc.']]
+        
+        total_sem_desconto_geral = 0
         for s in orcamento.get('servicos', []):
-            nome = f"{s.get('nome', '')} {s.get('tamanho', '')}"
-            qtd = s.get('qtd', 1)
-            desc = f"{s.get('desconto', 0)}%"
-            preco_unit = s.get('preco_unit', 0)
-            total = s.get('total', 0)
-            total_sem_desc = qtd * preco_unit
-            
-            data_table.append([
-                str(qtd),
-                nome,
-                desc,
-                f"R$ {total_sem_desc:.2f}",
-                f"R$ {total:.2f}"
+            preco_sem_desc = s.get('qtd', 1) * s.get('preco_unit', 0)
+            total_sem_desconto_geral += preco_sem_desc
+            table_data.append([
+                str(s.get('qtd', 1)),
+                f"{s.get('nome', '')} {s.get('tamanho', '')}".strip(),
+                f"{s.get('desconto', 0)}%",
+                f"R$ {preco_sem_desc:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                f"R$ {s.get('total', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             ])
-        
-        # Produtos
-        for prod in orcamento.get('produtos', []):
-            nome = f"{prod.get('nome', '')} - {prod.get('marca', '')}"
-            qtd = prod.get('qtd', 1)
-            desc = f"{prod.get('desconto', 0)}%"
-            preco_unit = prod.get('preco_unit', 0)
-            total = prod.get('total', 0)
-            total_sem_desc = qtd * preco_unit
-            
-            data_table.append([
-                str(qtd),
-                nome,
-                desc,
-                f"R$ {total_sem_desc:.2f}",
-                f"R$ {total:.2f}"
+        for p_item in orcamento.get('produtos', []):
+            preco_sem_desc = p_item.get('qtd', 1) * p_item.get('preco_unit', 0)
+            total_sem_desconto_geral += preco_sem_desc
+            table_data.append([
+                str(p_item.get('qtd', 1)),
+                f"{p_item.get('nome', '')} {p_item.get('marca', '')}".strip(),
+                f"{p_item.get('desconto', 0)}%",
+                f"R$ {preco_sem_desc:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                f"R$ {p_item.get('total', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             ])
-        
-        table = Table(data_table, colWidths=[40, 280, 50, 80, 80])
+
+        table = Table(table_data, colWidths=[2*cm, 7*cm, 2*cm, 3*cm, 3*cm])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), HexColor('#FFFFFF')),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#000000')),
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#E0E0E0')),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0,0), (-1,0), 9),
+            ('INNERGRID', (0,0), (-1,-1), 0.25, black),
+            ('BOX', (0,0), (-1,-1), 0.25, black),
         ]))
         
+        table_height = len(table_data) * 0.7*cm
         table.wrapOn(p, width, height)
-        table_height = len(data_table) * 18
-        table.drawOn(p, 50, y - table_height - 20)
+        table.drawOn(p, 2*cm, y - table_height)
         
-        y -= table_height + 40
+        draw_footer(1)
+        p.showPage()
+
+        # --- PÁGINA 2 ---
+        y = height - 2*cm
         
-        # TOTAIS
-        subtotal = sum(s.get('total', 0) for s in orcamento.get('servicos', [])) + \
-                   sum(p.get('total', 0) for p in orcamento.get('produtos', []))
-        
-        desconto_global = orcamento.get('desconto_global', 0)
-        desconto_valor = orcamento.get('desconto_valor', 0)
-        total_final = orcamento.get('total_final', 0)
-        
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(350, y, "TOTAL BRUTO")
-        p.drawString(480, y, f"R$ {subtotal:.2f}")
-        y -= 15
-        
-        if desconto_global > 0:
-            p.drawString(350, y, f"Desconto ({desconto_global}%)")
-            p.drawString(480, y, f"R$ {desconto_valor:.2f}")
-            y -= 15
-        
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(350, y, "TOTAL")
-        p.drawString(480, y, f"R$ {total_final:.2f}")
-        y -= 25
-        
-        # UTILIZAÇÃO
-        p.setFont("Helvetica", 8)
-        p.drawCentredString(width/2, y, "UTILIZAÇÃO")
-        y -= 12
-        p.drawCentredString(width/2, y, "03 mês(es) contados a partir da vigência deste Contrato.")
-        y -= 25
-        
-        # PAGAMENTO
+        # Totais
         p.setFont("Helvetica-Bold", 9)
-        p.drawString(50, y, "VALOR E FORMA DE PAGAMENTO")
-        y -= 15
-        
+        p.drawString(2*cm, y, "TOTAL BRUTO")
+        p.drawString(12*cm, y, "Desconto Total")
+        y -= 0.6*cm
+        p.setFont("Helvetica", 10)
+        p.drawString(2*cm, y, f"R$ {total_sem_desconto_geral:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        p.drawString(12*cm, y, f"{orcamento.get('desconto_global', 0)}%")
+        y -= 0.8*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "TOTAL")
+        y -= 0.6*cm
+        p.setFont("Helvetica", 10)
+        p.drawString(2*cm, y, f"R$ {orcamento.get('total_final', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+        # Utilização
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "UTILIZAÇÃO")
+        p.line(2*cm, y - 0.2*cm, 5*cm, y - 0.2*cm)
+        y -= 0.6*cm
+        p.setFont("Helvetica-Bold", 8)
+        p.drawString(2*cm, y, "PRAZO PARA UTILIZAÇÃO")
+        y -= 0.5*cm
         p.setFont("Helvetica", 8)
-        p.drawString(50, y, f"VALOR TOTAL: R$ {total_final:.2f}")
-        y -= 12
+        p.drawString(2*cm, y, "18 meses contados da assinatura deste Contrato.")
+
+        # Pagamento
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "VALOR E FORMA DE PAGAMENTO")
+        p.line(2*cm, y - 0.2*cm, 8.5*cm, y - 0.2*cm)
+        y -= 0.6*cm
+        p.setFont("Helvetica-Bold", 8)
+        p.drawString(2*cm, y, "VALOR TOTAL")
+        p.drawString(9*cm, y, "FORMA DE PAGAMENTO")
+        y -= 0.5*cm
+        p.setFont("Helvetica", 8)
+        p.drawString(2*cm, y, f"R$ {orcamento.get('total_final', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         
-        pagamento = orcamento.get('pagamento', {}).get('tipo', 'Pix')
-        p.drawString(50, y, f"FORMA DE PAGAMENTO: {pagamento}")
-        y -= 25
+        pag_tipo = orcamento.get('pagamento', {}).get('tipo', '').lower()
+        p.drawString(9*cm, y, "PIX")
+        p.drawString(8.5*cm, y-0.05*cm, "☑" if "pix" in pag_tipo else "☐")
+        p.drawString(12*cm, y, "CARTÃO DÉBITO")
+        p.drawString(11.5*cm, y-0.05*cm, "☑" if "débito" in pag_tipo else "☐")
+        y -= 0.6*cm
+        p.drawString(9*cm, y, "VISTA")
+        p.drawString(8.5*cm, y-0.05*cm, "☑" if "crédito à vista" in pag_tipo else "☐")
+        p.drawString(12*cm, y, "CARTÃO CRÉDITO")
+        y -= 0.6*cm
+        p.drawString(9*cm, y, "PARCELADO EM ____ VEZES")
+        p.drawString(8.5*cm, y-0.05*cm, "☑" if "parcelado" in pag_tipo else "☐")
+        p.drawString(12*cm, y, "COM ENTRADA DE")
+
+        # Disposições Gerais
+        y -= 1.2*cm
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(width - 6*cm, y, "DISPOSIÇÕES GERAIS")
+
+        y -= 0.8*cm
+        p.setFont("Helvetica", 8)
+        text = p.beginText(2*cm, y)
+        text.setFont("Helvetica", 8)
+        text.setLeading(12)
+        text.textLine("Pelo presente instrumento particular, as \"Partes\" resolvem celebrar o presente \"Contrato\", de acordo com as cláusulas e condições a seguir.")
+        text.textLine("1. O Contrato tem por objeto a prestação de serviços acima descritos, pela Contratada à Contratante, mediante agendamento prévio. A Contratada utilizará")
+        text.textLine("produtos com ingredientes naturais para a saúde dos cabelos, de alta qualidade, que serão manipulados dentro das normas de higiene e limpeza")
+        text.textLine("exigidas pela Vigilância Sanitária.")
+        text.textLine("2. A Contratante declara e está ciente que (i) os serviços têm caráter pessoal e são intransferíveis; (ii) só poderá alterar os Serviços contratados com a")
+        text.textLine("anuência da Contratada e desde que a utilização seja no prazo originalmente contratado; (iii) não tem nenhum impedimento médico e/ou alergias")
+        text.textLine("que impeçam de realizar os serviços contratados; (iv) escolheu os tratamentos de acordo com o seu tipo de cabelo; (v) concorda em realizar os")
+        text.textLine("tratamentos com a frequência indicada pela Contratada; e (vi) o resultado pretendido depende do respeito à frequência indicada pela Contratada.")
+        text.textLine("3. Os serviços deverão ser utilizados em conformidade com o prazo acima indicado e a Contratante está ciente de que não haverá prorrogação do prazo")
+        text.textLine("previsto para a utilização dos serviços, ou seja, ao final de 18 (dezoito) meses, o Contrato será extinto e a Contratante não terá direito ao reembolso")
+        text.textLine("de tratamentos não realizados no prazo contratual.")
+        text.textLine("4. A Contratante poderá desistir dos serviços no prazo de até 90 (noventa) dias a contar da assinatura deste Contrato e, neste caso, está de acordo")
+        text.textLine("com a restituição do valor equivalente a 80% (oitenta por cento) dos tratamentos não realizados, no prazo de até 5 (cinco) dias úteis da desistência.")
+        text.textLine("Eventuais descontos ou promoções nos valores dos serviços e/ou tratamentos não serão reembolsáveis.")
+        text.textLine("5. No caso de devolução de valor pago por cartão de crédito, o cancelamento será efetuado junto à administradora do seu cartão e o estorno poderá")
+        text.textLine("ocorrer em até 2 (duas) faturas posteriores de acordo com procedimentos internos da operadora do cartão de crédito, ou outro prazo definido pela")
+        text.textLine("administradora do cartão de crédito, ou, a exclusivo arbítrio da Contratada, mediante transferência direta do valor equivalente ao reembolso.")
+        p.drawText(text)
+
+        draw_footer(2)
+        p.showPage()
         
-        # RODAPÉ
-        p.setFont("Helvetica", 7)
-        p.drawString(50, 100, f"UBERABA, 5 de outubro de 2025.")
+        # --- PÁGINA 3 ---
+        y = height - 2*cm
+        text = p.beginText(2*cm, y)
+        text.setFont("Helvetica", 8)
+        text.setLeading(12)
+        text.textLine("6. Na hipótese de responsabilidade civil da Contratada, independentemente da natureza do dano, fica desde já limitada a responsabilidade da")
+        text.textLine("Contratada ao valor máximo equivalente a 2 (duas) sessões de tratamento dos serviços.")
+        text.textLine("7. No caso de alergias decorrentes dos produtos utilizados pela Contratada, a Contratante poderá optar pela suspensão dos serviços com a retomada")
+        text.textLine("após o reestabelecimento de sua saúde, ou pela concessão de crédito do valor remanescente em outros serviços junto à Contratada. A Contratada não")
+        text.textLine("é responsável por qualquer perda, independentemente do valor, incluindo danos diretos, indiretos, à imagem, lucros cessantes e/ou morais que se")
+        text.textLine("tornem exigíveis em decorrência de eventual alergia.")
+        text.textLine("8. As Partes se comprometem a tratar apenas os dados pessoais estritamente necessários para atingir as finalidades específicas do objeto do")
+        text.textLine("Contrato, em cumprimento ao disposto na Lei nº 13.709/2018 (\"LGPD\") e na regulamentação aplicável. Uma vez que estes deixem de ser necessários")
+        text.textLine("para atingir tais finalidades, as Partes eliminarão ou anonimizarão os dados pessoais reciprocamente compartilhados, salvo se persistir determinada")
+        text.textLine("finalidade legal para a manutenção e tratamento dos dados pessoais em questão. Assim, cada uma das Partes declara, em relação a si própria, que")
+        text.textLine("manterá a outra Parte e o titular de dados indenes por danos e/ou prejuízos que vier a causar no tratamento indevido de dados pessoais ou no")
+        text.textLine("caso de infrações à LGPD.")
+        text.textLine("9. Fica eleito o Foro da Comarca de UBERABA, Estado de MINAS GERAIS, como o competente para dirimir as dúvidas e controvérsias decorrentes")
+        text.textLine("do presente Contrato, com renúncia a qualquer outro, por mais privilegiado que seja.")
+        text.textLine("10. Este Contrato poderá ser assinado e entregue eletronicamente, por meio de plataforma de assinatura eletrônica, e terá a mesma validade e efeitos")
+        text.textLine("de um documento original com assinaturas físicas. Não obstante a data da assinatura eletrônica, a data de celebração deste Contrato será a data")
+        text.textLine("constante ao final do documento.")
+        p.drawText(text)
+
+        y -= 18 * 0.5 * cm 
+        p.setFont("Helvetica-Bold", 9)
+        p.drawString(2*cm, y, "De Acordo:")
+        y -= 1*cm
         
-        p.line(50, 70, 250, 70)
-        p.drawString(50, 55, "CONTRATANTE: " + cliente)
+        data_contrato = orcamento.get('created_at', datetime.now())
+        data_formatada = data_contrato.strftime("%d de %B de %Y")
+        p.setFont("Helvetica", 8)
+        p.drawString(2*cm, y, f"UBERABA, {data_formatada}")
+        y -= 1.5*cm
         
-        p.line(width - 250, 70, width - 50, 70)
-        p.drawString(width - 250, 55, "CONTRATADA: BIOMA UBERABA - 49.470.9377")
+        p.line(2*cm, y, 9*cm, y)
+        y -= 0.4*cm
+        p.drawString(2*cm, y, f"CONTRATANTE: {orcamento.get('cliente_nome', '')}")
+        y -= 1*cm
         
+        p.line(2*cm, y, 9*cm, y)
+        y -= 0.4*cm
+        p.drawString(2*cm, y, "CONTRATADA: BIOMA UBERABA - 49.470.937/0001-10")
+        
+        draw_footer(3)
+
         p.save()
         buffer.seek(0)
-        
         return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=f'contrato_bioma_{orcamento.get("numero")}.pdf')
-        
     except Exception as e:
         logger.error(f"❌ PDF error: {e}")
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': f'Erro interno ao gerar PDF: {e}'}), 500
+# --- FIM DA SEÇÃO MODIFICADA ---
 
-# ===== CONTRATOS =====
+
 @app.route('/api/contratos')
 @login_required
 def contratos():
-    """Contratos aprovados"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         contratos_list = list(db.orcamentos.find({'status': 'Aprovado'}).sort('created_at', DESCENDING))
         return jsonify({'success': True, 'contratos': convert_objectid(contratos_list)})
-    except Exception as e:
+    except:
         return jsonify({'success': False}), 500
 
-# ===== AGENDAMENTOS =====
 @app.route('/api/agendamentos', methods=['GET', 'POST'])
 @login_required
 def agendamentos():
-    """CRUD agendamentos"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     if request.method == 'GET':
         try:
             agora = datetime.now()
-            agends = list(db.agendamentos.find({
-                'data': {'$gte': agora}
-            }).sort('data', ASCENDING).limit(10))
-            
+            agends = list(db.agendamentos.find({'data': {'$gte': agora}}).sort('data', ASCENDING).limit(10))
             return jsonify({'success': True, 'agendamentos': convert_objectid(agends)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
-    
-    # POST
+        except:
+            return jsonify({'success': False}), 500
     data = request.json
     try:
         data_agendamento = datetime.fromisoformat(data['data'].replace('Z', '+00:00'))
-        
-        agend_id = db.agendamentos.insert_one({
-            'cliente_id': data.get('cliente_id'),
-            'cliente_nome': data.get('cliente_nome'),
-            'cliente_telefone': data.get('cliente_telefone'),
-            'profissional_id': data.get('profissional_id'),
-            'profissional_nome': data.get('profissional_nome'),
-            'servico_id': data.get('servico_id'),
-            'servico_nome': data.get('servico_nome'),
-            'data': data_agendamento,
-            'horario': data['horario'],
-            'status': 'confirmado',
-            'created_at': datetime.now()
-        }).inserted_id
-        
-        logger.info(f"✅ Agendamento: {data.get('cliente_nome')} - {data['horario']}")
+        agend_id = db.agendamentos.insert_one({'cliente_id': data.get('cliente_id'), 'cliente_nome': data.get('cliente_nome'), 'cliente_telefone': data.get('cliente_telefone'), 'profissional_id': data.get('profissional_id'), 'profissional_nome': data.get('profissional_nome'), 'servico_id': data.get('servico_id'), 'servico_nome': data.get('servico_nome'), 'data': data_agendamento, 'horario': data['horario'], 'status': 'confirmado', 'created_at': datetime.now()}).inserted_id
         return jsonify({'success': True, 'id': str(agend_id)})
-    except Exception as e:
-        logger.error(f"❌ Agendamento error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== FILA =====
 @app.route('/api/fila', methods=['GET', 'POST'])
 @login_required
 def fila():
-    """Fila de atendimento"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     if request.method == 'GET':
         try:
-            fila_list = list(db.fila_atendimento.find({
-                'status': {'$in': ['aguardando', 'atendendo']}
-            }).sort('created_at', ASCENDING))
+            fila_list = list(db.fila_atendimento.find({'status': {'$in': ['aguardando', 'atendendo']}}).sort('created_at', ASCENDING))
             return jsonify({'success': True, 'fila': convert_objectid(fila_list)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
-    
-    # POST
+        except:
+            return jsonify({'success': False}), 500
     data = request.json
     try:
-        total = db.fila_atendimento.count_documents({
-            'status': {'$in': ['aguardando', 'atendendo']}
-        })
-        
-        db.fila_atendimento.insert_one({
-            'cliente_nome': data['cliente_nome'],
-            'cliente_telefone': data['cliente_telefone'],
-            'servico': data.get('servico', ''),
-            'profissional': data.get('profissional', ''),
-            'posicao': total + 1,
-            'status': 'aguardando',
-            'created_at': datetime.now()
-        })
-        
+        total = db.fila_atendimento.count_documents({'status': {'$in': ['aguardando', 'atendendo']}})
+        db.fila_atendimento.insert_one({'cliente_nome': data['cliente_nome'], 'cliente_telefone': data['cliente_telefone'], 'servico': data.get('servico', ''), 'profissional': data.get('profissional', ''), 'posicao': total + 1, 'status': 'aguardando', 'created_at': datetime.now()})
         return jsonify({'success': True, 'posicao': total + 1})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
 @app.route('/api/fila/<id>', methods=['DELETE'])
 @login_required
 def delete_fila(id):
-    """Remove da fila"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
         result = db.fila_atendimento.delete_one({'_id': ObjectId(id)})
         return jsonify({'success': result.deleted_count > 0})
-    except Exception as e:
+    except:
         return jsonify({'success': False}), 500
 
-# ===== ESTOQUE =====
 @app.route('/api/estoque/alerta')
 @login_required
 def estoque_alerta():
-    """Produtos com estoque baixo"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     try:
-        produtos = list(db.produtos.find({
-            '$expr': {'$lte': ['$estoque', '$estoque_minimo']}
-        }))
+        produtos = list(db.produtos.find({'$expr': {'$lte': ['$estoque', '$estoque_minimo']}}))
         return jsonify({'success': True, 'produtos': convert_objectid(produtos)})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
 @app.route('/api/estoque/movimentacao', methods=['POST'])
 @login_required
 def estoque_movimentacao():
-    """Registra movimentação"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     data = request.json
     try:
         produto = db.produtos.find_one({'_id': ObjectId(data['produto_id'])})
         if not produto:
-            return jsonify({'success': False, 'message': 'Produto não encontrado'})
-        
+            return jsonify({'success': False})
         qtd = int(data['quantidade'])
         tipo = data['tipo']
-        
         novo_estoque = produto.get('estoque', 0)
         if tipo == 'entrada':
             novo_estoque += qtd
         else:
             novo_estoque -= qtd
-        
-        db.produtos.update_one(
-            {'_id': ObjectId(data['produto_id'])},
-            {'$set': {'estoque': novo_estoque}}
-        )
-        
-        db.estoque_movimentacoes.insert_one({
-            'produto_id': ObjectId(data['produto_id']),
-            'tipo': tipo,
-            'quantidade': qtd,
-            'motivo': data.get('motivo', ''),
-            'usuario': session.get('username'),
-            'data': datetime.now()
-        })
-        
+        db.produtos.update_one({'_id': ObjectId(data['produto_id'])}, {'$set': {'estoque': novo_estoque}})
+        db.estoque_movimentacoes.insert_one({'produto_id': ObjectId(data['produto_id']), 'tipo': tipo, 'quantidade': qtd, 'motivo': data.get('motivo', ''), 'usuario': session.get('username'), 'data': datetime.now()})
         return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== IMPORTAÇÃO CSV/XLSX =====
 @app.route('/api/importar', methods=['POST'])
 @login_required
 def importar():
-    """Importa CSV/XLSX"""
     if db is None:
-        return jsonify({'success': False, 'message': 'Database offline'}), 500
-    
+        return jsonify({'success': False}), 500
     if 'file' not in request.files:
-        return jsonify({'success': False, 'message': 'Nenhum arquivo'}), 400
-    
+        return jsonify({'success': False}), 400
     file = request.files['file']
     tipo = request.form.get('tipo', 'produtos')
-    
     if not file.filename:
-        return jsonify({'success': False, 'message': 'Arquivo inválido'}), 400
-    
+        return jsonify({'success': False}), 400
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-    
     if ext not in ['csv', 'xlsx', 'xls']:
-        return jsonify({'success': False, 'message': 'Apenas CSV ou XLSX'}), 400
-    
-    logger.info(f"📤 Importing {ext.upper()} - Type: {tipo}")
-    
+        return jsonify({'success': False}), 400
     try:
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        
         count_success = 0
         count_error = 0
-        erros_detalhados = []
         rows = []
-        
-        # Ler CSV
         if ext == 'csv':
-            encodings = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+            encodings = ['utf-8-sig', 'utf-8', 'latin-1', 'cp1252']
             for encoding in encodings:
                 try:
                     with open(filepath, 'r', encoding=encoding) as csvfile:
-                        reader = csv.DictReader(csvfile)
-                        rows = list(reader)
-                        logger.info(f"✅ CSV: {len(rows)} rows")
+                        rows = list(csv.DictReader(csvfile))
                         break
                 except:
                     continue
         else:
-            # Ler XLSX
-            try:
-                from openpyxl import load_workbook
-                wb = load_workbook(filepath, read_only=True, data_only=True)
-                ws = wb.active
-                
-                headers = [str(c.value).strip().lower() if c.value else '' 
-                          for c in next(ws.iter_rows(min_row=1, max_row=1))]
-                
-                for row in ws.iter_rows(min_row=2, values_only=True):
-                    row_dict = {}
-                    for i in range(len(headers)):
-                        if i < len(row) and row[i] is not None:
-                            val = row[i]
-                            if isinstance(val, str):
-                                val = val.strip()
-                            row_dict[headers[i]] = val
-                    if row_dict:
-                        rows.append(row_dict)
-                
-                wb.close()
-                logger.info(f"✅ XLSX: {len(rows)} rows")
-            except Exception as e:
-                logger.error(f"❌ XLSX error: {e}")
-                return jsonify({'success': False, 'message': f'Erro XLSX: {str(e)}'}), 500
-        
-        # Processar PRODUTOS
+            from openpyxl import load_workbook
+            wb = load_workbook(filepath, read_only=True, data_only=True)
+            ws = wb.active
+            headers = [str(c.value).strip().lower() if c.value else '' for c in next(ws.iter_rows(min_row=1, max_row=1))]
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                row_dict = {}
+                for i in range(len(headers)):
+                    if i < len(row) and row[i] is not None:
+                        val = row[i]
+                        if isinstance(val, str):
+                            val = val.strip()
+                        row_dict[headers[i]] = val
+                if row_dict:
+                    rows.append(row_dict)
+            wb.close()
         if tipo == 'produtos':
             for idx, row in enumerate(rows, 1):
                 try:
                     r = {k.lower().strip(): v for k, v in row.items() if k and v is not None}
-                    
                     if not r or all(not v for v in r.values()):
                         continue
-                    
-                    # Nome
                     nome = None
                     for col in ['nome', 'produto', 'name']:
                         if col in r and r[col]:
                             nome = str(r[col]).strip()
                             break
-                    
                     if not nome or len(nome) < 2:
-                        erros_detalhados.append(f"Linha {idx}: Nome inválido")
                         count_error += 1
                         continue
-                    
-                    # Marca
                     marca = ''
                     for col in ['marca', 'brand']:
                         if col in r and r[col]:
                             marca = str(r[col]).strip()
                             break
-                    
-                    # SKU
                     sku = f"PROD-{count_success+1}"
-                    for col in ['sku', 'codigo', 'code']:
+                    for col in ['sku', 'codigo']:
                         if col in r and r[col]:
                             sku = str(r[col]).strip()
                             break
-                    
-                    # Preço
                     preco = 0.0
                     for col in ['preco', 'preço', 'price', 'valor']:
                         if col in r and r[col]:
                             try:
                                 val = str(r[col]).replace('R$', '').strip()
-                                if ',' in val and '.' in val:
-                                    val = val.replace('.', '').replace(',', '.')
-                                elif ',' in val:
+                                if ',' in val:
                                     val = val.replace(',', '.')
-                                val = ''.join(c for c in val if c.isdigit() or c == '.')
-                                if val:
-                                    preco = float(val)
-                                    break
+                                preco = float(val)
+                                break
                             except:
                                 continue
-                    
                     if preco <= 0:
-                        erros_detalhados.append(f"Linha {idx}: Preço inválido")
                         count_error += 1
                         continue
-                    
-                    # Custo
                     custo = 0.0
                     for col in ['custo', 'cost']:
                         if col in r and r[col]:
@@ -1400,335 +1027,146 @@ def importar():
                                 break
                             except:
                                 continue
-                    
-                    # Estoque
                     estoque = 0
-                    for col in ['estoque', 'quantidade', 'qtd', 'stock']:
+                    for col in ['estoque', 'quantidade', 'qtd']:
                         if col in r and r[col]:
                             try:
                                 estoque = int(float(r[col]))
                                 break
                             except:
                                 continue
-                    
-                    # Categoria
                     categoria = 'Produto'
                     for col in ['categoria', 'category']:
                         if col in r and r[col]:
                             categoria = str(r[col]).strip().title()
                             break
-                    
-                    # Inserir
-                    db.produtos.insert_one({
-                        'nome': nome,
-                        'marca': marca,
-                        'sku': sku,
-                        'preco': preco,
-                        'custo': custo,
-                        'estoque': estoque,
-                        'estoque_minimo': 5,
-                        'categoria': categoria,
-                        'ativo': True,
-                        'created_at': datetime.now()
-                    })
+                    db.produtos.insert_one({'nome': nome, 'marca': marca, 'sku': sku, 'preco': preco, 'custo': custo, 'estoque': estoque, 'estoque_minimo': 5, 'categoria': categoria, 'ativo': True, 'created_at': datetime.now()})
                     count_success += 1
-                    
-                except Exception as e:
-                    erros_detalhados.append(f"Linha {idx}: {str(e)}")
+                except:
                     count_error += 1
-        
-        # Processar SERVIÇOS
-        elif tipo == 'servicos':
-            for idx, row in enumerate(rows, 1):
-                try:
-                    r = {k.lower().strip(): v for k, v in row.items() if k and v is not None}
-                    
-                    if not r:
-                        continue
-                    
-                    # Nome
-                    nome = None
-                    for col in ['nome', 'servico', 'service']:
-                        if col in r and r[col]:
-                            nome = str(r[col]).strip()
-                            break
-                    
-                    if not nome:
-                        erros_detalhados.append(f"Linha {idx}: Nome vazio")
-                        count_error += 1
-                        continue
-                    
-                    # Categoria
-                    categoria = 'Serviço'
-                    for col in ['categoria', 'category']:
-                        if col in r and r[col]:
-                            categoria = str(r[col]).strip().title()
-                            break
-                    
-                    # Tamanhos
-                    tamanhos_criados = 0
-                    tamanhos_map = {
-                        'kids': 'Kids',
-                        'infantil': 'Kids',
-                        'masculino': 'Masculino',
-                        'male': 'Masculino',
-                        'curto': 'Curto',
-                        'short': 'Curto',
-                        'medio': 'Médio',
-                        'médio': 'Médio',
-                        'medium': 'Médio',
-                        'longo': 'Longo',
-                        'long': 'Longo',
-                        'extra_longo': 'Extra Longo',
-                        'xl': 'Extra Longo'
-                    }
-                    
-                    for key, tam_nome in tamanhos_map.items():
-                        if key in r and r[key]:
-                            try:
-                                val = str(r[key]).replace('R$', '').strip()
-                                if ',' in val:
-                                    val = val.replace(',', '.')
-                                preco = float(val)
-                                
-                                if preco > 0:
-                                    db.servicos.insert_one({
-                                        'nome': nome,
-                                        'sku': f"{nome.upper().replace(' ', '-')}-{tam_nome.upper().replace(' ', '-')}",
-                                        'tamanho': tam_nome,
-                                        'preco': preco,
-                                        'categoria': categoria,
-                                        'duracao': 60,
-                                        'ativo': True,
-                                        'created_at': datetime.now()
-                                    })
-                                    tamanhos_criados += 1
-                            except:
-                                continue
-                    
-                    if tamanhos_criados > 0:
-                        count_success += 1
-                    else:
-                        erros_detalhados.append(f"Linha {idx}: Sem preços")
-                        count_error += 1
-                    
-                except Exception as e:
-                    erros_detalhados.append(f"Linha {idx}: {str(e)}")
-                    count_error += 1
-        
-        # Remover arquivo
         if os.path.exists(filepath):
             os.remove(filepath)
-        
-        logger.info(f"🎉 Import: {count_success} OK, {count_error} errors")
-        
-        return jsonify({
-            'success': True,
-            'message': f'{count_success} importados!',
-            'count_success': count_success,
-            'count_error': count_error,
-            'erros_detalhados': erros_detalhados[:10]
-        })
-        
+        return jsonify({'success': True, 'message': f'{count_success} importados!', 'count_success': count_success, 'count_error': count_error})
     except Exception as e:
-        logger.error(f"❌ Import error: {e}")
         if os.path.exists(filepath):
             os.remove(filepath)
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False}), 500
 
-# ===== TEMPLATE XLSX =====
 @app.route('/api/template/download/<tipo>')
 @login_required
 def download_template(tipo):
-    """Template XLSX profissional"""
     wb = Workbook()
     ws = wb.active
-    
     header_fill = PatternFill(start_color='7C3AED', end_color='7C3AED', fill_type='solid')
     header_font = Font(color='FFFFFF', bold=True, size=12)
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
-    )
-    
+    border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     if tipo == 'produtos':
         ws.title = 'Produtos BIOMA'
         headers = ['nome', 'marca', 'sku', 'preco', 'custo', 'estoque', 'categoria']
         ws.append(headers)
-        
         for cell in ws[1]:
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
             cell.border = border
-        
         ws.append(['Shampoo 500ml', 'Loreal', 'SHAMP-500', 49.90, 20.00, 50, 'SHAMPOO'])
-        ws.append(['Condicionador 500ml', 'Loreal', 'COND-500', 49.90, 20.00, 50, 'CONDICIONADOR'])
-        
         for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
             ws.column_dimensions[col].width = 18
-        
     else:
         ws.title = 'Serviços BIOMA'
         headers = ['nome', 'categoria', 'kids', 'masculino', 'curto', 'medio', 'longo', 'extra_longo']
         ws.append(headers)
-        
         for cell in ws[1]:
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
             cell.border = border
-        
         ws.append(['Hidratação', 'Tratamento', 50, 60, 80, 100, 120, 150])
-        ws.append(['Corte', 'Cabelo', 40, 50, 60, 80, 100, 120])
-        
         for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
             ws.column_dimensions[col].width = 15
-    
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-    
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=f'template_{tipo}_bioma.xlsx'
-    )
+    return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'template_{tipo}_bioma.xlsx')
 
-# ===== CONFIGURAÇÕES =====
 @app.route('/api/config', methods=['GET', 'POST'])
 @login_required
 def config():
-    """Configurações"""
     if db is None:
         return jsonify({'success': False}), 500
-    
     if request.method == 'GET':
         try:
             cfg = db.config.find_one({'key': 'unidade'}) or {}
             return jsonify({'success': True, 'config': convert_objectid(cfg)})
-        except Exception as e:
-            return jsonify({'success': False, 'message': str(e)}), 500
-    
-    # POST
+        except:
+            return jsonify({'success': False}), 500
     data = request.json
     try:
         db.config.update_one({'key': 'unidade'}, {'$set': data}, upsert=True)
         return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+    except:
+        return jsonify({'success': False}), 500
 
-# ===== INIT DB =====
 def init_db():
-    """Inicializa banco"""
     if db is None:
-        logger.warning("⚠️ DB não disponível")
+        logger.warning("⚠️ DB não disponível para inicialização")
         return
-    
     logger.info("🔧 Initializing DB...")
-    
-    # Admin user
     if db.users.count_documents({}) == 0:
-        db.users.insert_one({
-            'name': 'Administrador',
-            'username': 'admin',
-            'email': 'admin@bioma.com',
-            'telefone': '',
-            'password': generate_password_hash('admin123'),
-            'role': 'admin',
-            'theme': 'light',
-            'verified': True,
-            'created_at': datetime.now()
-        })
-        logger.info("✅ Admin: admin/admin123")
-    
-    # Serviços padrão
+        db.users.insert_one({'name': 'Administrador', 'username': 'admin', 'email': 'admin@bioma.com', 'telefone': '', 'password': generate_password_hash('admin123'), 'role': 'admin', 'theme': 'light', 'created_at': datetime.now()})
+        logger.info("✅ Admin user created: admin/admin123 (role: admin)")
     if db.servicos.count_documents({}) == 0:
-        services = [
-            ('Hidratação', 'Tratamento', [50, 60, 80, 100, 120, 150]),
-            ('Corte', 'Cabelo', [40, 50, 60, 80, 100, 120])
-        ]
-        
+        services = [('Hidratação', 'Tratamento', [50, 60, 80, 100, 120, 150]), ('Corte', 'Cabelo', [40, 50, 60, 80, 100, 120])]
         tamanhos = ['Kids', 'Masculino', 'Curto', 'Médio', 'Longo', 'Extra Longo']
-        
         for nome, cat, precos in services:
             for tam, preco in zip(tamanhos, precos):
-                db.servicos.insert_one({
-                    'nome': nome,
-                    'sku': f"{nome.upper()}-{tam.upper()}",
-                    'tamanho': tam,
-                    'preco': preco,
-                    'categoria': cat,
-                    'duracao': 60,
-                    'ativo': True,
-                    'created_at': datetime.now()
-                })
-        
-        logger.info(f"✅ {len(services) * 6} service SKUs")
-    
-    # Índices
+                db.servicos.insert_one({'nome': nome, 'sku': f"{nome.upper()}-{tam.upper()}", 'tamanho': tam, 'preco': preco, 'categoria': cat, 'duracao': 60, 'ativo': True, 'created_at': datetime.now()})
+        logger.info(f"✅ {len(services) * 6} service SKUs created")
     try:
         db.users.create_index([('username', ASCENDING)], unique=True)
         db.users.create_index([('email', ASCENDING)], unique=True)
         db.clientes.create_index([('cpf', ASCENDING)])
         db.orcamentos.create_index([('numero', ASCENDING)], unique=True)
-        logger.info("✅ Indexes created")
-    except:
-        pass
-    
-    logger.info("🎉 DB init complete!")
+        logger.info("✅ Database indexes created")
+    except Exception as e:
+        logger.warning(f"⚠️ Index creation warning: {e}")
+    logger.info("🎉 DB initialization complete!")
 
-# ===== ERROR HANDLERS =====
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({'success': False, 'message': 'Not found'}), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    logger.error(f"❌ 500: {e}")
-    return jsonify({'success': False, 'message': 'Internal error'}), 500
+    logger.error(f"❌ 500 Internal Error: {e}")
+    return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
-# ===== RUN =====
 if __name__ == '__main__':
     print("\n" + "=" * 80)
-    print("🌳 BIOMA UBERABA v3.4 FINAL - SISTEMA COMPLETO")
+    print("🌳 BIOMA UBERABA v3.7 COMPLETO E DEFINITIVO")
     print("=" * 80)
-    
     init_db()
-    
     is_production = os.getenv('FLASK_ENV') == 'production'
     base_url = 'https://bioma-system2.onrender.com' if is_production else 'http://localhost:5000'
-    
     print(f"\n🚀 Servidor: {base_url}")
-    print(f"👤 Login: admin / admin123")
-    
+    print(f"👤 Login Padrão: admin / admin123")
+    print(f"🔑 TODOS os novos usuários têm privilégios de ADMIN automaticamente")
     if db is not None:
         try:
             db.command('ping')
             print(f"💾 MongoDB: ✅ CONECTADO")
         except:
-            print(f"💾 MongoDB: ❌ ERRO")
+            print(f"💾 MongoDB: ❌ ERRO DE CONEXÃO")
     else:
         print(f"💾 MongoDB: ❌ NÃO CONECTADO")
-    
     if os.getenv('MAILERSEND_API_KEY'):
         print(f"📧 MailerSend: ✅ CONFIGURADO")
     else:
         print(f"📧 MailerSend: ⚠️  NÃO CONFIGURADO")
-    
     print("\n" + "=" * 80)
     print(f"🕐 Iniciado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    print(f"👨‍💻 Dev: @juanmarco1999")
+    print(f"👨‍💻 Desenvolvedor: @juanmarco1999")
+    print(f"📧 Contato: 180147064@aluno.unb.br")
     print("=" * 80 + "\n")
-    
     port = int(os.environ.get('PORT', 5000))
-    
-    app.run(
-        debug=False,
-        host='0.0.0.0',
-        port=port,
-        threaded=True
-    )
+    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
