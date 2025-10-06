@@ -545,6 +545,7 @@ def delete_orcamento(id):
 
 # --- INÍCIO DA SEÇÃO MODIFICADA ---
 class GradientHeader(Flowable):
+    """Um cabeçalho com fundo em gradiente."""
     def __init__(self, width, text):
         Flowable.__init__(self)
         self.width = width
@@ -564,11 +565,25 @@ class GradientHeader(Flowable):
             b = start_color.blue * (1 - ratio) + end_color.blue * ratio
             c.setFillColorRGB(r, g, b)
             c.rect((self.width / steps) * i, 0, self.width / steps, self.height, stroke=0, fill=1)
-
         c.setFont('Helvetica-Bold', 36)
         c.setFillColor(white)
-        c.drawCentredString(self.width / 2, self.height / 2 - 18, self.text)
+        c.drawCentredString(self.width / 2, self.height / 2 - (0.5*cm), self.text)
         c.restoreState()
+
+class HRFlowable(Flowable):
+    """Linha horizontal com cor customizada."""
+    def __init__(self, width, thickness=1, color=black):
+        Flowable.__init__(self)
+        self.width = width
+        self.thickness = thickness
+        self.color = color
+
+    def draw(self):
+        self.canv.saveState()
+        self.canv.setStrokeColor(self.color)
+        self.canv.setLineWidth(self.thickness)
+        self.canv.line(0, 0, self.width, 0)
+        self.canv.restoreState()
 
 @app.route('/api/orcamento/<id>/pdf')
 @login_required
@@ -590,22 +605,25 @@ def gerar_pdf_orcamento(id):
 
         buffer = io.BytesIO()
         doc_width, doc_height = A4
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2.5*cm)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=1.5*cm, bottomMargin=2.5*cm)
 
         COLOR_PRIMARY = HexColor('#7C3AED')
         COLOR_SECONDARY = HexColor('#6B7280')
+        COLOR_LIGHT_BG = HexColor('#F9FAFB')
         
         styles = getSampleStyleSheet()
-        styles.add(ParagraphStyle(name='MainTitle', fontName='Helvetica-Bold', fontSize=18, textColor=COLOR_PRIMARY, spaceAfter=6))
-        styles.add(ParagraphStyle(name='SubTitle', fontName='Helvetica', fontSize=10, textColor=COLOR_SECONDARY, spaceAfter=12))
+        styles.add(ParagraphStyle(name='MainTitle', fontName='Helvetica-Bold', fontSize=20, textColor=COLOR_PRIMARY, spaceAfter=8))
+        styles.add(ParagraphStyle(name='SubTitle', fontName='Helvetica', fontSize=10, textColor=COLOR_SECONDARY, spaceAfter=20))
         styles.add(ParagraphStyle(name='SectionTitle', fontName='Helvetica-Bold', fontSize=10, textColor=white))
-        styles.add(ParagraphStyle(name='Body', fontName='Helvetica', fontSize=9, leading=14, alignment=TA_JUSTIFY))
-        styles.add(ParagraphStyle(name='Clause', fontName='Helvetica', fontSize=8, leading=12, alignment=TA_JUSTIFY, leftIndent=10))
+        styles.add(ParagraphStyle(name='Body', fontName='Helvetica', fontSize=9, leading=14))
+        styles.add(ParagraphStyle(name='BodyRight', fontName='Helvetica', fontSize=9, leading=14, alignment=TA_RIGHT))
+        styles.add(ParagraphStyle(name='Clause', fontName='Helvetica', fontSize=8, leading=14, alignment=TA_JUSTIFY, leftIndent=10))
+        styles.add(ParagraphStyle(name='Signature', fontName='Helvetica', fontSize=9, alignment=TA_CENTER))
 
         story = []
         
         story.append(GradientHeader(doc_width - 4*cm, "BIOMA"))
-        story.append(Spacer(1, 1*cm))
+        story.append(Spacer(1, 1.5*cm))
         story.append(Paragraph("Contrato de Prestação de Serviços", styles['MainTitle']))
         story.append(Paragraph(
             "Pelo presente instrumento particular, as 'Partes' resolvem celebrar o presente 'Contrato', de acordo com as cláusulas e condições a seguir.", 
@@ -618,6 +636,9 @@ def gerar_pdf_orcamento(id):
             [Paragraph('<b>DATA DE EMISSÃO</b>', styles['Body']), Paragraph(data_contrato.strftime("%d de %B de %Y"), styles['Body'])]
         ]
         story.append(Table(info_data, colWidths=[5*cm, '*'], style=[('VALIGN', (0,0), (-1,-1), 'TOP')]))
+        story.append(Spacer(1, 1*cm))
+
+        story.append(HRFlowable(doc_width - 4*cm, color=HexColor('#E5E7EB'), thickness=1))
         story.append(Spacer(1, 1*cm))
 
         contratante_details = f"""
@@ -633,13 +654,15 @@ def gerar_pdf_orcamento(id):
             <b>Contato:</b> (34) 99235-5890
         """
         partes_data = [
-            [Paragraph('👤 <b>CONTRATANTE</b>', styles['Body']), Paragraph('🏢 <b>CONTRATADA</b>', styles['Body'])],
+            [Paragraph('<b>CONTRATANTE</b>', styles['Body']), Paragraph('<b>CONTRATADA</b>', styles['Body'])],
             [Paragraph(contratante_details, styles['Body']), Paragraph(contratada_details, styles['Body'])]
         ]
-        partes_table = Table(partes_data, colWidths=[(doc_width/2) - 2.5*cm, (doc_width/2) - 2.5*cm], hAlign='LEFT')
+        partes_table = Table(partes_data, colWidths=['*', '*'], hAlign='LEFT')
         partes_table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'), ('LINEBELOW', (0,0), (-1,0), 1, COLOR_PRIMARY),
-            ('PADDING', (0,0), (-1,0), 6), ('PADDING', (0,1), (-1,-1), 8),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('LINEBELOW', (0,0), (-1,0), 1, COLOR_PRIMARY),
+            ('LEFTPADDING', (0,0), (-1,-1), 0), ('RIGHTPADDING', (0,0), (-1,-1), 12),
+            ('TOPPADDING', (0,0), (-1,-1), 6), ('BOTTOMPADDING', (0,0), (-1,-1), 12),
         ]))
         story.append(partes_table)
         story.append(Spacer(1, 1*cm))
@@ -652,15 +675,15 @@ def gerar_pdf_orcamento(id):
             desc = f"{item.get('nome', '')} {item.get('tamanho', '')}".strip() if 'servico' in item.get('id', '') else f"{item.get('nome', '')} {item.get('marca', '')}".strip()
             items_data.append([
                 Paragraph(str(i+1), styles['Body']), Paragraph(desc, styles['Body']),
-                Paragraph(str(item.get('qtd', 1)), styles['Body']), Paragraph(f"R$ {item.get('preco_unit', 0):.2f}", styles['Body']),
-                Paragraph(f"R$ {item.get('total', 0):.2f}", styles['Body']),
+                Paragraph(str(item.get('qtd', 1)), styles['Body']), Paragraph(f"R$ {item.get('preco_unit', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), styles['Body']),
+                Paragraph(f"R$ {item.get('total', 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."), styles['Body']),
             ])
         items_table = Table(items_data, colWidths=[1.5*cm, '*', 1.5*cm, 3*cm, 3*cm], repeatRows=1)
         items_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), COLOR_PRIMARY), ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0,0), (-1,0), 8), ('TOPPADDING', (0,0), (-1,0), 8),
-            ('GRID', (0,0), (-1,-1), 1, COLOR_PRIMARY), ('BACKGROUND', (0,1), (-1,-1), HexColor('#F3E8FF')),
+            ('BACKGROUND', (0,0), (-1,0), COLOR_PRIMARY), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 8), ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('GRID', (0,0), (-1,-1), 1, COLOR_PRIMARY),
+            ('BACKGROUND', (0,1), (-1,-1), COLOR_LIGHT_BG),
         ]))
         story.append(items_table)
         story.append(Spacer(1, 1*cm))
@@ -671,18 +694,20 @@ def gerar_pdf_orcamento(id):
         pag_tipo = orcamento.get('pagamento', {}).get('tipo', 'Não especificado')
         
         valores_data = [
-            ['Subtotal:', f'R$ {subtotal:.2f}'],
-            ['Desconto Global:', f'R$ {desconto:.2f}'],
-            [Paragraph('<b>Valor Total a Pagar:</b>', styles['Body']), Paragraph(f'<b>R$ {total:.2f}</b>', styles['Body'])],
-            ['Forma de Pagamento:', pag_tipo]
+            [Paragraph('Subtotal:', styles['BodyRight']), Paragraph(f'R$ {subtotal:,.2f}'.replace(",", "X").replace(".", ",").replace("X", "."), styles['BodyRight'])],
+            [Paragraph('Desconto Global:', styles['BodyRight']), Paragraph(f'R$ {desconto:,.2f}'.replace(",", "X").replace(".", ",").replace("X", "."), styles['BodyRight'])],
+            [HRFlowable(8*cm, color=COLOR_PRIMARY, thickness=1.5), ''],
+            [Paragraph('<b>Valor Total a Pagar:</b>', styles['BodyRight']), Paragraph(f'<b>R$ {total:,.2f}</b>'.replace(",", "X").replace(".", ",").replace("X", "."), styles['BodyRight'])],
+            [Paragraph('Forma de Pagamento:', styles['BodyRight']), Paragraph(pag_tipo, styles['BodyRight'])],
         ]
-        valores_table = Table(valores_data, colWidths=[4*cm, 5*cm], hAlign='RIGHT')
+        valores_table = Table(valores_data, colWidths=[4*cm, 4*cm], hAlign='RIGHT')
         valores_table.setStyle(TableStyle([
-            ('ALIGN', (0,0), (-1,-1), 'RIGHT'), ('LINEABOVE', (0,2), (-1,2), 1, COLOR_PRIMARY),
-            ('TOPPADDING', (0,2), (-1,2), 5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('SPAN', (0,2), (1,2)), # Span for the horizontal line
         ]))
         story.append(valores_table)
-        story.append(Spacer(1, 1*cm))
+        story.append(Spacer(1, 1.5*cm))
 
         story.append(Paragraph("DISPOSIÇÕES GERAIS E CLÁUSULAS", styles['MainTitle']))
         clausulas = [
@@ -699,25 +724,22 @@ def gerar_pdf_orcamento(id):
         ]
         for i, clausula in enumerate(clausulas):
             story.append(Paragraph(f"<b>{i+1}.</b> {clausula}", styles['Clause']))
-            story.append(Spacer(1, 0.2*cm))
+            story.append(Spacer(1, 0.4*cm))
         
-        story.append(PageBreak())
-        story.append(Paragraph("ASSINATURAS", styles['MainTitle']))
-        story.append(Spacer(1, 2*cm))
-
-        assinaturas_data = [
-            [Paragraph("<br/><br/>_________________________________<br/><b>CONTRATANTE</b><br/>" + orcamento.get('cliente_nome', 'N/A'), styles['Body']),
-             Paragraph("<br/><br/>_________________________________<br/><b>CONTRATADA</b><br/>BIOMA UBERABA", styles['Body'])]
-        ]
-        assinaturas_table = Table(assinaturas_data, colWidths=['*', '*'])
-        assinaturas_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+        story.append(Spacer(1, 3*cm))
+        
+        assinatura_contratante = Paragraph("________________________________________<br/><b>CONTRATANTE</b><br/>" + orcamento.get('cliente_nome', 'N/A'), styles['Signature'])
+        assinatura_contratada = Paragraph("________________________________________<br/><b>CONTRATADA</b><br/>BIOMA UBERABA", styles['Signature'])
+        
+        assinaturas_table = Table([[assinatura_contratante, assinatura_contratada]], colWidths=['*', '*'])
         story.append(assinaturas_table)
         
         def on_each_page(canvas, doc):
             canvas.saveState()
             canvas.setFont('Helvetica', 8)
             canvas.setFillColor(COLOR_SECONDARY)
-            canvas.drawCentredString(doc_width/2, 1.5*cm, f"Página {doc.page} | BIOMA Uberaba")
+            page_num = canvas.getPageNumber()
+            canvas.drawCentredString(doc_width/2, 1.5*cm, f"Página {page_num} | Contrato BIOMA Uberaba")
             canvas.restoreState()
 
         doc.build(story, onFirstPage=on_each_page, onLaterPages=on_each_page)
