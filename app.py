@@ -240,7 +240,7 @@ def admin_required(f):
         if 'user_id' not in session:
             return jsonify({'success': False, 'message': 'Usuário não autenticado'}), 401
         
-        if not users_collection:
+        if users_collection is None:
             return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
         
         user = users_collection.find_one({'_id': ObjectId(session['user_id'])})
@@ -355,7 +355,7 @@ def validate_password_strength(password):
 
 def backup_database():
     """Realiza backup completo do banco de dados"""
-    if not backups_collection:
+    if backups_collection is None:
         logger.error('❌ Coleção de backups não disponível')
         return False
     
@@ -634,7 +634,7 @@ def generate_modern_pdf(budget_data):
 
 def criar_usuario_admin():
     """Cria usuário administrador padrão se não existir"""
-    if not users_collection:
+    if users_collection is None:
         logger.error('❌ Coleção de usuários não disponível')
         return False
     
