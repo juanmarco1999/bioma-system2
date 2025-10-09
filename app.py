@@ -283,10 +283,11 @@ def send_email(to_email, subject, body):
 
 def check_rate_limit(identifier, max_attempts=5, window_minutes=15):
     """Verifica limite de tentativas de login (Rate Limiting)"""
-    if not login_attempts_collection:
-        return True
-    
     try:
+        # CORREÇÃO: verificar se collection existe
+        if login_attempts_collection is None:
+            return True
+        
         now = datetime.now()
         window_start = now - timedelta(minutes=window_minutes)
         
@@ -304,14 +305,15 @@ def check_rate_limit(identifier, max_attempts=5, window_minutes=15):
         return True
     except Exception as e:
         logger.error(f'❌ Erro ao verificar rate limit: {str(e)}')
-        return True  # Em caso de erro, permitir tentativa
+        return True
 
 def register_login_attempt(identifier, success, user_id=None):
     """Registra tentativa de login para auditoria"""
-    if not login_attempts_collection:
-        return
-    
     try:
+        # CORREÇÃO: verificar se collection existe
+        if login_attempts_collection is None:
+            return
+        
         login_attempts_collection.insert_one({
             'identifier': identifier,
             'success': success,
@@ -322,13 +324,14 @@ def register_login_attempt(identifier, success, user_id=None):
         })
     except Exception as e:
         logger.error(f'❌ Erro ao registrar tentativa de login: {str(e)}')
-
+        
 def clear_old_login_attempts():
     """Remove tentativas de login antigas (>24h)"""
-    if not login_attempts_collection:
-        return
-    
     try:
+        # CORREÇÃO: verificar se collection existe
+        if login_attempts_collection is None:
+            return
+        
         cutoff = datetime.now() - timedelta(hours=24)
         result = login_attempts_collection.delete_many({'timestamp': {'$lt': cutoff}})
         logger.info(f'🧹 Removidas {result.deleted_count} tentativas de login antigas')
@@ -415,7 +418,7 @@ def clear_all_data():
         
         total_deleted = 0
         for name, collection in collections_to_clear:
-            if collection:
+            if collection is not None:
                 result = collection.delete_many({})
                 total_deleted += result.deleted_count
                 logger.info(f'🗑️ {name}: {result.deleted_count} registros removidos')
