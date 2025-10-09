@@ -692,32 +692,43 @@ def health():
 
 @app.route('/api/register', methods=['POST'])
 def register():
-    """Registra novo usuário com validação de senha forte"""
+    """Rota de registro de novo usuário"""
     try:
         data = request.json
         
-        # Validação de campos obrigatórios
-        if not data.get('name') or not data.get('email') or not data.get('password'):
-            return jsonify({'success': False, 'message': 'Dados incompletos'}), 400
+        # Validação básica
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
         
-        # Validar força da senha
-        is_strong, msg = validate_password_strength(data['password'])
-        if not is_strong:
-            return jsonify({'success': False, 'message': msg}), 400
+        if not name or not email or not password:
+            return jsonify({'success': False, 'message': 'Todos os campos são obrigatórios'}), 400
+        
+        # Validar email
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            return jsonify({'success': False, 'message': 'Email inválido'}), 400
+        
+        # Validar senha forte (mínimo 8 caracteres, com letras e números)
+        if len(password) < 8:
+            return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 8 caracteres'}), 400
+        
+        if not re.search(r'[A-Za-z]', password) or not re.search(r'[0-9]', password):
+            return jsonify({'success': False, 'message': 'Senha deve conter letras e números'}), 400
         
         # Verificar se email já existe
-        if users_collection.find_one({'email': data['email']}):
+        if users_collection.find_one({'email': email}):
             return jsonify({'success': False, 'message': 'Email já cadastrado'}), 400
         
-        # Hash da senha
-        hashed_password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+        # CORREÇÃO: Criar hash da senha corretamente
+        password_bytes = password.encode('utf-8')
+        hashed_password = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
         
         # Criar usuário
         user = {
-            'name': data['name'],
-            'email': data['email'],
-            'password': hashed_password,
-            'role': data.get('role', 'user'),
+            'name': name,
+            'email': email,
+            'password': hashed_password,  # Armazena como bytes
+            'role': 'user',
             'active': True,
             'created_at': datetime.now(),
             'last_login': None
@@ -725,89 +736,96 @@ def register():
         
         result = users_collection.insert_one(user)
         
-        # Enviar email de boas-vindas
-        if EMAIL_USER:
-            send_email(
-                data['email'],
-                'Bem-vindo ao Bioma System',
-                f'''
-                <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9fafb;border-radius:10px">
-                    <h2 style="color:#7C3AED;text-align:center">🌳 Bem-vindo ao BIOMA!</h2>
-                    <p>Olá <strong>{data["name"]}</strong>,</p>
-                    <p>Sua conta foi criada com sucesso no Bioma System.</p>
-                    <p>Email: <strong>{data["email"]}</strong></p>
-                    <p style="margin-top:30px;color:#6B7280;font-size:12px;text-align:center">
-                        BIOMA Uberaba - Sistema Profissional v3.9
-                    </p>
-                </div>
-                '''
-            )
+        logger.info(f'✅ Novo usuário registrado: {email} (ID: {result.inserted_id})')
         
-        logger.info(f'✅ Novo usuário registrado: {data["email"]}')
-        return jsonify({'success': True, 'message': 'Usuário registrado com sucesso'}), 201
+        return jsonify({
+            'success': True,
+            'message': 'Usuário cadastrado com sucesso',
+            'user': {
+                'id': str(result.inserted_id),
+                'name': name,
+                'email': email,
+                'role': 'user'
+            }
+        }), 201
         
     except Exception as e:
         logger.error(f'❌ Erro ao registrar usuário: {str(e)}')
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({'success': False, 'message': 'Erro ao registrar usuário'}), 500
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    """Realiza login com rate limiting e auditoria"""
+    """Rota de login do usuário"""
     try:
         data = request.json
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        remember_me = data.get('remember_me', False)
         
-        # Validação
-        if not data.get('email') or not data.get('password'):
+        # Validação básica
+        if not email or not password:
             return jsonify({'success': False, 'message': 'Email e senha são obrigatórios'}), 400
         
-        # Verificar rate limit
-        if not check_rate_limit(data['email']):
-            return jsonify({'success': False, 'message': 'Muitas tentativas. Tente novamente em 15 minutos'}), 429
+        # Rate limiting
+        if not check_rate_limit(email):
+            return jsonify({'success': False, 'message': 'Muitas tentativas de login. Tente novamente em 15 minutos'}), 429
         
         # Buscar usuário
-        user = users_collection.find_one({'email': data['email']})
+        user = users_collection.find_one({'email': email})
         
         if not user:
-            register_login_attempt(data['email'], False)
+            register_login_attempt(email, False)
             return jsonify({'success': False, 'message': 'Email ou senha incorretos'}), 401
         
         # Verificar se usuário está ativo
         if not user.get('active', True):
-            register_login_attempt(data['email'], False, str(user['_id']))
-            return jsonify({'success': False, 'message': 'Usuário inativo'}), 401
+            return jsonify({'success': False, 'message': 'Usuário desativado'}), 403
+        
+        # CORREÇÃO CRÍTICA: Converter senha hash para bytes se for string
+        stored_password = user['password']
+        
+        # Se a senha está armazenada como string, converter para bytes
+        if isinstance(stored_password, str):
+            stored_password = stored_password.encode('utf-8')
         
         # Verificar senha
-        if not bcrypt.checkpw(data['password'].encode('utf-8'), user['password']):
-            register_login_attempt(data['email'], False, str(user['_id']))
+        password_bytes = password.encode('utf-8')
+        
+        if not bcrypt.checkpw(password_bytes, stored_password):
+            register_login_attempt(email, False, user_id=str(user['_id']))
             return jsonify({'success': False, 'message': 'Email ou senha incorretos'}), 401
         
-        # Login bem-sucedido - Criar sessão
-        session.clear()
-        session['user_id'] = str(user['_id'])
-        session['user_name'] = user['name']
-        session['user_email'] = user['email']
-        session['user_role'] = user.get('role', 'user')
-        session['last_activity'] = datetime.now().isoformat()
+        # Login bem-sucedido
+        register_login_attempt(email, True, user_id=str(user['_id']))
         
-        # Configurar "Remember me"
-        remember_me = data.get('remember_me', False)
-        if remember_me:
-            session.permanent = True
-            app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-            session['remember_me'] = True
-        else:
-            session.permanent = False
-            app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
-            session['remember_me'] = False
-        
-        # Registrar tentativa bem-sucedida e atualizar último login
-        register_login_attempt(data['email'], True, str(user['_id']))
+        # Atualizar último login
         users_collection.update_one(
             {'_id': user['_id']},
             {'$set': {'last_login': datetime.now()}}
         )
         
-        logger.info(f'✅ Login bem-sucedido: {data["email"]} (Remember: {remember_me})')
+        # Criar sessão
+        session.permanent = remember_me
+        session['user_id'] = str(user['_id'])
+        session['user_email'] = user['email']
+        session['user_name'] = user['name']
+        session['user_role'] = user.get('role', 'user')
+        session['login_time'] = datetime.now().isoformat()
+        
+        # Salvar sessão no MongoDB
+        if sessions_collection is not None:
+            sessions_collection.insert_one({
+                'user_id': str(user['_id']),
+                'email': user['email'],
+                'login_time': datetime.now(),
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', 'Unknown'),
+                'remember_me': remember_me
+            })
+        
+        logger.info(f'✅ Login realizado: {email} (ID: {user["_id"]})')
         
         return jsonify({
             'success': True,
@@ -822,7 +840,9 @@ def login():
         
     except Exception as e:
         logger.error(f'❌ Erro ao realizar login: {str(e)}')
-        return jsonify({'success': False, 'message': 'Erro ao realizar login'}), 500
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
 
 @app.route('/api/logout', methods=['POST'])
 @login_required
