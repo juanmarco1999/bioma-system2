@@ -171,19 +171,19 @@ except Exception as e:
     logger.error(f'❌ Erro ao conectar MongoDB: {str(e)}')
     db = None
 
-# Coleções do MongoDB
-users_collection = db['users'] if db else None
-clients_collection = db['clients'] if db else None
-professionals_collection = db['professionals'] if db else None
-services_collection = db['services'] if db else None
-products_collection = db['products'] if db else None
-budgets_collection = db['budgets'] if db else None
-appointments_collection = db['appointments'] if db else None
-stock_collection = db['stock_movements'] if db else None
-sales_collection = db['sales'] if db else None
-login_attempts_collection = db['login_attempts'] if db else None
-sessions_collection = db['sessions'] if db else None
-backups_collection = db['backups'] if db else None
+# Coleções (com verificação segura)
+users_collection = db['users'] if db is not None else None
+clients_collection = db['clients'] if db is not None else None
+professionals_collection = db['professionals'] if db is not None else None
+services_collection = db['services'] if db is not None else None
+products_collection = db['products'] if db is not None else None
+budgets_collection = db['budgets'] if db is not None else None
+appointments_collection = db['appointments'] if db is not None else None
+stock_collection = db['stock_movements'] if db is not None else None
+sales_collection = db['sales'] if db is not None else None
+login_attempts_collection = db['login_attempts'] if db is not None else None
+sessions_collection = db['sessions'] if db is not None else None
+backups_collection = db['backups'] if db is not None else None
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CONFIGURAÇÃO DE EMAIL
@@ -2163,7 +2163,7 @@ def init_scheduler():
 
 def criar_usuario_admin():
     """Cria usuário administrador padrão se não existir"""
-    if not users_collection:
+    if users_collection is None:
         logger.error('❌ Coleção de usuários não disponível')
         return False
     
@@ -2194,7 +2194,7 @@ def criar_usuario_admin():
             return True
     except Exception as e:
         logger.error(f'❌ Erro ao criar usuário admin: {str(e)}')
-        logger.exception(e)  # Log completo do erro
+        logger.exception(e)
         return False
 
 if __name__ == '__main__':
@@ -2203,7 +2203,7 @@ if __name__ == '__main__':
     logger.info('═══════════════════════════════════════════════════════════════')
     
     # Verificar MongoDB
-    if not db:
+    if db is None:
         logger.error('❌ ERRO CRÍTICO: MongoDB não conectado!')
         logger.error('❌ Verifique a variável MONGO_URI nas Environment Variables')
         exit(1)
@@ -2219,19 +2219,18 @@ if __name__ == '__main__':
     criar_usuario_admin()
     
     # Criar índices no MongoDB
-    if db:
-        try:
-            users_collection.create_index('email', unique=True)
-            clients_collection.create_index('phone')
-            appointments_collection.create_index([('date', ASCENDING), ('time', ASCENDING)])
-            sales_collection.create_index('date')
-            logger.info('📑 Índices do MongoDB criados com sucesso')
-        except Exception as e:
-            logger.warning(f'⚠️ Erro ao criar índices: {str(e)}')
+    try:
+        users_collection.create_index('email', unique=True)
+        clients_collection.create_index('phone')
+        appointments_collection.create_index([('date', ASCENDING), ('time', ASCENDING)])
+        sales_collection.create_index('date')
+        logger.info('📑 Índices do MongoDB criados com sucesso')
+    except Exception as e:
+        logger.warning(f'⚠️ Erro ao criar índices: {str(e)}')
     
     # Informações de inicialização
     logger.info(f'📧 Email configurado: {"✅ SIM" if EMAIL_USER else "❌ NÃO"}')
-    logger.info(f'💾 MongoDB: {"✅ CONECTADO" if db else "❌ DESCONECTADO"}')
+    logger.info(f'💾 MongoDB: ✅ CONECTADO')
     logger.info('═══════════════════════════════════════════════════════════════')
     logger.info('✅ Sistema pronto para receber requisições')
     logger.info('═══════════════════════════════════════════════════════════════')
