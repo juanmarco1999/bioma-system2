@@ -2158,18 +2158,64 @@ def init_scheduler():
     logger.info('⏰ Scheduler iniciado com sucesso')
 
 # ═══════════════════════════════════════════════════════════════════════════
-# INICIALIZAÇÃO
+# INICIALIZAÇÃO v4.0 - CORRIGIDA
 # ═══════════════════════════════════════════════════════════════════════════
+
+def criar_usuario_admin():
+    """Cria usuário administrador padrão se não existir"""
+    if not users_collection:
+        logger.error('❌ Coleção de usuários não disponível')
+        return False
+    
+    try:
+        # Verificar se já existe admin
+        admin_exists = users_collection.find_one({'email': 'admin@bioma.com'})
+        
+        if not admin_exists:
+            # Hash da senha admin123
+            hashed_password = bcrypt.hashpw(b'admin123', bcrypt.gensalt())
+            
+            admin_user = {
+                'name': 'Administrador',
+                'email': 'admin@bioma.com',
+                'password': hashed_password,
+                'role': 'admin',
+                'active': True,
+                'created_at': datetime.now(),
+                'last_login': None
+            }
+            
+            result = users_collection.insert_one(admin_user)
+            logger.info(f'✅ Usuário admin criado com ID: {result.inserted_id}')
+            logger.info('✅ Login: admin@bioma.com / Senha: admin123')
+            return True
+        else:
+            logger.info('ℹ️ Usuário administrador já existe')
+            return True
+    except Exception as e:
+        logger.error(f'❌ Erro ao criar usuário admin: {str(e)}')
+        logger.exception(e)  # Log completo do erro
+        return False
 
 if __name__ == '__main__':
     logger.info('═══════════════════════════════════════════════════════════════')
-    logger.info('🌳 BIOMA UBERABA v3.9 - INICIANDO SISTEMA')
+    logger.info('🌳 BIOMA UBERABA v4.0 - INICIANDO SISTEMA')
     logger.info('═══════════════════════════════════════════════════════════════')
     
-    # Inicializar scheduler
-    init_scheduler()
+    # Verificar MongoDB
+    if not db:
+        logger.error('❌ ERRO CRÍTICO: MongoDB não conectado!')
+        logger.error('❌ Verifique a variável MONGO_URI nas Environment Variables')
+        exit(1)
     
-    # Criar usuário admin padrão
+    # Inicializar scheduler
+    try:
+        init_scheduler()
+    except Exception as e:
+        logger.warning(f'⚠️ Scheduler não iniciado: {str(e)}')
+    
+    # Criar usuário admin
+    logger.info('🔐 Verificando usuário administrador...')
     criar_usuario_admin()
     
     # Criar índices no MongoDB

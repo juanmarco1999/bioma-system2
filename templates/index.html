@@ -2180,30 +2180,10 @@ function switchTab(tab) {
 async function handleLogin(e) {
     e.preventDefault();
     
-    const form = e.target;
     const email = document.getElementById('loginEmail');
     const password = document.getElementById('loginPassword');
     
-    // Validação em tempo real
-    let valid = true;
-    
-    if (!email.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        email.classList.add('is-invalid');
-        valid = false;
-    } else {
-        email.classList.remove('is-invalid');
-        email.classList.add('is-valid');
-    }
-    
-    if (password.value.length < 8) {
-        password.classList.add('is-invalid');
-        valid = false;
-    } else {
-        password.classList.remove('is-invalid');
-        password.classList.add('is-valid');
-    }
-    
-    if (!valid) return false;
+    console.log('🔍 Tentando login com:', email.value); // DEBUG
     
     try {
         const res = await fetch('/api/login', {
@@ -2217,22 +2197,19 @@ async function handleLogin(e) {
             })
         });
         
+        console.log('📡 Response status:', res.status); // DEBUG
+        
         const data = await res.json();
+        console.log('📦 Response data:', data); // DEBUG
         
         if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: '✅ Bem-vindo!',
-                text: `Olá, ${data.user.name}!`,
-                timer: 1500,
-                showConfirmButton: false
-            });
-            
-            setTimeout(() => location.reload(), 500);
+            // ...
         } else {
+            console.error('❌ Login failed:', data.message); // DEBUG
             Swal.fire('Erro', data.message || 'Credenciais inválidas', 'error');
         }
     } catch (e) {
+        console.error('❌ Fetch error:', e); // DEBUG
         Swal.fire('Erro', 'Não foi possível conectar ao servidor', 'error');
     }
     
