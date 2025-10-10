@@ -764,40 +764,58 @@ def login():
         password = data.get('password', '')
         remember_me = data.get('remember_me', False)
         
+        logger.info(f'🔐 Tentativa de login: {email}')
+        
         # Validação básica
         if not email or not password:
+            logger.warning(f'❌ Login falhou: campos vazios - {email}')
             return jsonify({'success': False, 'message': 'Email e senha são obrigatórios'}), 400
         
-        # Rate limiting
+        # Rate limiting (verificação segura)
         if not check_rate_limit(email):
-            return jsonify({'success': False, 'message': 'Muitas tentativas de login. Tente novamente em 15 minutos'}), 429
+            logger.warning(f'🚨 Rate limit excedido: {email}')
+            return jsonify({'success': False, 'message': 'Muitas tentativas. Aguarde 15 minutos'}), 429
         
         # Buscar usuário
         user = users_collection.find_one({'email': email})
         
         if not user:
+            logger.warning(f'❌ Login falhou: usuário não encontrado - {email}')
             register_login_attempt(email, False)
             return jsonify({'success': False, 'message': 'Email ou senha incorretos'}), 401
         
         # Verificar se usuário está ativo
         if not user.get('active', True):
+            logger.warning(f'❌ Login falhou: usuário desativado - {email}')
             return jsonify({'success': False, 'message': 'Usuário desativado'}), 403
         
-        # CORREÇÃO CRÍTICA: Converter senha hash para bytes se for string
+        # CORREÇÃO: Verificar senha com suporte para string e bytes
         stored_password = user['password']
         
-        # Se a senha está armazenada como string, converter para bytes
-        if isinstance(stored_password, str):
-            stored_password = stored_password.encode('utf-8')
+        try:
+            # Se a senha está como string, manter como string
+            if isinstance(stored_password, str):
+                password_match = bcrypt.checkpw(
+                    password.encode('utf-8'),
+                    stored_password.encode('utf-8')
+                )
+            else:
+                # Se é bytes, usar direto
+                password_match = bcrypt.checkpw(
+                    password.encode('utf-8'),
+                    stored_password
+                )
+        except Exception as bcrypt_error:
+            logger.error(f'❌ Erro bcrypt: {str(bcrypt_error)}')
+            return jsonify({'success': False, 'message': 'Erro na verificação de senha'}), 500
         
-        # Verificar senha
-        password_bytes = password.encode('utf-8')
-        
-        if not bcrypt.checkpw(password_bytes, stored_password):
+        if not password_match:
+            logger.warning(f'❌ Login falhou: senha incorreta - {email}')
             register_login_attempt(email, False, user_id=str(user['_id']))
             return jsonify({'success': False, 'message': 'Email ou senha incorretos'}), 401
         
         # Login bem-sucedido
+        logger.info(f'✅ Login bem-sucedido: {email}')
         register_login_attempt(email, True, user_id=str(user['_id']))
         
         # Atualizar último login
@@ -825,7 +843,7 @@ def login():
                 'remember_me': remember_me
             })
         
-        logger.info(f'✅ Login realizado: {email} (ID: {user["_id"]})')
+        logger.info(f'✅ Sessão criada para: {email} (ID: {user["_id"]})')
         
         return jsonify({
             'success': True,
@@ -839,7 +857,7 @@ def login():
         }), 200
         
     except Exception as e:
-        logger.error(f'❌ Erro ao realizar login: {str(e)}')
+        logger.error(f'❌ ERRO CRÍTICO no login: {str(e)}')
         import traceback
         logger.error(traceback.format_exc())
         return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
