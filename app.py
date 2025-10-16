@@ -348,18 +348,89 @@ def delete_cliente(id):
     except:
         return jsonify({'success': False}), 500
 
+@app.route('/api/clientes/<id>', methods=['GET'])
+@login_required
+def get_cliente(id):
+    """Visualizar um cliente específico"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        cliente = db.clientes.find_one({'_id': ObjectId(id)})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+        
+        # Adicionar estatísticas
+        cliente_cpf = cliente.get('cpf')
+        cliente['total_gasto'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
+        ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
+        cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
+        cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
+        
+        return jsonify({'success': True, 'cliente': convert_objectid(cliente)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar cliente: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/clientes/<id>', methods=['PUT'])
+@login_required
+def update_cliente(id):
+    """Editar um cliente existente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        cliente_existente = db.clientes.find_one({'_id': ObjectId(id)})
+        if not cliente_existente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+        
+        # Verificar se o CPF já existe em outro cliente
+        if data.get('cpf') != cliente_existente.get('cpf'):
+            cpf_duplicado = db.clientes.find_one({'cpf': data['cpf'], '_id': {'$ne': ObjectId(id)}})
+            if cpf_duplicado:
+                return jsonify({'success': False, 'message': 'CPF já cadastrado em outro cliente'}), 400
+        
+        update_data = {
+            'nome': data.get('nome', cliente_existente.get('nome')),
+            'cpf': data.get('cpf', cliente_existente.get('cpf')),
+            'email': data.get('email', cliente_existente.get('email', '')),
+            'telefone': data.get('telefone', cliente_existente.get('telefone', '')),
+            'updated_at': datetime.now()
+        }
+        
+        db.clientes.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+        logger.info(f"✅ Cliente atualizado: {update_data['nome']}")
+        
+        return jsonify({'success': True, 'message': 'Cliente atualizado com sucesso'})
+    except Exception as e:
+        logger.error(f"Erro ao atualizar cliente: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/clientes/buscar')
 @login_required
 def buscar_clientes():
     if db is None:
         return jsonify({'success': False}), 500
-    termo = request.args.get('termo', '')
+    termo = request.args.get('termo', '').strip()
     try:
         regex = {'$regex': termo, '$options': 'i'}
-        clientes = list(db.clientes.find({'$or': [{'nome': regex}, {'cpf': regex}]}).limit(10))
+        clientes = list(db.clientes.find({
+            '$or': [
+                {'nome': regex},
+                {'cpf': regex},
+                {'email': regex},
+                {'telefone': regex}
+            ]
+        }).sort('nome', ASCENDING).limit(50))
+        
+        # Adicionar informação completa formatada
+        for c in clientes:
+            c['display_name'] = f"{c.get('nome', '')} - CPF: {c.get('cpf', '')}"
+        
         return jsonify({'success': True, 'clientes': convert_objectid(clientes)})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"Erro ao buscar clientes: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/profissionais', methods=['GET', 'POST'])
 @login_required
@@ -391,6 +462,59 @@ def delete_profissional(id):
         return jsonify({'success': result.deleted_count > 0})
     except:
         return jsonify({'success': False}), 500
+
+@app.route('/api/profissionais/<id>', methods=['GET'])
+@login_required
+def get_profissional(id):
+    """Visualizar um profissional específico"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        profissional = db.profissionais.find_one({'_id': ObjectId(id)})
+        if not profissional:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+        return jsonify({'success': True, 'profissional': convert_objectid(profissional)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar profissional: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/profissionais/<id>', methods=['PUT'])
+@login_required
+def update_profissional(id):
+    """Editar um profissional existente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        profissional_existente = db.profissionais.find_one({'_id': ObjectId(id)})
+        if not profissional_existente:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+        
+        # Verificar se o CPF já existe em outro profissional
+        if data.get('cpf') != profissional_existente.get('cpf'):
+            cpf_duplicado = db.profissionais.find_one({'cpf': data['cpf'], '_id': {'$ne': ObjectId(id)}})
+            if cpf_duplicado:
+                return jsonify({'success': False, 'message': 'CPF já cadastrado em outro profissional'}), 400
+        
+        update_data = {
+            'nome': data.get('nome', profissional_existente.get('nome')),
+            'cpf': data.get('cpf', profissional_existente.get('cpf')),
+            'email': data.get('email', profissional_existente.get('email', '')),
+            'telefone': data.get('telefone', profissional_existente.get('telefone', '')),
+            'especialidade': data.get('especialidade', profissional_existente.get('especialidade', '')),
+            'comissao_perc': float(data.get('comissao_perc', profissional_existente.get('comissao_perc', 0))),
+            'ativo': data.get('ativo', profissional_existente.get('ativo', True)),
+            'updated_at': datetime.now()
+        }
+        
+        db.profissionais.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+        logger.info(f"✅ Profissional atualizado: {update_data['nome']}")
+        
+        return jsonify({'success': True, 'message': 'Profissional atualizado com sucesso'})
+    except Exception as e:
+        logger.error(f"Erro ao atualizar profissional: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/servicos', methods=['GET', 'POST'])
 @login_required
@@ -429,17 +553,79 @@ def delete_servico(id):
     except:
         return jsonify({'success': False}), 500
 
+@app.route('/api/servicos/<id>', methods=['GET'])
+@login_required
+def get_servico(id):
+    """Visualizar um serviço específico"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        servico = db.servicos.find_one({'_id': ObjectId(id)})
+        if not servico:
+            return jsonify({'success': False, 'message': 'Serviço não encontrado'}), 404
+        return jsonify({'success': True, 'servico': convert_objectid(servico)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar serviço: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/servicos/<id>', methods=['PUT'])
+@login_required
+def update_servico(id):
+    """Editar um serviço existente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        servico_existente = db.servicos.find_one({'_id': ObjectId(id)})
+        if not servico_existente:
+            return jsonify({'success': False, 'message': 'Serviço não encontrado'}), 404
+        
+        update_data = {
+            'nome': data.get('nome', servico_existente.get('nome')),
+            'sku': data.get('sku', servico_existente.get('sku')),
+            'tamanho': data.get('tamanho', servico_existente.get('tamanho')),
+            'preco': float(data.get('preco', servico_existente.get('preco', 0))),
+            'categoria': data.get('categoria', servico_existente.get('categoria', 'Serviço')),
+            'duracao': int(data.get('duracao', servico_existente.get('duracao', 60))),
+            'ativo': data.get('ativo', servico_existente.get('ativo', True)),
+            'updated_at': datetime.now()
+        }
+        
+        db.servicos.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+        logger.info(f"✅ Serviço atualizado: {update_data['nome']}")
+        
+        return jsonify({'success': True, 'message': 'Serviço atualizado com sucesso'})
+    except Exception as e:
+        logger.error(f"Erro ao atualizar serviço: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/servicos/buscar')
 @login_required
 def buscar_servicos():
     if db is None:
         return jsonify({'success': False}), 500
-    termo = request.args.get('termo', '')
+    termo = request.args.get('termo', '').strip()
     try:
-        servicos = list(db.servicos.find({'nome': {'$regex': termo, '$options': 'i'}}).limit(20))
+        # Busca mais abrangente: por nome, tamanho ou SKU
+        regex = {'$regex': termo, '$options': 'i'}
+        servicos = list(db.servicos.find({
+            '$or': [
+                {'nome': regex},
+                {'tamanho': regex},
+                {'sku': regex}
+            ],
+            'ativo': True
+        }).sort([('nome', ASCENDING), ('tamanho', ASCENDING)]).limit(50))
+        
+        # Adicionar informação completa formatada para exibição
+        for s in servicos:
+            s['display_name'] = f"{s.get('nome', '')} - {s.get('tamanho', '')} (R$ {s.get('preco', 0):.2f})"
+        
         return jsonify({'success': True, 'servicos': convert_objectid(servicos)})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"Erro ao buscar serviços: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/produtos', methods=['GET', 'POST'])
 @login_required
@@ -474,17 +660,87 @@ def delete_produto(id):
     except:
         return jsonify({'success': False}), 500
 
+@app.route('/api/produtos/<id>', methods=['GET'])
+@login_required
+def get_produto(id):
+    """Visualizar um produto específico"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        produto = db.produtos.find_one({'_id': ObjectId(id)})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+        return jsonify({'success': True, 'produto': convert_objectid(produto)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar produto: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/produtos/<id>', methods=['PUT'])
+@login_required
+def update_produto(id):
+    """Editar um produto existente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        produto_existente = db.produtos.find_one({'_id': ObjectId(id)})
+        if not produto_existente:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+        
+        # Verificar se o SKU já existe em outro produto
+        if data.get('sku') != produto_existente.get('sku'):
+            sku_duplicado = db.produtos.find_one({'sku': data['sku'], '_id': {'$ne': ObjectId(id)}})
+            if sku_duplicado:
+                return jsonify({'success': False, 'message': 'SKU já cadastrado em outro produto'}), 400
+        
+        update_data = {
+            'nome': data.get('nome', produto_existente.get('nome')),
+            'marca': data.get('marca', produto_existente.get('marca', '')),
+            'sku': data.get('sku', produto_existente.get('sku')),
+            'preco': float(data.get('preco', produto_existente.get('preco', 0))),
+            'custo': float(data.get('custo', produto_existente.get('custo', 0))),
+            'estoque': int(data.get('estoque', produto_existente.get('estoque', 0))),
+            'estoque_minimo': int(data.get('estoque_minimo', produto_existente.get('estoque_minimo', 5))),
+            'categoria': data.get('categoria', produto_existente.get('categoria', 'Produto')),
+            'ativo': data.get('ativo', produto_existente.get('ativo', True)),
+            'updated_at': datetime.now()
+        }
+        
+        db.produtos.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+        logger.info(f"✅ Produto atualizado: {update_data['nome']}")
+        
+        return jsonify({'success': True, 'message': 'Produto atualizado com sucesso'})
+    except Exception as e:
+        logger.error(f"Erro ao atualizar produto: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/produtos/buscar')
 @login_required
 def buscar_produtos():
     if db is None:
         return jsonify({'success': False}), 500
-    termo = request.args.get('termo', '')
+    termo = request.args.get('termo', '').strip()
     try:
-        produtos = list(db.produtos.find({'nome': {'$regex': termo, '$options': 'i'}}).limit(20))
+        regex = {'$regex': termo, '$options': 'i'}
+        produtos = list(db.produtos.find({
+            '$or': [
+                {'nome': regex},
+                {'marca': regex},
+                {'sku': regex}
+            ],
+            'ativo': True
+        }).sort('nome', ASCENDING).limit(50))
+        
+        # Adicionar informação completa formatada para exibição
+        for p in produtos:
+            marca = p.get('marca', '')
+            p['display_name'] = f"{p.get('nome', '')} {('- ' + marca) if marca else ''} (R$ {p.get('preco', 0):.2f})"
+        
         return jsonify({'success': True, 'produtos': convert_objectid(produtos)})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"Erro ao buscar produtos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/orcamentos', methods=['GET', 'POST'])
 @login_required
@@ -541,6 +797,86 @@ def delete_orcamento(id):
         return jsonify({'success': result.deleted_count > 0})
     except:
         return jsonify({'success': False}), 500
+
+@app.route('/api/orcamentos/<id>', methods=['GET'])
+@login_required
+def get_orcamento(id):
+    """Visualizar um orçamento específico"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    try:
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+        return jsonify({'success': True, 'orcamento': convert_objectid(orcamento)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar orçamento: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/orcamentos/<id>', methods=['PUT'])
+@login_required
+def update_orcamento(id):
+    """Editar um orçamento existente"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    
+    data = request.json
+    try:
+        # Verificar se o orçamento existe
+        orcamento_existente = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not orcamento_existente:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+        
+        # Atualizar cliente se fornecido
+        if data.get('cliente_cpf'):
+            db.clientes.update_one(
+                {'cpf': data['cliente_cpf']},
+                {'$set': {
+                    'cpf': data['cliente_cpf'],
+                    'nome': data.get('cliente_nome', ''),
+                    'email': data.get('cliente_email', ''),
+                    'telefone': data.get('cliente_telefone', ''),
+                    'updated_at': datetime.now()
+                }},
+                upsert=True
+            )
+        
+        # Recalcular valores
+        subtotal = sum(s.get('total', 0) for s in data.get('servicos', [])) + sum(p.get('total', 0) for p in data.get('produtos', []))
+        desconto_global = float(data.get('desconto_global', 0))
+        desconto_valor = subtotal * (desconto_global / 100)
+        total_com_desconto = subtotal - desconto_valor
+        cashback_perc = float(data.get('cashback_perc', 0))
+        cashback_valor = total_com_desconto * (cashback_perc / 100)
+        
+        # Atualizar orçamento
+        update_data = {
+            'cliente_cpf': data.get('cliente_cpf', orcamento_existente.get('cliente_cpf')),
+            'cliente_nome': data.get('cliente_nome', orcamento_existente.get('cliente_nome')),
+            'cliente_email': data.get('cliente_email', orcamento_existente.get('cliente_email')),
+            'cliente_telefone': data.get('cliente_telefone', orcamento_existente.get('cliente_telefone')),
+            'servicos': data.get('servicos', orcamento_existente.get('servicos', [])),
+            'produtos': data.get('produtos', orcamento_existente.get('produtos', [])),
+            'subtotal': subtotal,
+            'desconto_global': desconto_global,
+            'desconto_valor': desconto_valor,
+            'total_com_desconto': total_com_desconto,
+            'cashback_perc': cashback_perc,
+            'cashback_valor': cashback_valor,
+            'total_final': total_com_desconto,
+            'pagamento': data.get('pagamento', orcamento_existente.get('pagamento', {})),
+            'status': data.get('status', orcamento_existente.get('status', 'Pendente')),
+            'updated_at': datetime.now()
+        }
+        
+        db.orcamentos.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+        
+        logger.info(f"✅ Orçamento #{orcamento_existente.get('numero')} atualizado")
+        return jsonify({'success': True, 'message': 'Orçamento atualizado com sucesso'})
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar orçamento: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # --- INÍCIO DA SEÇÃO MODIFICADA ---
 class GradientHeader(Flowable):
