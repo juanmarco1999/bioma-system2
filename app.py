@@ -447,10 +447,34 @@ def profissionais():
     
     data = request.json
     try:
-        db.profissionais.insert_one({'nome': data['nome'], 'cpf': data['cpf'], 'email': data.get('email', ''), 'telefone': data.get('telefone', ''), 'especialidade': data.get('especialidade', ''), 'comissao_perc': float(data.get('comissao_perc', 0)), 'ativo': True, 'created_at': datetime.now()})
+        # Sistema de multicomissão: profissional principal + assistentes
+        assistentes = data.get('assistentes', [])
+        # Validar assistentes (cada assistente tem id, nome e comissao_perc_sobre_profissional)
+        assistentes_processados = []
+        for assistente in assistentes:
+            if assistente.get('id') and assistente.get('comissao_perc_sobre_profissional'):
+                assistentes_processados.append({
+                    'id': assistente['id'],
+                    'nome': assistente.get('nome', ''),
+                    'comissao_perc_sobre_profissional': float(assistente['comissao_perc_sobre_profissional'])
+                })
+
+        db.profissionais.insert_one({
+            'nome': data['nome'],
+            'cpf': data['cpf'],
+            'email': data.get('email', ''),
+            'telefone': data.get('telefone', ''),
+            'especialidade': data.get('especialidade', ''),
+            'comissao_perc': float(data.get('comissao_perc', 0)),
+            'assistentes': assistentes_processados,
+            'foto_url': data.get('foto_url', ''),
+            'ativo': True,
+            'created_at': datetime.now()
+        })
         return jsonify({'success': True})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"Erro ao criar profissional: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/profissionais/<id>', methods=['DELETE'])
 @login_required
@@ -497,6 +521,17 @@ def update_profissional(id):
             if cpf_duplicado:
                 return jsonify({'success': False, 'message': 'CPF já cadastrado em outro profissional'}), 400
         
+        # Processar assistentes para multicomissão
+        assistentes = data.get('assistentes', profissional_existente.get('assistentes', []))
+        assistentes_processados = []
+        for assistente in assistentes:
+            if isinstance(assistente, dict) and assistente.get('id') and assistente.get('comissao_perc_sobre_profissional'):
+                assistentes_processados.append({
+                    'id': assistente['id'],
+                    'nome': assistente.get('nome', ''),
+                    'comissao_perc_sobre_profissional': float(assistente['comissao_perc_sobre_profissional'])
+                })
+
         update_data = {
             'nome': data.get('nome', profissional_existente.get('nome')),
             'cpf': data.get('cpf', profissional_existente.get('cpf')),
@@ -504,6 +539,8 @@ def update_profissional(id):
             'telefone': data.get('telefone', profissional_existente.get('telefone', '')),
             'especialidade': data.get('especialidade', profissional_existente.get('especialidade', '')),
             'comissao_perc': float(data.get('comissao_perc', profissional_existente.get('comissao_perc', 0))),
+            'assistentes': assistentes_processados,
+            'foto_url': data.get('foto_url', profissional_existente.get('foto_url', '')),
             'ativo': data.get('ativo', profissional_existente.get('ativo', True)),
             'updated_at': datetime.now()
         }
@@ -514,6 +551,73 @@ def update_profissional(id):
         return jsonify({'success': True, 'message': 'Profissional atualizado com sucesso'})
     except Exception as e:
         logger.error(f"Erro ao atualizar profissional: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/profissionais/buscar')
+@login_required
+def buscar_profissionais():
+    if db is None:
+        return jsonify({'success': False}), 500
+    termo = request.args.get('termo', '').strip()
+    try:
+        regex = {'$regex': termo, '$options': 'i'}
+        profissionais = list(db.profissionais.find({
+            '$or': [
+                {'nome': regex},
+                {'cpf': regex},
+                {'especialidade': regex}
+            ],
+            'ativo': True
+        }).sort('nome', ASCENDING).limit(50))
+
+        # Adicionar informação completa formatada
+        for p in profissionais:
+            p['display_name'] = f"{p.get('nome', '')} - {p.get('especialidade', '')} (Comissão: {p.get('comissao_perc', 0)}%)"
+
+        return jsonify({'success': True, 'profissionais': convert_objectid(profissionais)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar profissionais: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/profissionais/<id>/upload-foto', methods=['POST'])
+@login_required
+def upload_foto_profissional(id):
+    """Upload de foto para profissional"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    if 'foto' not in request.files:
+        return jsonify({'success': False, 'message': 'Nenhuma foto enviada'}), 400
+
+    foto = request.files['foto']
+    if not foto.filename:
+        return jsonify({'success': False, 'message': 'Nome de arquivo inválido'}), 400
+
+    try:
+        import base64
+        # Ler o arquivo e converter para base64
+        foto_data = foto.read()
+        foto_base64 = base64.b64encode(foto_data).decode('utf-8')
+
+        # Obter o tipo MIME
+        content_type = foto.content_type or 'image/jpeg'
+
+        # Criar data URL
+        foto_url = f"data:{content_type};base64,{foto_base64}"
+
+        # Atualizar profissional
+        result = db.profissionais.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': {'foto_url': foto_url, 'updated_at': datetime.now()}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'foto_url': foto_url})
+        else:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+
+    except Exception as e:
+        logger.error(f"Erro ao fazer upload de foto: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/servicos', methods=['GET', 'POST'])
@@ -1178,19 +1282,352 @@ def estoque_movimentacao():
     try:
         produto = db.produtos.find_one({'_id': ObjectId(data['produto_id'])})
         if not produto:
-            return jsonify({'success': False})
+            return jsonify({'success': False, 'message': 'Produto não encontrado'})
+
         qtd = int(data['quantidade'])
         tipo = data['tipo']
-        novo_estoque = produto.get('estoque', 0)
-        if tipo == 'entrada':
-            novo_estoque += qtd
-        else:
-            novo_estoque -= qtd
-        db.produtos.update_one({'_id': ObjectId(data['produto_id'])}, {'$set': {'estoque': novo_estoque}})
-        db.estoque_movimentacoes.insert_one({'produto_id': ObjectId(data['produto_id']), 'tipo': tipo, 'quantidade': qtd, 'motivo': data.get('motivo', ''), 'usuario': session.get('username'), 'data': datetime.now()})
-        return jsonify({'success': True})
-    except:
+        aprovar_automatico = data.get('aprovar_automatico', False)
+
+        # Criar movimentação com status pendente ou aprovado
+        status = 'aprovado' if aprovar_automatico else 'pendente'
+
+        movimentacao_data = {
+            'produto_id': ObjectId(data['produto_id']),
+            'tipo': tipo,
+            'quantidade': qtd,
+            'motivo': data.get('motivo', ''),
+            'usuario': session.get('username'),
+            'data': datetime.now(),
+            'status': status
+        }
+
+        # Se for aprovação automática, atualizar estoque imediatamente
+        if aprovar_automatico:
+            novo_estoque = produto.get('estoque', 0)
+            if tipo == 'entrada':
+                novo_estoque += qtd
+            else:
+                novo_estoque -= qtd
+                if novo_estoque < 0:
+                    return jsonify({'success': False, 'message': 'Estoque insuficiente'})
+
+            db.produtos.update_one(
+                {'_id': ObjectId(data['produto_id'])},
+                {'$set': {'estoque': novo_estoque, 'updated_at': datetime.now()}}
+            )
+
+            movimentacao_data['aprovado_por'] = session.get('username')
+            movimentacao_data['aprovado_em'] = datetime.now()
+
+        db.estoque_movimentacoes.insert_one(movimentacao_data)
+
+        return jsonify({'success': True, 'status': status})
+    except Exception as e:
+        logger.error(f"Erro na movimentação de estoque: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/movimentacoes')
+@login_required
+def estoque_movimentacoes():
+    """Retorna todas as movimentações de estoque com informações do produto"""
+    if db is None:
         return jsonify({'success': False}), 500
+    try:
+        movimentacoes = list(db.estoque_movimentacoes.find({}).sort('data', DESCENDING).limit(100))
+
+        # Enriquecer com dados do produto
+        for mov in movimentacoes:
+            if 'produto_id' in mov:
+                produto = db.produtos.find_one({'_id': mov['produto_id']})
+                if produto:
+                    mov['produto_nome'] = produto.get('nome', 'Desconhecido')
+                    mov['produto_marca'] = produto.get('marca', '')
+
+        return jsonify({'success': True, 'movimentacoes': convert_objectid(movimentacoes)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar movimentações: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/stats')
+@login_required
+def estoque_stats():
+    """Retorna estatísticas do estoque"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        total_produtos = db.produtos.count_documents({'ativo': True})
+        produtos_baixo = db.produtos.count_documents({'$expr': {'$lte': ['$estoque', '$estoque_minimo']}, 'ativo': True})
+        produtos_zerados = db.produtos.count_documents({'estoque': 0, 'ativo': True})
+
+        # Valor total em estoque
+        pipeline = [
+            {'$match': {'ativo': True}},
+            {'$group': {'_id': None, 'total': {'$sum': {'$multiply': ['$estoque', '$preco']}}}}
+        ]
+        valor_result = list(db.produtos.aggregate(pipeline))
+        valor_total = valor_result[0]['total'] if valor_result else 0
+
+        # Movimentações pendentes
+        pendentes = db.estoque_movimentacoes.count_documents({'status': 'pendente'})
+
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_produtos': total_produtos,
+                'produtos_baixo': produtos_baixo,
+                'produtos_zerados': produtos_zerados,
+                'valor_total_estoque': valor_total,
+                'movimentacoes_pendentes': pendentes
+            }
+        })
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas de estoque: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/aprovar/<movimentacao_id>', methods=['POST'])
+@login_required
+def aprovar_movimentacao(movimentacao_id):
+    """Aprovar uma movimentação de estoque"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        movimentacao = db.estoque_movimentacoes.find_one({'_id': ObjectId(movimentacao_id)})
+        if not movimentacao:
+            return jsonify({'success': False, 'message': 'Movimentação não encontrada'}), 404
+
+        if movimentacao.get('status') != 'pendente':
+            return jsonify({'success': False, 'message': 'Movimentação já foi processada'}), 400
+
+        # Atualizar estoque do produto
+        produto = db.produtos.find_one({'_id': movimentacao['produto_id']})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+        novo_estoque = produto.get('estoque', 0)
+        if movimentacao['tipo'] == 'entrada':
+            novo_estoque += movimentacao['quantidade']
+        else:
+            novo_estoque -= movimentacao['quantidade']
+            if novo_estoque < 0:
+                return jsonify({'success': False, 'message': 'Estoque insuficiente'}), 400
+
+        # Atualizar produto e movimentação
+        db.produtos.update_one(
+            {'_id': movimentacao['produto_id']},
+            {'$set': {'estoque': novo_estoque, 'updated_at': datetime.now()}}
+        )
+
+        db.estoque_movimentacoes.update_one(
+            {'_id': ObjectId(movimentacao_id)},
+            {'$set': {
+                'status': 'aprovado',
+                'aprovado_por': session.get('username'),
+                'aprovado_em': datetime.now()
+            }}
+        )
+
+        logger.info(f"✅ Movimentação {movimentacao_id} aprovada por {session.get('username')}")
+        return jsonify({'success': True, 'novo_estoque': novo_estoque})
+
+    except Exception as e:
+        logger.error(f"Erro ao aprovar movimentação: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/reprovar/<movimentacao_id>', methods=['POST'])
+@login_required
+def reprovar_movimentacao(movimentacao_id):
+    """Reprovar uma movimentação de estoque"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        data = request.json or {}
+        motivo = data.get('motivo', 'Sem motivo especificado')
+
+        movimentacao = db.estoque_movimentacoes.find_one({'_id': ObjectId(movimentacao_id)})
+        if not movimentacao:
+            return jsonify({'success': False, 'message': 'Movimentação não encontrada'}), 404
+
+        if movimentacao.get('status') != 'pendente':
+            return jsonify({'success': False, 'message': 'Movimentação já foi processada'}), 400
+
+        db.estoque_movimentacoes.update_one(
+            {'_id': ObjectId(movimentacao_id)},
+            {'$set': {
+                'status': 'reprovado',
+                'reprovado_por': session.get('username'),
+                'reprovado_em': datetime.now(),
+                'motivo_reprovacao': motivo
+            }}
+        )
+
+        logger.info(f"❌ Movimentação {movimentacao_id} reprovada por {session.get('username')}")
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Erro ao reprovar movimentação: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/aprovar-todos', methods=['POST'])
+@login_required
+def aprovar_todas_movimentacoes():
+    """Aprovar todas as movimentações pendentes"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        movimentacoes = list(db.estoque_movimentacoes.find({'status': 'pendente'}))
+        aprovadas = 0
+        erros = 0
+
+        for mov in movimentacoes:
+            try:
+                produto = db.produtos.find_one({'_id': mov['produto_id']})
+                if not produto:
+                    erros += 1
+                    continue
+
+                novo_estoque = produto.get('estoque', 0)
+                if mov['tipo'] == 'entrada':
+                    novo_estoque += mov['quantidade']
+                else:
+                    novo_estoque -= mov['quantidade']
+                    if novo_estoque < 0:
+                        erros += 1
+                        continue
+
+                db.produtos.update_one(
+                    {'_id': mov['produto_id']},
+                    {'$set': {'estoque': novo_estoque, 'updated_at': datetime.now()}}
+                )
+
+                db.estoque_movimentacoes.update_one(
+                    {'_id': mov['_id']},
+                    {'$set': {
+                        'status': 'aprovado',
+                        'aprovado_por': session.get('username'),
+                        'aprovado_em': datetime.now()
+                    }}
+                )
+                aprovadas += 1
+
+            except Exception as e:
+                logger.error(f"Erro ao aprovar movimentação {mov['_id']}: {e}")
+                erros += 1
+
+        logger.info(f"✅ {aprovadas} movimentações aprovadas em massa por {session.get('username')}")
+        return jsonify({'success': True, 'aprovadas': aprovadas, 'erros': erros})
+
+    except Exception as e:
+        logger.error(f"Erro ao aprovar todas movimentações: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/reprovar-todos', methods=['POST'])
+@login_required
+def reprovar_todas_movimentacoes():
+    """Reprovar todas as movimentações pendentes"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        data = request.json or {}
+        motivo = data.get('motivo', 'Reprovação em massa')
+
+        result = db.estoque_movimentacoes.update_many(
+            {'status': 'pendente'},
+            {'$set': {
+                'status': 'reprovado',
+                'reprovado_por': session.get('username'),
+                'reprovado_em': datetime.now(),
+                'motivo_reprovacao': motivo
+            }}
+        )
+
+        logger.info(f"❌ {result.modified_count} movimentações reprovadas em massa por {session.get('username')}")
+        return jsonify({'success': True, 'reprovadas': result.modified_count})
+
+    except Exception as e:
+        logger.error(f"Erro ao reprovar todas movimentações: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/produtos-criticos')
+@login_required
+def produtos_criticos():
+    """Retorna produtos com estoque crítico (<=30% do mínimo)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        pipeline = [
+            {'$match': {'ativo': True}},
+            {'$addFields': {
+                'percentual_estoque': {
+                    '$cond': [
+                        {'$eq': ['$estoque_minimo', 0]},
+                        100,
+                        {'$multiply': [{'$divide': ['$estoque', '$estoque_minimo']}, 100]}
+                    ]
+                }
+            }},
+            {'$match': {'percentual_estoque': {'$lte': 30}}},
+            {'$sort': {'percentual_estoque': 1}}
+        ]
+
+        produtos = list(db.produtos.aggregate(pipeline))
+        return jsonify({'success': True, 'produtos': convert_objectid(produtos)})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar produtos críticos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/ajustar', methods=['POST'])
+@login_required
+def ajustar_estoque():
+    """Ajustar estoque de um produto (inventário)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    data = request.json
+    try:
+        produto_id = data.get('produto_id')
+        estoque_real = int(data.get('estoque_real', 0))
+        motivo = data.get('motivo', 'Ajuste de inventário')
+
+        produto = db.produtos.find_one({'_id': ObjectId(produto_id)})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+        estoque_atual = produto.get('estoque', 0)
+        diferenca = estoque_real - estoque_atual
+
+        # Atualizar estoque
+        db.produtos.update_one(
+            {'_id': ObjectId(produto_id)},
+            {'$set': {'estoque': estoque_real, 'updated_at': datetime.now()}}
+        )
+
+        # Registrar ajuste
+        tipo_ajuste = 'entrada' if diferenca > 0 else 'saida'
+        db.estoque_movimentacoes.insert_one({
+            'produto_id': ObjectId(produto_id),
+            'tipo': tipo_ajuste,
+            'quantidade': abs(diferenca),
+            'motivo': f"AJUSTE: {motivo} (Anterior: {estoque_atual}, Real: {estoque_real})",
+            'usuario': session.get('username'),
+            'data': datetime.now(),
+            'status': 'aprovado',  # Ajustes são aprovados automaticamente
+            'aprovado_por': session.get('username'),
+            'aprovado_em': datetime.now(),
+            'tipo_movimentacao': 'ajuste_inventario'
+        })
+
+        logger.info(f"📊 Ajuste de estoque: {produto.get('nome')} de {estoque_atual} para {estoque_real}")
+        return jsonify({'success': True, 'diferenca': diferenca})
+
+    except Exception as e:
+        logger.error(f"Erro ao ajustar estoque: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/importar', methods=['POST'])
 @login_required
@@ -1303,6 +1740,77 @@ def importar():
                     db.produtos.insert_one({'nome': nome, 'marca': marca, 'sku': sku, 'preco': preco, 'custo': custo, 'estoque': estoque, 'estoque_minimo': 5, 'categoria': categoria, 'ativo': True, 'created_at': datetime.now()})
                     count_success += 1
                 except:
+                    count_error += 1
+        elif tipo == 'servicos':
+            # Importação de serviços corrigida
+            for idx, row in enumerate(rows, 1):
+                try:
+                    r = {k.lower().strip(): v for k, v in row.items() if k and v is not None}
+                    if not r or all(not v for v in r.values()):
+                        continue
+
+                    # Obter nome do serviço
+                    nome = None
+                    for col in ['nome', 'servico', 'name', 'serviço']:
+                        if col in r and r[col]:
+                            nome = str(r[col]).strip()
+                            break
+                    if not nome or len(nome) < 2:
+                        count_error += 1
+                        continue
+
+                    # Obter categoria
+                    categoria = 'Serviço'
+                    for col in ['categoria', 'category']:
+                        if col in r and r[col]:
+                            categoria = str(r[col]).strip()
+                            break
+
+                    # Processar tamanhos e preços
+                    tamanhos_map = {
+                        'kids': 'Kids',
+                        'masculino': 'Masculino',
+                        'curto': 'Curto',
+                        'medio': 'Médio',
+                        'médio': 'Médio',
+                        'longo': 'Longo',
+                        'extra_longo': 'Extra Longo',
+                        'extralongo': 'Extra Longo'
+                    }
+
+                    servicos_criados = 0
+                    for col_name, tamanho_display in tamanhos_map.items():
+                        if col_name in r and r[col_name]:
+                            try:
+                                preco_str = str(r[col_name]).replace('R$', '').strip()
+                                if ',' in preco_str:
+                                    preco_str = preco_str.replace(',', '.')
+                                preco = float(preco_str)
+
+                                if preco > 0:
+                                    sku = f"{nome.upper().replace(' ', '-')}-{tamanho_display.upper().replace(' ', '-')}"
+                                    db.servicos.insert_one({
+                                        'nome': nome,
+                                        'sku': sku,
+                                        'tamanho': tamanho_display,
+                                        'preco': preco,
+                                        'categoria': categoria,
+                                        'duracao': 60,
+                                        'ativo': True,
+                                        'created_at': datetime.now()
+                                    })
+                                    servicos_criados += 1
+                            except Exception as e:
+                                logger.error(f"Erro ao processar tamanho {col_name}: {e}")
+                                continue
+
+                    if servicos_criados > 0:
+                        count_success += servicos_criados
+                    else:
+                        count_error += 1
+
+                except Exception as e:
+                    logger.error(f"Erro ao importar serviço linha {idx}: {e}")
                     count_error += 1
         if os.path.exists(filepath):
             os.remove(filepath)

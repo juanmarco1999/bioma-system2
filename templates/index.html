@@ -14,6 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/correcoes_bioma.css">
+    <link rel="stylesheet" href="/static/css/bioma_melhorias.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -131,6 +132,14 @@
                 <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-trophy"></i> Top 5 Serviços</div><div class="card-body"><canvas id="chartServicos" style="max-height:300px"></canvas></div></div></div>
                 <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-calendar3"></i> Faturamento Mensal</div><div class="card-body"><canvas id="chartFaturamento" style="max-height:300px"></canvas></div></div></div>
             </div>
+            <div class="row g-4 mt-2">
+                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-box-seam"></i> Estoque</div><div class="card-body"><canvas id="chartEstoque" style="max-height:300px"></canvas></div></div></div>
+                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-graph-up"></i> Vendas por Categoria</div><div class="card-body"><canvas id="chartVendasCategoria" style="max-height:300px"></canvas></div></div></div>
+            </div>
+            <div class="row g-4 mt-2">
+                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-people"></i> Faturamento por Profissional</div><div class="card-body"><canvas id="chartFaturamentoProfissional" style="max-height:300px"></canvas></div></div></div>
+                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-fire"></i> Mapa de Calor Semanal</div><div class="card-body"><canvas id="chartMapaCalor" style="max-height:300px"></canvas></div></div></div>
+            </div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-people-fill"></i> Top 10 Clientes VIP</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Posição</th><th>Cliente</th><th>Total Gasto</th><th>Visitas</th><th>Última Visita</th></tr></thead><tbody id="topClientesBody"><tr><td colspan="5" class="text-center text-muted">Clique em "Atualizar"</td></tr></tbody></table></div></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-box-seam"></i> Produtos Mais Vendidos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Produto</th><th>Qtd Vendida</th><th>Faturamento</th></tr></thead><tbody id="topProdutosBody"><tr><td colspan="3" class="text-center text-muted">Clique em "Atualizar"</td></tr></tbody></table></div></div></div>
         </div>
@@ -166,16 +175,355 @@
         </div>
 
         <div id="section-estoque" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-box-seam-fill"></i> Estoque</h1></div>
-            <div class="card"><div class="card-header"><i class="bi bi-exclamation-triangle-fill"></i> Estoque Baixo</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Produto</th><th>Estoque</th><th>Mínimo</th><th>Status</th></tr></thead><tbody id="estoqueBaixoBody"><tr><td colspan="4" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
+            <div class="page-header">
+                <h1><i class="bi bi-box-seam-fill"></i> Gerenciamento de Estoque Avançado</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success" onclick="addSaidaEstoque()">
+                        <i class="bi bi-box-arrow-right"></i> Nova Saída
+                    </button>
+                    <button class="btn btn-primary" onclick="loadEstoqueMelhorado()">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Estatísticas de Estoque -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="estoque-stat-card">
+                        <div class="estoque-stat-icon">📦</div>
+                        <div class="estoque-stat-valor" id="estoque-total">0</div>
+                        <div class="estoque-stat-label">Total de Produtos</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="estoque-stat-card">
+                        <div class="estoque-stat-icon">⚠️</div>
+                        <div class="estoque-stat-valor" id="estoque-baixo">0</div>
+                        <div class="estoque-stat-label">Produtos em Falta</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="estoque-stat-card">
+                        <div class="estoque-stat-icon">❌</div>
+                        <div class="estoque-stat-valor" id="estoque-zerado">0</div>
+                        <div class="estoque-stat-label">Estoque Zerado</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="estoque-stat-card">
+                        <div class="estoque-stat-icon">⏳</div>
+                        <div class="estoque-stat-valor" id="estoque-pendentes">0</div>
+                        <div class="estoque-stat-label">Pendentes</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="estoque-stat-card">
+                        <div class="estoque-stat-icon">💰</div>
+                        <div class="estoque-stat-valor" id="estoque-valor">R$ 0</div>
+                        <div class="estoque-stat-label">Valor Total</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Produtos em Falta -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Produtos em Falta / Estoque Baixo
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Marca</th>
+                                    <th>Estoque Atual</th>
+                                    <th>Estoque Mínimo</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="produtos-falta-body">
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Produtos Críticos (≤30% do mínimo) -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #EF4444, #DC2626);">
+                    <i class="bi bi-exclamation-octagon"></i> Produtos Críticos (≤30% do Mínimo)
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Marca</th>
+                                    <th>Estoque</th>
+                                    <th>Mínimo</th>
+                                    <th>Nível</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="produtos-criticos-body">
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movimentações de Estoque com Aprovação -->
+            <div class="card">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <i class="bi bi-clock-history"></i> Últimas Movimentações
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-sm btn-success" onclick="aprovarTodas()" title="Aprovar todas pendentes">
+                            <i class="bi bi-check-all"></i> Aprovar Todas
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="reprovarTodas()" title="Reprovar todas pendentes">
+                            <i class="bi bi-x-lg"></i> Reprovar Todas
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Produto</th>
+                                    <th>Tipo</th>
+                                    <th>Quantidade</th>
+                                    <th>Motivo</th>
+                                    <th>Usuário</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movimentacoes-body">
+                                <tr>
+                                    <td colspan="8" class="text-center">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="section-clube" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-award"></i> Comunidade</h1></div>
+            <div class="page-header">
+                <h1><i class="bi bi-award"></i> Comunidade BIOMA</h1>
+                <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 10px 0 0 0;">
+                    Planos exclusivos de assinatura com benefícios incríveis
+                </p>
+            </div>
+
             <div class="row g-4">
-                <div class="col-md-4"><div class="card" style="border:4px solid #CD7F32;border-radius:20px"><div class="card-header" style="background:linear-gradient(135deg,#CD7F32,#B87333);color:#fff;text-align:center;padding:25px;border-radius:16px 16px 0 0"><div style="font-size:3rem">🥉</div><h2 style="margin:10px 0;font-weight:900">Vivência - 3x R$ 390</h2></div><div class="card-body" style="padding:30px;background:#fff"><ul style="list-style:none;padding:0;margin:0"><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>1 corte/mês</span></li><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>5% desconto</span></li></ul></div></div></div>
-                <div class="col-md-4"><div class="card" style="border:4px solid #C0C0C0;border-radius:20px"><div class="card-header" style="background:linear-gradient(135deg,#C0C0C0,#A8A8A8);color:#fff;text-align:center;padding:25px;border-radius:16px 16px 0 0"><div style="font-size:3rem">🥈</div><h2 style="margin:10px 0;font-weight:900">Imersão - 6x R$ 390</h2></div><div class="card-body" style="padding:30px;background:#fff"><ul style="list-style:none;padding:0;margin:0"><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>6 cortes</span></li><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>10% desconto</span></li></ul></div></div></div>
-                <div class="col-md-4"><div class="card" style="border:4px solid #FFD700;border-radius:20px"><div class="card-header" style="background:linear-gradient(135deg,#FFD700,#FFC700);color:#000;text-align:center;padding:25px;border-radius:16px 16px 0 0"><div style="font-size:3rem">🥇</div><h2 style="margin:10px 0;font-weight:900">Conexão - 12x R$ 390</h2></div><div class="card-body" style="padding:30px;background:#fff"><ul style="list-style:none;padding:0;margin:0"><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>12 cortes</span></li><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>15% desconto</span></li><li style="padding:10px 0;display:flex;align-items:center;gap:10px"><i class="bi bi-check-circle-fill" style="color:#10B981;font-size:1.2rem"></i><span>VIP</span></li></ul></div></div></div>
+                <!-- Plano Bronze - Vivência -->
+                <div class="col-md-4">
+                    <div class="plano-card fade-in-up" style="animation-delay: 0.1s;">
+                        <div class="plano-header" style="background: linear-gradient(135deg, #CD7F32, #B87333);">
+                            <div class="plano-icone">🥉</div>
+                            <h2 class="plano-titulo" style="color: #fff;">Vivência</h2>
+                            <p style="color: rgba(255,255,255,0.9); font-size: 0.95rem; margin: 0;">
+                                Ideal para começar
+                            </p>
+                            <div style="margin-top: 20px;">
+                                <span style="font-size: 2.5rem; font-weight: 900; color: #fff;">3x</span>
+                                <span style="font-size: 1.5rem; color: rgba(255,255,255,0.9);"> R$ 390</span>
+                            </div>
+                        </div>
+                        <div class="plano-body">
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>1 corte por mês</strong></span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>5% de desconto</strong> em produtos</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Acesso à comunidade</strong> exclusiva</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Agendamento prioritário</strong></span>
+                            </div>
+                            <button class="btn btn-assinar" style="background: linear-gradient(135deg, #CD7F32, #B87333); color: #fff;" onclick="assinarPlano('vivencia')">
+                                <i class="bi bi-star"></i> Assinar Vivência
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plano Prata - Imersão -->
+                <div class="col-md-4">
+                    <div class="plano-card fade-in-up" style="animation-delay: 0.2s; transform: scale(1.05); box-shadow: 0 20px 60px rgba(192, 192, 192, 0.4);">
+                        <div style="position: absolute; top: -15px; right: 20px; background: linear-gradient(135deg, #7C3AED, #EC4899); color: #fff; padding: 8px 20px; border-radius: 20px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 5px 15px rgba(124, 58, 237, 0.4);">
+                            ⭐ POPULAR
+                        </div>
+                        <div class="plano-header" style="background: linear-gradient(135deg, #C0C0C0, #A8A8A8);">
+                            <div class="plano-icone">🥈</div>
+                            <h2 class="plano-titulo" style="color: #fff;">Imersão</h2>
+                            <p style="color: rgba(255,255,255,0.9); font-size: 0.95rem; margin: 0;">
+                                Mais vantagens e economia
+                            </p>
+                            <div style="margin-top: 20px;">
+                                <span style="font-size: 2.5rem; font-weight: 900; color: #fff;">6x</span>
+                                <span style="font-size: 1.5rem; color: rgba(255,255,255,0.9);"> R$ 390</span>
+                            </div>
+                        </div>
+                        <div class="plano-body">
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>6 cortes</strong> durante a validade</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>10% de desconto</strong> em produtos</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Cashback de 3%</strong> em serviços</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Brinde exclusivo</strong> BIOMA</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Agendamento VIP</strong></span>
+                            </div>
+                            <button class="btn btn-assinar" style="background: linear-gradient(135deg, #C0C0C0, #A8A8A8); color: #fff;" onclick="assinarPlano('imersao')">
+                                <i class="bi bi-star-fill"></i> Assinar Imersão
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plano Ouro - Conexão -->
+                <div class="col-md-4">
+                    <div class="plano-card fade-in-up" style="animation-delay: 0.3s;">
+                        <div class="plano-header" style="background: linear-gradient(135deg, #FFD700, #FFC700);">
+                            <div class="plano-icone">🥇</div>
+                            <h2 class="plano-titulo" style="color: #000;">Conexão</h2>
+                            <p style="color: rgba(0,0,0,0.7); font-size: 0.95rem; margin: 0;">
+                                Experiência completa VIP
+                            </p>
+                            <div style="margin-top: 20px;">
+                                <span style="font-size: 2.5rem; font-weight: 900; color: #000;">12x</span>
+                                <span style="font-size: 1.5rem; color: rgba(0,0,0,0.7);"> R$ 390</span>
+                            </div>
+                        </div>
+                        <div class="plano-body">
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>12 cortes</strong> durante a validade</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>15% de desconto</strong> em produtos</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Cashback de 5%</strong> em tudo</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Kit exclusivo</strong> de boas-vindas</span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Acesso VIP total</strong></span>
+                            </div>
+                            <div class="plano-beneficio">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span><strong>Eventos exclusivos</strong></span>
+                            </div>
+                            <button class="btn btn-assinar" style="background: linear-gradient(135deg, #FFD700, #FFC700); color: #000; font-weight: 900;" onclick="assinarPlano('conexao')">
+                                <i class="bi bi-trophy-fill"></i> Assinar Conexão
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Comparação -->
+            <div class="card mt-5">
+                <div class="card-header" style="background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                    <i class="bi bi-table"></i> Comparação de Planos
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table style="width: 100%; text-align: center;">
+                            <thead>
+                                <tr style="background: var(--bg-main);">
+                                    <th style="text-align: left; padding: 15px;">Benefício</th>
+                                    <th style="padding: 15px;">Vivência 🥉</th>
+                                    <th style="padding: 15px; background: rgba(124, 58, 237, 0.1);">Imersão 🥈</th>
+                                    <th style="padding: 15px;">Conexão 🥇</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="text-align: left; padding: 15px; font-weight: 600;">Cortes inclusos</td>
+                                    <td style="padding: 15px;">1/mês</td>
+                                    <td style="padding: 15px; background: rgba(124, 58, 237, 0.05);">6 total</td>
+                                    <td style="padding: 15px;">12 total</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 15px; font-weight: 600;">Desconto em produtos</td>
+                                    <td style="padding: 15px;">5%</td>
+                                    <td style="padding: 15px; background: rgba(124, 58, 237, 0.05);">10%</td>
+                                    <td style="padding: 15px;">15%</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 15px; font-weight: 600;">Cashback</td>
+                                    <td style="padding: 15px;">-</td>
+                                    <td style="padding: 15px; background: rgba(124, 58, 237, 0.05);">3%</td>
+                                    <td style="padding: 15px;">5%</td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 15px; font-weight: 600;">Agendamento prioritário</td>
+                                    <td style="padding: 15px;"><i class="bi bi-check-lg" style="color: var(--success); font-size: 1.5rem;"></i></td>
+                                    <td style="padding: 15px; background: rgba(124, 58, 237, 0.05);"><i class="bi bi-check-lg" style="color: var(--success); font-size: 1.5rem;"></i></td>
+                                    <td style="padding: 15px;"><i class="bi bi-check-lg" style="color: var(--success); font-size: 1.5rem;"></i></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 15px; font-weight: 600;">Brindes exclusivos</td>
+                                    <td style="padding: 15px;">-</td>
+                                    <td style="padding: 15px; background: rgba(124, 58, 237, 0.05);"><i class="bi bi-check-lg" style="color: var(--success); font-size: 1.5rem;"></i></td>
+                                    <td style="padding: 15px;"><i class="bi bi-check-lg" style="color: var(--success); font-size: 1.5rem;"></i></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: left; padding: 15px; font-weight: 600;">Acesso VIP total</td>
+                                    <td style="padding: 15px;">-</td>
+                                    <td style="padding: 15px; background: rgba(124, 58, 237, 0.05);">-</td>
+                                    <td style="padding: 15px;"><i class="bi bi-check-lg" style="color: var(--success); font-size: 1.5rem;"></i></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -208,6 +556,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/static/js/correcoes_bioma.js"></script>
+<script src="/static/js/bioma_melhorias.js"></script>
 <script>
 
 let currentUser=null,currentTheme='light',orcamento={servicos:[],produtos:[]},servicosDisponiveis=[],produtosDisponiveis=[],servicoSelecionado=null,produtoSelecionado=null;
@@ -354,7 +703,7 @@ function goTo(section){
         else if(section==='contratos')loadContratos();
         else if(section==='fila')loadFila();
         else if(section==='sistema')verificarStatus();
-        else if(section==='estoque')loadEstoqueBaixo();
+        else if(section==='estoque'){loadEstoqueBaixo();if(typeof loadEstoqueMelhorado==='function')loadEstoqueMelhorado();}
         else if(section==='agendamentos')loadAgendamentos();
     }catch(e){
         console.error('❌ Erro navegação:',e);
@@ -563,22 +912,28 @@ async function deleteProfissional(id){
 }
 
 function showModalProfissional(){
-    Swal.fire({title:'Novo Profissional',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade"><input type="number" id="swal-comissao" class="form-control" placeholder="Comissão %" value="10">`,showCancelButton:true,preConfirm:()=>{
-        const nome=document.getElementById('swal-nome').value;
-        const cpf=document.getElementById('swal-cpf').value;
-        if(!nome||!cpf){Swal.showValidationMessage('Nome e CPF obrigatórios');return false;}
-        return {nome,cpf,especialidade:document.getElementById('swal-espec').value,comissao_perc:document.getElementById('swal-comissao').value};
-    }}).then(async(result)=>{
-        if(result.isConfirmed){
-            try{
-                await fetch('/api/profissionais',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(result.value)});
-                Swal.fire('Sucesso!','','success');
-                loadProfissionais();
-            }catch(e){
-                Swal.fire('Erro','','error');
+    // Usar a nova versão melhorada com multicomissão e foto
+    if(typeof showModalProfissionalMelhorado === 'function'){
+        showModalProfissionalMelhorado();
+    }else{
+        // Fallback para versão antiga
+        Swal.fire({title:'Novo Profissional',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade"><input type="number" id="swal-comissao" class="form-control" placeholder="Comissão %" value="10">`,showCancelButton:true,preConfirm:()=>{
+            const nome=document.getElementById('swal-nome').value;
+            const cpf=document.getElementById('swal-cpf').value;
+            if(!nome||!cpf){Swal.showValidationMessage('Nome e CPF obrigatórios');return false;}
+            return {nome,cpf,especialidade:document.getElementById('swal-espec').value,comissao_perc:document.getElementById('swal-comissao').value};
+        }}).then(async(result)=>{
+            if(result.isConfirmed){
+                try{
+                    await fetch('/api/profissionais',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(result.value)});
+                    Swal.fire('Sucesso!','','success');
+                    loadProfissionais();
+                }catch(e){
+                    Swal.fire('Erro','','error');
+                }
             }
-        }
-    });
+        });
+    }
 }
 
 async function loadServicosLista(){
@@ -587,7 +942,26 @@ async function loadServicosLista(){
         const data=await res.json();
         const tbody=document.getElementById('servicosListBody');
         if(data.success&&data.servicos&&data.servicos.length>0){
-            const html=data.servicos.map(s=>`<tr><td><strong>${s.nome}</strong></td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td>${s.categoria}</td><td><button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+            const html=data.servicos.map(s=>`
+                <tr>
+                    <td><strong>${s.nome}</strong></td>
+                    <td>${s.tamanho}</td>
+                    <td><strong>R$ ${s.preco.toFixed(2)}</strong></td>
+                    <td>${s.categoria}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="visualizarServico('${s._id}')"
+                                style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="editarServico('${s._id}')" style="margin-right:5px">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
             tbody.innerHTML=html;
         }else{
             tbody.innerHTML='<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
@@ -678,7 +1052,26 @@ async function loadProdutosLista(){
         const data=await res.json();
         const tbody=document.getElementById('produtosListBody');
         if(data.success&&data.produtos&&data.produtos.length>0){
-            const html=data.produtos.map(p=>`<tr><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+            const html=data.produtos.map(p=>`
+                <tr>
+                    <td><strong>${p.nome}</strong></td>
+                    <td>${p.marca||'-'}</td>
+                    <td><strong>R$ ${p.preco.toFixed(2)}</strong></td>
+                    <td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="visualizarProduto('${p._id}')"
+                                style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="editarProduto('${p._id}')" style="margin-right:5px">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
             tbody.innerHTML=html;
         }else{
             tbody.innerHTML='<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
