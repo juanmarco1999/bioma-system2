@@ -146,7 +146,26 @@
 
         <div id="section-agendamentos" class="content-section">
             <div class="page-header"><h1><i class="bi bi-calendar-check"></i> Agendamentos</h1><button class="btn btn-primary" onclick="showModalAgendamento()"><i class="bi bi-plus-circle"></i> Novo</button></div>
-            <div class="card"><div class="card-header"><i class="bi bi-calendar3"></i> Calendário</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Status</th></tr></thead><tbody id="agendamentosBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
+
+            <!-- MELHORIA #9: Calendário Avançado com Mapa de Calor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-calendar3"></i> Calendário Avançado
+                    <button class="btn btn-sm btn-outline float-end" onclick="carregarCalendarioAvancado()">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="calendario-container">
+                        <div class="text-center text-muted">
+                            <div class="spinner"></div>
+                            <p class="mt-3">Carregando calendário...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card"><div class="card-header"><i class="bi bi-list-ul"></i> Lista de Agendamentos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Status</th></tr></thead><tbody id="agendamentosBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
         </div>
 
         <div id="section-fila" class="content-section">
@@ -546,7 +565,19 @@
 
         <div id="section-configuracoes" class="content-section">
             <div class="page-header"><h1><i class="bi bi-gear"></i> Configurações</h1></div>
-            <div class="card"><div class="card-header"><i class="bi bi-building"></i> Dados da Franquia BIOMA</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Nome da Empresa *</label><input type="text" id="cfgNome" value="BIOMA UBERABA" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">CNPJ *</label><input type="text" id="cfgCNPJ" value="49.470.937/0001-10" class="form-control"></div></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Endereço Completo *</label><input type="text" id="cfgEndereco" value="Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG - CEP 38050-400" class="form-control"></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Telefone *</label><input type="text" id="cfgTelefone" value="(34) 99235-5890" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">E-mail *</label><input type="email" id="cfgEmail" value="biomauberaba@gmail.com" class="form-control"></div></div><button class="btn btn-primary" onclick="salvarConfig()"><i class="bi bi-save"></i> Salvar Dados da Franquia</button></div></div>
+
+            <!-- MELHORIA #11: Logo da Empresa -->
+            <div class="card">
+                <div class="card-header"><i class="bi bi-image"></i> Logo da Empresa</div>
+                <div class="card-body" style="text-align: center;">
+                    <p class="text-muted mb-3">Configure o logo da sua empresa que aparecerá no sistema e no login</p>
+                    <button class="btn btn-primary" onclick="configurarLogoEmpresa()">
+                        <i class="bi bi-upload"></i> Fazer Upload do Logo
+                    </button>
+                </div>
+            </div>
+
+            <div class="card mt-4"><div class="card-header"><i class="bi bi-building"></i> Dados da Franquia BIOMA</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Nome da Empresa *</label><input type="text" id="cfgNome" value="BIOMA UBERABA" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">CNPJ *</label><input type="text" id="cfgCNPJ" value="49.470.937/0001-10" class="form-control"></div></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Endereço Completo *</label><input type="text" id="cfgEndereco" value="Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG - CEP 38050-400" class="form-control"></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Telefone *</label><input type="text" id="cfgTelefone" value="(34) 99235-5890" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">E-mail *</label><input type="email" id="cfgEmail" value="biomauberaba@gmail.com" class="form-control"></div></div><button class="btn btn-primary" onclick="salvarConfig()"><i class="bi bi-save"></i> Salvar Dados da Franquia</button></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-sliders"></i> Configurações Operacionais</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Abertura</label><input type="time" id="cfgHorarioAbertura" value="08:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Fechamento</label><input type="time" id="cfgHorarioFechamento" value="19:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Duração Padrão (min)</label><input type="number" id="cfgDuracaoPadrao" value="60" class="form-control"></div></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Cashback Padrão (%)</label><input type="number" id="cfgCashbackPadrao" value="5" min="0" max="100" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Comissão Padrão (%)</label><input type="number" id="cfgComissaoPadrao" value="10" min="0" max="100" class="form-control"></div></div><button class="btn btn-success" onclick="salvarConfigOp()"><i class="bi bi-check-circle"></i> Salvar Configurações Operacionais</button></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-shield-check"></i> Licença e Desenvolvedor</div><div class="card-body"><table style="width:100%"><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Plano Contratado:</td><td style="padding:15px"><span class="badge success">PROFISSIONAL PREMIUM</span></td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Franquia:</td><td style="padding:15px">BIOMA Uberaba - Oficial</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Desenvolvedor:</td><td style="padding:15px">@juanmarco1999 (Juan Marco Bernardos Souza e Silva)</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Email Suporte:</td><td style="padding:15px">180147064@aluno.unb.br</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Versão:</td><td style="padding:15px">v3.7 (Build 2025.10.05)</td></tr><tr><td style="padding:15px;font-weight:700">Última Atualização:</td><td style="padding:15px">05 de Outubro de 2025 às 22:34 UTC</td></tr></table></div></div>
         </div>
@@ -557,6 +588,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/static/js/correcoes_bioma.js"></script>
 <script src="/static/js/bioma_melhorias.js"></script>
+<script src="/static/js/bioma_melhorias_v4.js"></script>
 <script>
 
 let currentUser=null,currentTheme='light',orcamento={servicos:[],produtos:[]},servicosDisponiveis=[],produtosDisponiveis=[],servicoSelecionado=null,produtoSelecionado=null;

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BIOMA UBERABA v3.7 COMPLETO - Sistema Ultra Profissional
+BIOMA UBERABA v4.1 COMPLETO - Sistema Ultra Profissional
 Desenvolvedor: Juan Marco (@juanmarco1999)
 Email: 180147064@aluno.unb.br
 Data: 2025-10-05 21:57:49 UTC
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'bioma-2025-v3-7-ultra-secure-key-final-definitivo-completo')
+app.secret_key = os.getenv('SECRET_KEY', 'bioma-2025-v4-1-ultra-secure-key-final-definitivo-completo')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -146,7 +146,7 @@ def health():
             db.command('ping')
         except:
             db_status = 'error'
-    return jsonify({'status': 'healthy', 'time': datetime.now().isoformat(), 'database': db_status, 'version': '3.7.0'}), 200
+    return jsonify({'status': 'healthy', 'time': datetime.now().isoformat(), 'database': db_status, 'version': '4.1'}), 200
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -275,7 +275,7 @@ def system_status():
         'status': {
             'mongodb': {'operational': mongo_ok, 'message': mongo_msg, 'last_check': datetime.now().isoformat()},
             'mailersend': {'operational': bool(os.getenv('MAILERSEND_API_KEY')), 'message': 'Configurado' if bool(os.getenv('MAILERSEND_API_KEY')) else 'Não configurado'},
-            'server': {'time': datetime.now().isoformat(), 'version': '3.7.0'}
+            'server': {'time': datetime.now().isoformat(), 'version': '4.1'}
         }
     })
 
@@ -1875,6 +1875,426 @@ def config():
     except:
         return jsonify({'success': False}), 500
 
+# === NOVAS ROTAS PARA MELHORIAS ===
+
+@app.route('/api/config/logo', methods=['POST'])
+@login_required
+def upload_logo():
+    """Upload de logo da empresa (Melhoria #11)"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    if 'logo' not in request.files:
+        return jsonify({'success': False, 'message': 'Nenhum logo enviado'}), 400
+
+    logo = request.files['logo']
+    if not logo.filename:
+        return jsonify({'success': False, 'message': 'Nome de arquivo inválido'}), 400
+
+    try:
+        import base64
+        logo_data = logo.read()
+        logo_base64 = base64.b64encode(logo_data).decode('utf-8')
+        content_type = logo.content_type or 'image/png'
+        logo_url = f"data:{content_type};base64,{logo_base64}"
+
+        db.config.update_one(
+            {'key': 'unidade'},
+            {'$set': {'logo_url': logo_url, 'updated_at': datetime.now()}},
+            upsert=True
+        )
+
+        logger.info("✅ Logo da empresa atualizado")
+        return jsonify({'success': True, 'logo_url': logo_url})
+    except Exception as e:
+        logger.error(f"Erro ao fazer upload de logo: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/comissoes/calcular', methods=['POST'])
+@login_required
+def calcular_comissoes():
+    """Calcular comissões de profissionais e assistentes (Melhoria #1 e #10)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    data = request.json
+    orcamento_id = data.get('orcamento_id')
+
+    try:
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(orcamento_id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+
+        total_orcamento = orcamento.get('total_final', 0)
+        comissoes_detalhadas = []
+
+        # Processar cada serviço do orçamento
+        for servico in orcamento.get('servicos', []):
+            profissional_id = servico.get('profissional_id')
+            if not profissional_id:
+                continue
+
+            profissional = db.profissionais.find_one({'_id': ObjectId(profissional_id)})
+            if not profissional:
+                continue
+
+            # Calcular comissão do profissional principal
+            comissao_perc = profissional.get('comissao_perc', 0)
+            valor_servico = servico.get('total', 0)
+            comissao_profissional = valor_servico * (comissao_perc / 100)
+
+            comissao_info = {
+                'profissional_id': str(profissional_id),
+                'profissional_nome': profissional.get('nome'),
+                'profissional_foto': profissional.get('foto_url', ''),
+                'servico_nome': servico.get('nome'),
+                'valor_servico': valor_servico,
+                'comissao_perc': comissao_perc,
+                'comissao_valor': comissao_profissional,
+                'assistentes': []
+            }
+
+            # Processar assistentes (comissão sobre comissão do profissional)
+            for assistente in profissional.get('assistentes', []):
+                assistente_id = assistente.get('id')
+                assistente_comissao_perc = assistente.get('comissao_perc_sobre_profissional', 0)
+
+                # Comissão do assistente é X% da comissão do profissional
+                comissao_assistente = comissao_profissional * (assistente_comissao_perc / 100)
+
+                comissao_info['assistentes'].append({
+                    'assistente_id': assistente_id,
+                    'assistente_nome': assistente.get('nome'),
+                    'comissao_perc_sobre_profissional': assistente_comissao_perc,
+                    'comissao_valor': comissao_assistente
+                })
+
+            comissoes_detalhadas.append(comissao_info)
+
+        # Salvar comissões calculadas no orçamento
+        db.orcamentos.update_one(
+            {'_id': ObjectId(orcamento_id)},
+            {'$set': {'comissoes_calculadas': comissoes_detalhadas, 'comissoes_updated_at': datetime.now()}}
+        )
+
+        return jsonify({'success': True, 'comissoes': comissoes_detalhadas})
+    except Exception as e:
+        logger.error(f"Erro ao calcular comissões: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/profissionais/<id>/stats')
+@login_required
+def profissional_stats(id):
+    """Estatísticas detalhadas do profissional (Melhoria #10)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        profissional = db.profissionais.find_one({'_id': ObjectId(id)})
+        if not profissional:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+
+        # Buscar todos os orçamentos com serviços do profissional
+        orcamentos = list(db.orcamentos.find({'status': 'Aprovado'}))
+
+        total_comissoes = 0
+        total_servicos = 0
+        total_faturamento_gerado = 0
+
+        for orc in orcamentos:
+            for servico in orc.get('servicos', []):
+                if servico.get('profissional_id') == str(id):
+                    total_servicos += 1
+                    valor_servico = servico.get('total', 0)
+                    total_faturamento_gerado += valor_servico
+                    comissao = valor_servico * (profissional.get('comissao_perc', 0) / 100)
+                    total_comissoes += comissao
+
+        stats = {
+            'total_comissoes': total_comissoes,
+            'total_servicos': total_servicos,
+            'total_faturamento_gerado': total_faturamento_gerado,
+            'comissao_perc': profissional.get('comissao_perc', 0),
+            'ticket_medio': total_faturamento_gerado / total_servicos if total_servicos > 0 else 0,
+            'assistentes': profissional.get('assistentes', [])
+        }
+
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas do profissional: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/assistentes', methods=['GET', 'POST'])
+@login_required
+def assistentes():
+    """Gerenciar assistentes independentes (Melhoria #1 e #10)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    if request.method == 'GET':
+        try:
+            assistentes_list = list(db.assistentes.find({}).sort('nome', ASCENDING))
+            return jsonify({'success': True, 'assistentes': convert_objectid(assistentes_list)})
+        except:
+            return jsonify({'success': False}), 500
+
+    data = request.json
+    try:
+        assistente_data = {
+            'nome': data['nome'],
+            'cpf': data.get('cpf', ''),
+            'email': data.get('email', ''),
+            'telefone': data.get('telefone', ''),
+            'foto_url': data.get('foto_url', ''),
+            'ativo': True,
+            'created_at': datetime.now()
+        }
+        db.assistentes.insert_one(assistente_data)
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro ao criar assistente: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/busca/global')
+@login_required
+def busca_global():
+    """Busca global no sistema (Melhoria #3 e #13)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    termo = request.args.get('termo', '').strip()
+    if len(termo) < 2:
+        return jsonify({'success': True, 'resultados': []})
+
+    try:
+        regex = {'$regex': termo, '$options': 'i'}
+        resultados = {
+            'clientes': [],
+            'profissionais': [],
+            'servicos': [],
+            'produtos': [],
+            'orcamentos': []
+        }
+
+        # Buscar clientes
+        clientes = list(db.clientes.find({
+            '$or': [{'nome': regex}, {'cpf': regex}, {'email': regex}, {'telefone': regex}]
+        }).limit(5))
+        for c in clientes:
+            resultados['clientes'].append({
+                'id': str(c['_id']),
+                'tipo': 'cliente',
+                'titulo': c.get('nome', ''),
+                'subtitulo': f"CPF: {c.get('cpf', '')}",
+                'icone': 'bi-person'
+            })
+
+        # Buscar profissionais
+        profissionais = list(db.profissionais.find({
+            '$or': [{'nome': regex}, {'cpf': regex}, {'especialidade': regex}],
+            'ativo': True
+        }).limit(5))
+        for p in profissionais:
+            resultados['profissionais'].append({
+                'id': str(p['_id']),
+                'tipo': 'profissional',
+                'titulo': p.get('nome', ''),
+                'subtitulo': p.get('especialidade', ''),
+                'icone': 'bi-person-workspace',
+                'foto': p.get('foto_url', '')
+            })
+
+        # Buscar serviços
+        servicos = list(db.servicos.find({
+            '$or': [{'nome': regex}, {'tamanho': regex}, {'sku': regex}],
+            'ativo': True
+        }).limit(5))
+        for s in servicos:
+            resultados['servicos'].append({
+                'id': str(s['_id']),
+                'tipo': 'servico',
+                'titulo': f"{s.get('nome', '')} - {s.get('tamanho', '')}",
+                'subtitulo': f"R$ {s.get('preco', 0):.2f}",
+                'icone': 'bi-scissors'
+            })
+
+        # Buscar produtos
+        produtos = list(db.produtos.find({
+            '$or': [{'nome': regex}, {'marca': regex}, {'sku': regex}],
+            'ativo': True
+        }).limit(5))
+        for p in produtos:
+            resultados['produtos'].append({
+                'id': str(p['_id']),
+                'tipo': 'produto',
+                'titulo': p.get('nome', ''),
+                'subtitulo': f"{p.get('marca', '')} - Estoque: {p.get('estoque', 0)}",
+                'icone': 'bi-box-seam'
+            })
+
+        # Buscar orçamentos
+        try:
+            numero_busca = int(termo)
+            orcamentos = list(db.orcamentos.find({'numero': numero_busca}).limit(5))
+        except:
+            orcamentos = list(db.orcamentos.find({'cliente_nome': regex}).limit(5))
+
+        for o in orcamentos:
+            resultados['orcamentos'].append({
+                'id': str(o['_id']),
+                'tipo': 'orcamento',
+                'titulo': f"Orçamento #{o.get('numero', '')}",
+                'subtitulo': f"{o.get('cliente_nome', '')} - R$ {o.get('total_final', 0):.2f}",
+                'icone': 'bi-file-earmark-text'
+            })
+
+        return jsonify({'success': True, 'resultados': resultados})
+    except Exception as e:
+        logger.error(f"Erro na busca global: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/agendamentos/calendario')
+@login_required
+def agendamentos_calendario():
+    """Dados do calendário de agendamentos (Melhoria #9)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        mes = int(request.args.get('mes', datetime.now().month))
+        ano = int(request.args.get('ano', datetime.now().year))
+
+        # Primeiro e último dia do mês
+        primeiro_dia = datetime(ano, mes, 1)
+        if mes == 12:
+            ultimo_dia = datetime(ano + 1, 1, 1) - timedelta(days=1)
+        else:
+            ultimo_dia = datetime(ano, mes + 1, 1) - timedelta(days=1)
+
+        # Buscar todos os agendamentos do mês
+        agendamentos = list(db.agendamentos.find({
+            'data': {'$gte': primeiro_dia, '$lte': ultimo_dia}
+        }))
+
+        # Buscar orçamentos criados no mês para o mapa de calor
+        orcamentos = list(db.orcamentos.find({
+            'created_at': {'$gte': primeiro_dia, '$lte': ultimo_dia}
+        }))
+
+        # Organizar por dia
+        calendario_data = {}
+        for agend in agendamentos:
+            dia = agend['data'].day
+            if dia not in calendario_data:
+                calendario_data[dia] = {'agendamentos': [], 'total': 0}
+            calendario_data[dia]['agendamentos'].append(agend.get('horario', ''))
+            calendario_data[dia]['total'] += 1
+
+        # Adicionar dados de orcamentos para mapa de calor
+        mapa_calor = {}
+        for orc in orcamentos:
+            dia = orc['created_at'].day
+            if dia not in mapa_calor:
+                mapa_calor[dia] = {'orcamentos': 0, 'valor': 0}
+            mapa_calor[dia]['orcamentos'] += 1
+            mapa_calor[dia]['valor'] += orc.get('total_final', 0)
+
+        return jsonify({
+            'success': True,
+            'calendario': calendario_data,
+            'mapa_calor': mapa_calor,
+            'mes': mes,
+            'ano': ano
+        })
+    except Exception as e:
+        logger.error(f"Erro ao buscar calendário: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/relatorios/graficos')
+@login_required
+def relatorios_graficos():
+    """Dados para gráficos avançados (Melhoria #8)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        # Últimos 30 dias
+        data_inicio = datetime.now() - timedelta(days=30)
+
+        # Faturamento por dia
+        pipeline_faturamento = [
+            {'$match': {'status': 'Aprovado', 'created_at': {'$gte': data_inicio}}},
+            {'$group': {
+                '_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}},
+                'total': {'$sum': '$total_final'},
+                'quantidade': {'$sum': 1}
+            }},
+            {'$sort': {'_id': 1}}
+        ]
+        faturamento_diario = list(db.orcamentos.aggregate(pipeline_faturamento))
+
+        # Produtos mais vendidos
+        pipeline_produtos = [
+            {'$match': {'status': 'Aprovado', 'created_at': {'$gte': data_inicio}}},
+            {'$unwind': '$produtos'},
+            {'$group': {
+                '_id': '$produtos.nome',
+                'quantidade': {'$sum': '$produtos.qtd'},
+                'valor': {'$sum': '$produtos.total'}
+            }},
+            {'$sort': {'quantidade': -1}},
+            {'$limit': 10}
+        ]
+        produtos_vendidos = list(db.orcamentos.aggregate(pipeline_produtos))
+
+        # Serviços mais vendidos
+        pipeline_servicos = [
+            {'$match': {'status': 'Aprovado', 'created_at': {'$gte': data_inicio}}},
+            {'$unwind': '$servicos'},
+            {'$group': {
+                '_id': '$servicos.nome',
+                'quantidade': {'$sum': 1},
+                'valor': {'$sum': '$servicos.total'}
+            }},
+            {'$sort': {'quantidade': -1}},
+            {'$limit': 10}
+        ]
+        servicos_vendidos = list(db.orcamentos.aggregate(pipeline_servicos))
+
+        # Estoque baixo
+        produtos_baixo_estoque = list(db.produtos.find({
+            '$expr': {'$lte': ['$estoque', '$estoque_minimo']},
+            'ativo': True
+        }).limit(10))
+
+        # Top clientes
+        pipeline_clientes = [
+            {'$match': {'status': 'Aprovado'}},
+            {'$group': {
+                '_id': '$cliente_cpf',
+                'nome': {'$first': '$cliente_nome'},
+                'total_gasto': {'$sum': '$total_final'},
+                'visitas': {'$sum': 1}
+            }},
+            {'$sort': {'total_gasto': -1}},
+            {'$limit': 10}
+        ]
+        top_clientes = list(db.orcamentos.aggregate(pipeline_clientes))
+
+        return jsonify({
+            'success': True,
+            'graficos': {
+                'faturamento_diario': faturamento_diario,
+                'produtos_vendidos': produtos_vendidos,
+                'servicos_vendidos': servicos_vendidos,
+                'produtos_baixo_estoque': convert_objectid(produtos_baixo_estoque),
+                'top_clientes': top_clientes
+            }
+        })
+    except Exception as e:
+        logger.error(f"Erro ao buscar dados de relatórios: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 def init_db():
     if db is None:
         logger.warning("⚠️ DB não disponível para inicialização")
@@ -1911,7 +2331,7 @@ def internal_error(e):
 
 if __name__ == '__main__':
     print("\n" + "=" * 80)
-    print("🌳 BIOMA UBERABA v3.7 COMPLETO E DEFINITIVO")
+    print("🌳 BIOMA UBERABA v4.1 COMPLETO E DEFINITIVO")
     print("=" * 80)
     init_db()
     is_production = os.getenv('FLASK_ENV') == 'production'
