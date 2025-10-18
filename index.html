@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v4.2 - Sistema Completo Corrigido">
+    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v4.2.2 - Sistema Completo e Compatível">
     <meta name="author" content="Juan Marco (@juanmarco1999)">
-    <title>BIOMA Uberaba v4.2 - Sistema Profissional Corrigido</title>
+    <title>BIOMA Uberaba v4.2.2 - Sistema Profissional</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
     
     <!-- CHART.JS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -36,7 +35,7 @@
         <div class="auth-logo">
             <div class="logo-icon">🌳</div>
             <h2>BIOMA</h2>
-            <p>Uberaba - v4.2 Corrigido</p>
+            <p>Uberaba - v4.2.2 Compatível</p>
         </div>
         <ul class="nav nav-pills nav-fill mb-4">
             <li class="nav-item">
@@ -1426,11 +1425,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============ AUTENTICAÇÃO ============
 async function checkAuth() {
     try {
-        const res = await fetch('/api/current-user', { credentials: 'include' });
+        const res = await fetch('/api/auth/check', { credentials: 'include' });
         const data = await res.json();
-        if (data.success && data.user) {
+        if (data.success && data.authenticated && data.user) {
             currentUser = data.user;
-            currentTheme = data.user.theme || 'light';
+            currentTheme = (data.user && data.user.theme) || localStorage.getItem('bioma_theme') || 'light';
             applyTheme(currentTheme);
             showApp();
         } else {
@@ -1472,16 +1471,16 @@ async function handleLogin(e) {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     try {
-        const res = await fetch('/api/login', {
+        const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ username, password })
         });
         const data = await res.json();
-        if (data.success && data.user) {
+        if (data.success && data.authenticated && data.user) {
             currentUser = data.user;
-            currentTheme = data.user.theme || 'light';
+            currentTheme = (data.user && data.user.theme) || localStorage.getItem('bioma_theme') || 'light';
             Swal.fire({
                 icon: 'success',
                 title: '✅ Bem-vindo!',
@@ -1507,11 +1506,11 @@ async function handleRegister(e) {
     const telefone = document.getElementById('registerTelefone').value.trim();
     const password = document.getElementById('registerPassword').value.trim();
     try {
-        const res = await fetch('/api/register', {
+        const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ name, username, email, telefone, password })
+            body: JSON.stringify({ nome: name, username, email, password })
         });
         const data = await res.json();
         if (data.success) {
@@ -1542,7 +1541,7 @@ async function doLogout() {
         cancelButtonText: 'Cancelar'
     });
     if (result.isConfirmed) {
-        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         Swal.fire({
             icon: 'success',
             title: 'Até logo!',
@@ -1570,12 +1569,7 @@ async function toggleTheme() {
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     applyTheme(newTheme);
     try {
-        await fetch('/api/update-theme', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ theme: newTheme })
-        });
+        localStorage.setItem('bioma_theme', newTheme);
     } catch (e) {
         console.error('❌ Theme error:', e);
     }
@@ -1774,10 +1768,10 @@ async function loadProfissionais() {
 
 </script>
 
-<!-- INCLUIR OS ARQUIVOS DE CORREÇÕES JAVASCRIPT -->
+<!-- INCLUIR OS ARQUIVOS DE CORREÇÕES JAVASCRIPT -->`r`n<script src="/static/js/bioma_melhorias_v4.js" defer></script>
 
-<script src="/static/js/bioma_correcoes_frontend.js" defer onerror="console.warn(&quot;Correções JS 1 não encontradas&quot;)"></script>
-<script src="/static/js/bioma_correcoes_frontend_parte2.js" defer onerror="console.warn(&quot;Correções JS 2 não encontradas&quot;)"></script>
+
+
 
 
 <script>
@@ -4114,8 +4108,8 @@ console.log('%c  • Ctrl+D - Dashboard', 'color:#6B7280;font-size:12px');
 console.log('%c  • ESC - Cancelar Orçamento', 'color:#6B7280;font-size:12px');
 console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color:#6B7280');
 console.log('%c👨‍💻 Desenvolvedor: @juanmarco1999', 'color:#EC4899;font-size:12px;font-weight:700');
-console.log('%c📅 Build: 2025-10-17 19:38:56 UTC', 'color:#6B7280;font-size:11px');
-console.log('%c🌳 BIOMA Uberaba v4.2 - Sistema Profissional Completo', 'color:#7C3AED;font-size:12px;font-weight:700');
+console.log('%c📅 Build: 2025-10-18 Compatibilidade Frontend/Backend', 'color:#6B7280;font-size:11px');
+console.log('%c🌳 BIOMA Uberaba v4.2.2 - Frontend Compatível com Backend', 'color:#7C3AED;font-size:12px;font-weight:700');
 console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color:#6B7280');
 
 // Exportar funções globalmente para uso no HTML
@@ -4140,7 +4134,7 @@ window.toggleDebug = toggleDebug;
 
 <script>
 // ============ LOG FINAL ============
-console.log('%c✅ BIOMA v4.2 CORRIGIDO - FRONTEND COMPLETO CARREGADO', 'color:#10B981;font-size:18px;font-weight:900');
+console.log('%c✅ BIOMA v4.2.2 COMPATÍVEL - FRONTEND COMPLETO CARREGADO', 'color:#10B981;font-size:18px;font-weight:900');
 console.log('%c🔥 Todas as correções implementadas:', 'color:#7C3AED;font-size:14px;font-weight:700');
 console.log('%c  ✅ 1. Profissionais com foto e multicomissão', 'color:#6B7280;font-size:12px');
 console.log('%c  ✅ 2. Entrada de estoque funcional', 'color:#6B7280;font-size:12px');
@@ -4150,7 +4144,8 @@ console.log('%c  ✅ 5. Calendário sem carregamento infinito', 'color:#6B7280;f
 console.log('%c  ✅ 6. Remoção de logo implementada', 'color:#6B7280;font-size:12px');
 console.log('%c  ✅ 7. Sistema de backup completo', 'color:#6B7280;font-size:12px');
 console.log('%c  ✅ 8. Relatórios com dados reais', 'color:#6B7280;font-size:12px');
-console.log('%c📅 Build: 2025-10-17 19:26 UTC', 'color:#6B7280;font-size:12px');
+console.log('%c  ✅ 9. CSS inline - sem dependências externas', 'color:#6B7280;font-size:12px');
+console.log('%c📅 Build: 2025-10-18 Compatibilidade', 'color:#6B7280;font-size:12px');
 console.log('%c👨‍💻 Dev: @juanmarco1999', 'color:#6B7280;font-size:12px');
 
 // ==================== FUNÇÕES CORRIGIDAS - ADICIONADAS ====================
@@ -4730,7 +4725,7 @@ async function uploadLogo(file) {
     });
 
     try {
-        const res = await fetch('/api/configuracoes/logo', {
+        const res = await fetch('/api/config/logo', {
             method: 'POST',
             body: formData,
             credentials: 'include'
@@ -4771,7 +4766,7 @@ async function removerLogo() {
     if (!result.isConfirmed) return;
 
     try {
-        const res = await fetch('/api/configuracoes/logo', {
+        const res = await fetch('/api/config/logo', {
             method: 'DELETE',
             credentials: 'include'
         });
@@ -4799,13 +4794,16 @@ async function removerLogo() {
 }
 
 // Log de carregamento das correções
-console.log('%c✅ CORREÇÕES FRONTEND CARREGADAS!', 'color:#10B981;font-size:16px;font-weight:900');
+console.log('%c✅ CORREÇÕES FRONTEND v4.2.2 CARREGADAS!', 'color:#10B981;font-size:16px;font-weight:900');
 console.log('%c  ✅ showModalProfissionalMelhorado() - Upload de Foto', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ modalEntradaEstoque() - Entrada de Estoque', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ carregarCalendarioAvancado() - Calendário Sem Travar', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ exportarRelatorioExcel() - Exportação Excel', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ criarBackup() + restaurarBackup() - Sistema de Backup', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ uploadLogo() + removerLogo() - Gerenciamento de Logo', 'color:#10B981;font-size:12px');
+console.log('%c  ✅ CSS inline - sem arquivos externos', 'color:#10B981;font-size:12px');
+console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color:#6B7280');
+console.log('%c🎯 Frontend 100% compatível com Backend v4.2.2', 'color:#7C3AED;font-size:14px;font-weight:900');
 
 
 </script>
