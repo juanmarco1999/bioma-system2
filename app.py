@@ -215,9 +215,7 @@ def send_email(to, name, subject, html_content, pdf=None):
 def index():
     """Servir a página principal"""
     try:
-        # Tentar servir o arquivo HTML da mesma pasta
-        with open('index_FRONTEND_100_FUNCIONAL.html', 'r', encoding='utf-8') as f:
-            return f.read()
+        return render_template('index.html')
     except FileNotFoundError:
         # Se não encontrar, retornar mensagem
         return '''
