@@ -309,6 +309,11 @@ def update_theme():
         logger.error(f'Erro ao atualizar tema: {exc}')
         return jsonify({'success': False, 'message': 'Erro ao salvar tema'}), 500
 
+@app.route('/', methods=['GET'])
+def home():
+    """Renderiza o frontend principal."""
+    return render_template('index.html')
+
 # ============ CORREÇÕES E NOVAS FUNCIONALIDADES ============
 
 # CORREÇÃO 1: Rota de criar profissional retornando o ID
