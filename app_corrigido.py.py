@@ -209,6 +209,182 @@ def send_email(to, name, subject, html_content, pdf=None):
     except:
         return False
 
+# ============ ROTAS PRINCIPAIS ============
+
+@app.route('/')
+def index():
+    """Servir a página principal"""
+    try:
+        # Tentar servir o arquivo HTML da mesma pasta
+        with open('index_FRONTEND_100_FUNCIONAL.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        # Se não encontrar, retornar mensagem
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>BIOMA Uberaba</title>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 50px; }
+                h1 { color: #7C3AED; }
+                .error { color: #EF4444; margin: 20px; }
+                .info { background: #F3F4F6; padding: 20px; border-radius: 10px; max-width: 600px; margin: 20px auto; }
+            </style>
+        </head>
+        <body>
+            <h1>🌳 BIOMA Uberaba v4.2.1</h1>
+            <div class="error">
+                <h2>⚠️ Arquivo index_FRONTEND_100_FUNCIONAL.html não encontrado</h2>
+            </div>
+            <div class="info">
+                <p><strong>Instruções:</strong></p>
+                <p>1. Certifique-se de que o arquivo <code>index_FRONTEND_100_FUNCIONAL.html</code> está na mesma pasta que <code>app_corrigido.py</code></p>
+                <p>2. Ou renomeie o arquivo HTML para <code>index.html</code></p>
+                <p>3. A API está funcionando em: <a href="/api/relatorios/completo">/api/relatorios/completo</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 200
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Autenticação de usuário"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    
+    data = request.json
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Usuário e senha são obrigatórios'}), 400
+    
+    try:
+        # Buscar usuário por username ou email
+        user = db.users.find_one({
+            '$or': [
+                {'username': username},
+                {'email': username}
+            ]
+        })
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 401
+        
+        # Verificar senha
+        if not check_password_hash(user['password'], password):
+            return jsonify({'success': False, 'message': 'Senha incorreta'}), 401
+        
+        # Criar sessão
+        session.permanent = True
+        session['user_id'] = str(user['_id'])
+        session['username'] = user['username']
+        session['email'] = user.get('email', '')
+        session['nome'] = user.get('nome', user['username'])
+        
+        logger.info(f"✅ Login: {username}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Login realizado com sucesso',
+            'user': {
+                'id': str(user['_id']),
+                'username': user['username'],
+                'nome': user.get('nome', user['username']),
+                'email': user.get('email', '')
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro no login: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao processar login'}), 500
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Registro de novo usuário"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    
+    data = request.json
+    nome = data.get('nome', '').strip()
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+    
+    if not all([nome, username, email, password]):
+        return jsonify({'success': False, 'message': 'Todos os campos são obrigatórios'}), 400
+    
+    if len(password) < 6:
+        return jsonify({'success': False, 'message': 'Senha deve ter no mínimo 6 caracteres'}), 400
+    
+    try:
+        # Verificar se usuário já existe
+        existing = db.users.find_one({
+            '$or': [
+                {'username': username},
+                {'email': email}
+            ]
+        })
+        
+        if existing:
+            if existing.get('username') == username:
+                return jsonify({'success': False, 'message': 'Usuário já existe'}), 400
+            else:
+                return jsonify({'success': False, 'message': 'Email já cadastrado'}), 400
+        
+        # Criar novo usuário
+        user = {
+            'nome': nome,
+            'username': username,
+            'email': email,
+            'password': generate_password_hash(password),
+            'created_at': datetime.now(),
+            'ativo': True
+        }
+        
+        result = db.users.insert_one(user)
+        
+        logger.info(f"✅ Novo usuário registrado: {username}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Usuário criado com sucesso',
+            'user_id': str(result.inserted_id)
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro no registro: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao criar usuário'}), 500
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout do usuário"""
+    username = session.get('username', 'Desconhecido')
+    session.clear()
+    logger.info(f"✅ Logout: {username}")
+    return jsonify({'success': True, 'message': 'Logout realizado com sucesso'})
+
+@app.route('/api/auth/check', methods=['GET'])
+def check_auth():
+    """Verificar se usuário está autenticado"""
+    if 'user_id' in session:
+        return jsonify({
+            'success': True,
+            'authenticated': True,
+            'user': {
+                'id': session.get('user_id'),
+                'username': session.get('username'),
+                'nome': session.get('nome'),
+                'email': session.get('email')
+            }
+        })
+    else:
+        return jsonify({
+            'success': True,
+            'authenticated': False
+        })
+
 # ============ CORREÇÕES E NOVAS FUNCIONALIDADES ============
 
 # CORREÇÃO 1: Rota de criar profissional retornando o ID
