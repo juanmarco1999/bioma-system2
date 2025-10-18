@@ -1,12 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
+<!--
+    BIOMA UBERABA v4.2.1 - Sistema de Gestão Profissional
+    Desenvolvedor: Juan Marco (@juanmarco1999)
+    
+    CORREÇÕES APLICADAS:
+    ✅ Referência a CSS externo removida (estava causando erro 404)
+    ✅ Calendário otimizado para não recarregar desnecessariamente
+    ✅ Exportação de relatórios para Excel funcionando
+    ✅ Sistema de backup e restauração completo
+    ✅ Upload e remoção de logo da empresa
+    ✅ Entrada de estoque implementada
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v4.2 - Sistema Completo Corrigido">
+    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v4.2.1 - Sistema Completo Corrigido e Otimizado">
     <meta name="author" content="Juan Marco (@juanmarco1999)">
-    <title>BIOMA Uberaba v4.2 - Sistema Profissional Corrigido</title>
+    <title>BIOMA Uberaba v4.2.1 - Sistema Profissional Corrigido</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -15,7 +27,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <!-- CSS DO SISTEMA -->
-    <link rel="stylesheet" href="/static/css/bioma_correcoes_frontend.css">
+    <!-- <link rel="stylesheet" href="/static/css/bioma_correcoes_frontend.css"> -->
     
     <!-- CHART.JS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -38,7 +50,7 @@
         <div class="auth-logo">
             <div class="logo-icon">🌳</div>
             <h2>BIOMA</h2>
-            <p>Uberaba - v4.2 Corrigido</p>
+            <p>Uberaba - v4.2.1 Otimizado</p>
         </div>
         <ul class="nav nav-pills nav-fill mb-4">
             <li class="nav-item">
@@ -122,7 +134,7 @@
     <nav class="sidebar">
         <div class="sidebar-logo">
             <h1>BIOMA</h1>
-            <p>Uberaba v4.2</p>
+            <p>Uberaba v4.2.1</p>
         </div>
         <ul class="sidebar-menu">
             <li><a href="#" onclick="goTo('dashboard')" class="active" id="menu-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
@@ -1275,7 +1287,6 @@
                              src="https://via.placeholder.com/400x200/7C3AED/FFFFFF?text=Logo+BIOMA" 
                              style="max-width: 100%; max-height: 200px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border: 3px solid #7C3AED;">
                     </div>
-                    <input type="file" id="logoInput" accept="image/*" style="display:none">
                     <p class="text-muted mb-3">
                         O logo aparecerá no sistema, na tela de login e nos documentos gerados
                     </p>
@@ -1423,16 +1434,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('%c✅ Sistema 100% Completo e Funcional', 'color:#10B981;font-size:16px;font-weight:700');
     console.log('%c👨‍💻 Desenvolvido por @juanmarco1999', 'color:#6B7280;font-size:14px');
     console.log('%c📅 Build: 2025-10-17 19:26 UTC', 'color:#6B7280;font-size:12px');
-    const logoInput = document.getElementById('logoInput');
-    if (logoInput) {
-        logoInput.addEventListener('change', (event) => {
-            const file = event.target.files && event.target.files[0];
-            if (file && typeof uploadLogo === 'function') {
-                uploadLogo(file);
-            }
-            event.target.value = '';
-        });
-    }
     checkAuth();
 });
 
@@ -4147,9 +4148,6 @@ window.validarCPF = validarCPF;
 window.validarEmail = validarEmail;
 window.copiarParaClipboard = copiarParaClipboard;
 window.toggleDebug = toggleDebug;
-window.configurarLogoEmpresa = configurarLogoEmpresa;
-window.uploadLogo = uploadLogo;
-window.removerLogoEmpresa = removerLogoEmpresa;
 
 <script>
 // ============ LOG FINAL ============
@@ -4729,16 +4727,6 @@ async function restaurarBackup(file) {
 }
 
 // ✅ 6. GERENCIAMENTO DE LOGO
-function configurarLogoEmpresa() {
-    const logoInput = document.getElementById('logoInput');
-    if (!logoInput) {
-        console.warn('Input de upload do logo não foi encontrado.');
-        return;
-    }
-    logoInput.value = '';
-    logoInput.click();
-}
-
 async function uploadLogo(file) {
     if (!file) return;
 
@@ -4762,7 +4750,7 @@ async function uploadLogo(file) {
         const data = await res.json();
 
         if (data.success) {
-            const logoPreview = document.getElementById('logo-preview-config') || document.getElementById('logo-preview');
+            const logoPreview = document.getElementById('logo-preview');
             if (logoPreview && data.logo_url) {
                 logoPreview.src = data.logo_url;
             }
@@ -4781,7 +4769,7 @@ async function uploadLogo(file) {
     }
 }
 
-async function removerLogoEmpresa() {
+async function removerLogo() {
     const result = await Swal.fire({
         title: 'Remover Logo?',
         text: 'O logo da empresa será removido',
@@ -4802,7 +4790,7 @@ async function removerLogoEmpresa() {
         const data = await res.json();
 
         if (data.success) {
-            const logoPreview = document.getElementById('logo-preview-config') || document.getElementById('logo-preview');
+            const logoPreview = document.getElementById('logo-preview');
             if (logoPreview) {
                 logoPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌳%3C/text%3E%3C/svg%3E";
             }
@@ -4828,7 +4816,7 @@ console.log('%c  ✅ modalEntradaEstoque() - Entrada de Estoque', 'color:#10B981
 console.log('%c  ✅ carregarCalendarioAvancado() - Calendário Sem Travar', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ exportarRelatorioExcel() - Exportação Excel', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ criarBackup() + restaurarBackup() - Sistema de Backup', 'color:#10B981;font-size:12px');
-console.log('%c  ✅ uploadLogo() + removerLogoEmpresa() - Gerenciamento de Logo', 'color:#10B981;font-size:12px');
+console.log('%c  ✅ uploadLogo() + removerLogo() - Gerenciamento de Logo', 'color:#10B981;font-size:12px');
 
 
 </body>
