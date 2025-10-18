@@ -1371,7 +1371,7 @@ if __name__ == '__main__':
     print("=" * 80 + "\n")
     
     # Inicializar DB
-    if db:
+    if db is not None:
         # Criar índices necessários
         try:
             db.users.create_index([('username', ASCENDING)], unique=True)
