@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -1776,8 +1776,11 @@ async function loadProfissionais() {
 
 <!-- INCLUIR OS ARQUIVOS DE CORREÇÕES JAVASCRIPT -->
 
-<script src="/static/js/bioma_correcoes_frontend.js"></script>
-<script src="/static/js/bioma_correcoes_frontend_parte2.js"></script>
+<script src="/static/js/bioma_correcoes_frontend.js" defer onerror="console.warn(&quot;Correções JS 1 não encontradas&quot;)"></script>
+<script src="/static/js/bioma_correcoes_frontend_parte2.js" defer onerror="console.warn(&quot;Correções JS 2 não encontradas&quot;)"></script>
+
+
+<script>
 /**
  * BIOMA UBERABA v4.2 - FUNÇÕES ORIGINAIS DO SISTEMA
  * Desenvolvedor: Juan Marco (@juanmarco1999)
@@ -4804,6 +4807,8 @@ console.log('%c  ✅ exportarRelatorioExcel() - Exportação Excel', 'color:#10B
 console.log('%c  ✅ criarBackup() + restaurarBackup() - Sistema de Backup', 'color:#10B981;font-size:12px');
 console.log('%c  ✅ uploadLogo() + removerLogo() - Gerenciamento de Logo', 'color:#10B981;font-size:12px');
 
+
+</script>
 
 </body>
 </html>
