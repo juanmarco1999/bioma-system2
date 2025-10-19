@@ -159,6 +159,35 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def permission_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            role = session.get('role', 'admin')
+            if roles and role not in roles:
+                return jsonify({'success': False, 'message': 'Permissão negada'}), 403
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+def audit(action: str, status: str = 'success', meta: dict | None = None):
+    try:
+        if db is None:
+            return
+        db.audit_logs.insert_one({
+            'time': datetime.now(),
+            'user_id': session.get('user_id'),
+            'username': session.get('username'),
+            'role': session.get('role', 'admin'),
+            'method': request.method,
+            'path': request.path,
+            'action': action,
+            'status': status,
+            'meta': meta or {}
+        })
+    except Exception as _:
+        pass
+
 def validar_cpf(cpf):
     """Validar CPF usando o algoritmo oficial"""
     if not cpf:
@@ -438,6 +467,58 @@ def check_auth():
             'authenticated': False
         })
 
+# =================== Compatibilidade com rotas do FRONTEND de backup ===================
+
+# Alias das rotas de autenticação do backup para manter compatibilidade de frontend
+@app.route('/api/login', methods=['POST'])
+def login_compat():
+    return login()
+
+@app.route('/api/register', methods=['POST'])
+def register_compat():
+    return register()
+
+@app.route('/api/logout', methods=['POST'])
+def logout_compat():
+    return logout()
+
+@app.route('/api/current-user')
+def current_user():
+    """Retorna o usuário logado (compatível com frontend de backup)."""
+    if 'user_id' in session and db is not None:
+        try:
+            user = db.users.find_one({'_id': ObjectId(session['user_id'])})
+            if user:
+                # Normalizar campos entre versões (name/nome)
+                name = user.get('nome') or user.get('name') or user.get('username')
+                return jsonify({
+                    'success': True,
+                    'user': {
+                        'id': str(user.get('_id')),
+                        'name': name,
+                        'username': user.get('username'),
+                        'email': user.get('email', ''),
+                        'role': user.get('role', 'admin'),
+                        'theme': user.get('theme', 'light')
+                    }
+                })
+        except Exception as e:
+            logger.error(f"Erro current-user: {e}")
+    return jsonify({'success': False})
+
+@app.route('/api/update-theme', methods=['POST'])
+@login_required
+def update_theme():
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        theme = (request.json or {}).get('theme', 'light')
+        db.users.update_one({'_id': ObjectId(session['user_id'])}, {'$set': {'theme': theme}})
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro update-theme: {e}")
+        return jsonify({'success': False}), 500
+
 # ============ CORREÇÕES E NOVAS FUNCIONALIDADES ============
 
 # CORREÇÃO 1: Rota de criar profissional retornando o ID
@@ -644,6 +725,71 @@ def entrada_estoque():
     except Exception as e:
         logger.error(f"Erro ao registrar entrada: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# Compatibilidade com rota antiga de movimentação de estoque
+@app.route('/api/estoque/movimentacao', methods=['POST'])
+@login_required
+def estoque_movimentacao_compat():
+    """Rota compatível com a versão de backup.
+    Aceita {produto_id, quantidade, tipo: 'entrada'|'saida', ...}
+    """
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    data = request.json or {}
+    try:
+        produto_id = data.get('produto_id')
+        tipo = (data.get('tipo') or '').lower()
+        quantidade = int(data.get('quantidade') or 0)
+        if not produto_id or quantidade <= 0 or tipo not in ('entrada','saida'):
+            return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+
+        produto = db.produtos.find_one({'_id': ObjectId(produto_id)})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+        estoque_atual = int(produto.get('estoque', 0))
+        if tipo == 'entrada':
+            # Criar movimentação pendente (não altera estoque até aprovação)
+            preco_compra = float(data.get('preco_compra', data.get('custo', 0) or 0))
+            motivo = data.get('motivo', 'Entrada de mercadoria') or data.get('observacoes', '')
+            fornecedor = data.get('fornecedor', '')
+            nota_fiscal = data.get('nota_fiscal', '')
+
+            db.estoque_movimentacoes.insert_one({
+                'produto_id': ObjectId(produto_id),
+                'tipo': 'entrada',
+                'quantidade': quantidade,
+                'motivo': motivo,
+                'fornecedor': fornecedor,
+                'nota_fiscal': nota_fiscal,
+                'preco_compra': preco_compra,
+                'usuario': session.get('username', 'system'),
+                'data': datetime.now(),
+                'status': 'pendente'
+            })
+        else:
+            # Saída simples: valida e subtrai
+            if quantidade > estoque_atual:
+                # Permitir negativo? Manter consistente com backup: não bloqueia; mas vamos proteger para não negativo
+                quantidade = estoque_atual
+            novo_estoque = max(0, estoque_atual - quantidade)
+            db.produtos.update_one({'_id': ObjectId(produto_id)}, {'$set': {
+                'estoque': novo_estoque,
+                'updated_at': datetime.now()
+            }})
+            db.estoque_movimentacoes.insert_one({
+                'produto_id': ObjectId(produto_id),
+                'tipo': 'saida',
+                'quantidade': quantidade,
+                'motivo': data.get('motivo', 'Saída de estoque'),
+                'usuario': session.get('username', 'system'),
+                'data': datetime.now(),
+                'status': 'aprovado'
+            })
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro movimentação compat: {e}")
+        return jsonify({'success': False}), 500
 
 # CORREÇÃO 3: Implementar exportação de relatórios para Excel
 @app.route('/api/relatorios/exportar/excel', methods=['GET', 'POST'])
@@ -1528,6 +1674,57 @@ def remove_logo():
         logger.error(f"Erro ao remover logo: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# Preferências do destaque de logo (hero)
+@app.route('/api/config/hero', methods=['GET'])
+def get_logo_hero():
+    if db is None:
+        return jsonify({'success': True, 'logo_hero_enabled': True, 'logo_hero_title': '', 'logo_hero_size': 'grande', 'logo_hero_style': 'card'})
+    try:
+        cfg = db.configuracao.find_one({}) or {}
+        return jsonify({'success': True,
+                        'logo_hero_enabled': bool(cfg.get('logo_hero_enabled', True)),
+                        'logo_hero_title': cfg.get('logo_hero_title', ''),
+                        'logo_hero_size': cfg.get('logo_hero_size', 'grande'),
+                        'logo_hero_style': cfg.get('logo_hero_style', 'card')})
+    except Exception as exc:
+        logger.error(f'Erro ao buscar hero: {exc}')
+        return jsonify({'success': True, 'logo_hero_enabled': True, 'logo_hero_title': '', 'logo_hero_size': 'grande', 'logo_hero_style': 'card'})
+
+@app.route('/api/config/hero', methods=['POST'])
+@login_required
+def set_logo_hero():
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    try:
+        data = request.json or {}
+        enabled = data.get('logo_hero_enabled')
+        title = data.get('logo_hero_title')
+        size = data.get('logo_hero_size')
+        style = data.get('logo_hero_style')
+        update = {}
+        if enabled is not None:
+            update['logo_hero_enabled'] = bool(enabled)
+        if title is not None:
+            update['logo_hero_title'] = str(title)[:120]
+        if size is not None:
+            allowed = {'compacto','medio','grande','xl'}
+            if str(size) in allowed:
+                update['logo_hero_size'] = str(size)
+        if style is not None:
+            allowed_styles = {'card','minimal'}
+            if str(style) in allowed_styles:
+                update['logo_hero_style'] = str(style)
+        if not update:
+            return jsonify({'success': False, 'message': 'Nada para atualizar'}), 400
+        db.configuracao.update_one({}, {'$set': update, '$setOnInsert': {'created_at': datetime.now()}}, upsert=True)
+        db.configuracao.update_one({}, {'$set': {'updated_at': datetime.now()}})
+        audit('config.hero.update', 'success', update)
+        return jsonify({'success': True})
+    except Exception as exc:
+        logger.error(f'Erro ao salvar hero: {exc}')
+        audit('config.hero.update', 'error', {'error': str(exc)})
+        return jsonify({'success': False, 'message': 'Erro ao salvar preferências'}), 500
+
 @app.route('/api/comissoes/calcular', methods=['POST'])
 @login_required
 def calcular_comissoes():
@@ -1651,7 +1848,9 @@ def estoque_alerta():
     
     try:
         itens = list(db.produtos.find({'$expr': {'$lte': ['$estoque', {'$ifNull': ['$estoque_minimo', 0]}]}}))
-        return jsonify({'success': True, 'itens': convert_objectid(itens)})
+        conv = convert_objectid(itens)
+        # Compatível com front antigo (produtos) e novo (itens)
+        return jsonify({'success': True, 'itens': conv, 'produtos': conv})
     except Exception as e:
         logger.error(f"Erro ao buscar alertas de estoque: {e}")
         return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
@@ -1941,6 +2140,27 @@ def template_servicos():
     output.seek(0)
     return send_file(io.BytesIO(output.getvalue().encode('utf-8')), mimetype='text/csv', as_attachment=True, download_name='template_servicos.csv')
 
+@app.route('/api/template/download/<tipo>')
+@login_required
+def template_download_tipo(tipo):
+    """Compatibilidade com rota dinâmica do backup."""
+    if tipo == 'produtos':
+        return template_produtos()
+    if tipo == 'servicos' or tipo == 'serviços':
+        return template_servicos()
+    return jsonify({'success': False, 'message': 'Tipo inválido'}), 400
+
+@app.route('/health')
+def health():
+    db_status = 'disconnected'
+    if db is not None:
+        try:
+            db.command('ping')
+            db_status = 'connected'
+        except Exception:
+            db_status = 'error'
+    return jsonify({'status': 'healthy', 'time': datetime.now().isoformat(), 'database': db_status, 'version': '4.2.6'}), 200
+
 @app.route('/api/importar', methods=['POST'])
 @login_required
 def importar():
@@ -2046,10 +2266,12 @@ def aprovar_todas_mov():
                 logger.error(f"Erro ao aprovar movimentação {m.get('_id')}: {e}")
                 continue  # Continua com as próximas mesmo se uma falhar
         
+        audit('estoque.mov.aprovar_todas', 'success', {'count': count})
         return jsonify({'success': True, 'aprovadas': count})
     
     except Exception as e:
         logger.error(f"Erro ao aprovar movimentações: {e}")
+        audit('estoque.mov.aprovar_todas', 'error', {'error': str(e)})
         return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
 
 @app.route('/api/estoque/movimentacoes/reprovar-todas', methods=['POST'])
@@ -2070,10 +2292,251 @@ def reprovar_todas_mov():
                 logger.error(f"Erro ao reprovar movimentação {m.get('_id')}: {e}")
                 continue  # Continua com as próximas mesmo se uma falhar
         
+        audit('estoque.mov.reprovar_todas', 'success', {'count': count})
         return jsonify({'success': True, 'reprovadas': count})
     
     except Exception as e:
         logger.error(f"Erro ao reprovar movimentações: {e}")
+        audit('estoque.mov.reprovar_todas', 'error', {'error': str(e)})
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+# Atualizar/consultar/remover agendamentos (suporte a drag & drop)
+@app.route('/api/agendamentos/<id>', methods=['GET','PUT','DELETE'])
+@login_required
+def agendamento_id(id):
+    oid = to_objectid(id)
+    if not oid:
+        return jsonify({'success': False, 'message': 'ID inválido'}), 400
+    if request.method == 'GET':
+        a = db.agendamentos.find_one({'_id': oid})
+        return jsonify({'success': True, 'agendamento': convert_objectid(a)}) if a else (jsonify({'success': False}), 404)
+    if request.method == 'DELETE':
+        db.agendamentos.delete_one({'_id': oid})
+        audit('agendamento.delete', 'success', {'id': id})
+        return jsonify({'success': True})
+    data = request.json or {}
+    # Aceitar vários formatos (start, startStr, data, horario)
+    new_data_iso = data.get('start') or data.get('startStr') or data.get('data')
+    update = {}
+    if new_data_iso:
+        update['data'] = str(new_data_iso)
+    if 'horario' in data:
+        update['horario'] = data.get('horario','')
+    if not update:
+        return jsonify({'success': False, 'message': 'Sem campos para atualizar'}), 400
+    db.agendamentos.update_one({'_id': oid}, {'$set': update})
+    audit('agendamento.update', 'success', {'id': id, 'set': update})
+    return jsonify({'success': True})
+
+# Exportar relatórios em PDF
+@app.route('/api/relatorios/exportar/pdf', methods=['GET','POST'])
+@login_required
+def exportar_relatorio_pdf():
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    # parâmetros por GET ou POST
+    if request.method == 'POST':
+        data = request.json or {}
+        tipo = data.get('tipo', 'vendas')
+        di = data.get('data_inicio')
+        df = data.get('data_fim')
+    else:
+        tipo = request.args.get('tipo', 'vendas')
+        di = request.args.get('data_inicio')
+        df = request.args.get('data_fim')
+    try:
+        di_dt = datetime.fromisoformat(di) if di else datetime.now() - timedelta(days=30)
+        df_dt = datetime.fromisoformat(df) if df else datetime.now()
+        # Montar dados básicos
+        vendas = list(db.orcamentos.find({'status': {'$in':['Aprovado','aprovado','aprovada']}, 'created_at': {'$gte': di_dt, '$lte': df_dt}}))
+        total = sum(float(v.get('total_final',0)) for v in vendas)
+        qtd = len(vendas)
+        # Top clientes
+        pipeline = [
+            {'$match': {'status': {'$in':['Aprovado','aprovado','aprovada']}, 'created_at': {'$gte': di_dt, '$lte': df_dt}}},
+            {'$group': {'_id': '$cliente_cpf','cliente_nome': {'$first':'$cliente_nome'},'total': {'$sum': '$total_final'},'qtd': {'$sum':1}}},
+            {'$sort': {'total': -1}}, {'$limit': 10}
+        ]
+        top = list(db.orcamentos.aggregate(pipeline))
+
+        # Coletar Top Serviços (por itens nos orçamentos)
+        top_servicos = []
+        try:
+            pipeline_serv = [
+                {'$match': {'status': {'$in':['Aprovado','aprovado','aprovada']}, 'created_at': {'$gte': di_dt, '$lte': df_dt}}},
+                {'$unwind': '$itens'},
+                {'$group': {'_id': '$itens.nome', 'total': {'$sum': {'$ifNull': ['$itens.total', 0]}}}},
+                {'$sort': {'total': -1}},
+                {'$limit': 10}
+            ]
+            top_servicos = list(db.orcamentos.aggregate(pipeline_serv))
+        except Exception:
+            top_servicos = []
+
+        # Faturamento mensal
+        fat_mensal = []
+        try:
+            pipeline_mensal = [
+                {'$match': {'status': {'$in':['Aprovado','aprovado','aprovada']}, 'created_at': {'$gte': di_dt, '$lte': df_dt}}},
+                {'$group': {'_id': {'y': {'$year': '$created_at'}, 'm': {'$month': '$created_at'}}, 'total': {'$sum': '$total_final'}}},
+                {'$sort': {'_id.y': 1, '_id.m': 1}}
+            ]
+            fat_mensal = list(db.orcamentos.aggregate(pipeline_mensal))
+        except Exception:
+            fat_mensal = []
+
+        # Gerar PDF
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        elems = []
+        elems.append(Paragraph('Relatório de Vendas', styles['Title']))
+        periodo = f"Período: {di_dt.date().isoformat()} a {df_dt.date().isoformat()}"
+        elems.append(Paragraph(periodo, styles['Normal']))
+        elems.append(Spacer(1,12))
+        elems.append(Paragraph(f"Quantidade de Orçamentos Aprovados: {qtd}", styles['Normal']))
+        elems.append(Paragraph(f"Faturamento no período: R$ {total:.2f}", styles['Heading2']))
+        elems.append(Spacer(1,12))
+
+        # Top Clientes tabela
+        data_tbl = [['Cliente','CPF','Qtd','Total (R$)']]
+        for c in top:
+            data_tbl.append([
+                c.get('cliente_nome','-') or '-',
+                c.get('_id','-'),
+                str(c.get('qtd',0)),
+                f"{float(c.get('total',0)):.2f}"
+            ])
+        table = Table(data_tbl, hAlign='LEFT')
+        table.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,black),('BACKGROUND',(0,0),(-1,0),HexColor('#eeeeee'))]))
+        elems.append(Paragraph('Top Clientes', styles['Heading2']))
+        elems.append(table)
+
+        # Adicionar gráficos (Top Serviços e Faturamento Mensal)
+        try:
+            from reportlab.graphics.shapes import Drawing, String
+            from reportlab.graphics.charts.barcharts import VerticalBarChart
+            from reportlab.lib import colors
+
+            # Top Serviços
+            if top_servicos:
+                cats = [str(s.get('_id') or '-')[:18] for s in top_servicos]
+                vals = [float(s.get('total',0)) for s in top_servicos]
+                d = Drawing(460, 220)
+                bc = VerticalBarChart()
+                bc.x = 40; bc.y = 30
+                bc.height = 160; bc.width = 400
+                bc.data = [vals]
+                bc.categoryAxis.categoryNames = cats
+                bc.categoryAxis.labels.angle = 45
+                bc.categoryAxis.labels.fontSize = 7
+                bc.valueAxis.labels.fontSize = 8
+                bc.barWidth = 12
+                bc.groupSpacing = 6
+                bc.strokeColor = colors.transparent
+                bc.bars[0].fillColor = HexColor('#7C3AED')
+                d.add(String(0, 200, 'Top Serviços', fontName='Helvetica-Bold', fontSize=12, fillColor=HexColor('#333333')))
+                d.add(bc)
+                elems.append(Spacer(1, 12))
+                elems.append(d)
+
+            # Faturamento Mensal
+            if fat_mensal:
+                cats_m = [f"{x['_id']['y']}-{int(x['_id']['m']):02d}" for x in fat_mensal]
+                vals_m = [float(x.get('total',0)) for x in fat_mensal]
+                d2 = Drawing(460, 220)
+                bc2 = VerticalBarChart()
+                bc2.x = 40; bc2.y = 30
+                bc2.height = 160; bc2.width = 400
+                bc2.data = [vals_m]
+                bc2.categoryAxis.categoryNames = cats_m
+                bc2.categoryAxis.labels.angle = 45
+                bc2.categoryAxis.labels.fontSize = 7
+                bc2.valueAxis.labels.fontSize = 8
+                bc2.barWidth = 14
+                bc2.groupSpacing = 6
+                bc2.strokeColor = colors.transparent
+                bc2.bars[0].fillColor = HexColor('#10B981')
+                d2.add(String(0, 200, 'Faturamento Mensal', fontName='Helvetica-Bold', fontSize=12, fillColor=HexColor('#333333')))
+                d2.add(bc2)
+                elems.append(Spacer(1, 12))
+                elems.append(d2)
+        except Exception as _:
+            pass
+
+        doc.build(elems)
+        buffer.seek(0)
+        audit('relatorio.pdf', 'success', {'tipo': tipo, 'di': di, 'df': df})
+        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name='relatorio.pdf')
+    except Exception as e:
+        logger.error(f"Erro PDF: {e}")
+        audit('relatorio.pdf', 'error', {'error': str(e)})
+        return jsonify({'success': False, 'message': 'Erro ao gerar PDF'}), 500
+
+# Listar movimentações de estoque
+@app.route('/api/estoque/movimentacoes', methods=['GET'])
+@login_required
+def listar_movimentacoes():
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    try:
+        movs = list(db.estoque_movimentacoes.find({}).sort('data', DESCENDING).limit(100))
+        # anexar nome do produto
+        for m in movs:
+            try:
+                prod = db.produtos.find_one({'_id': m.get('produto_id')}) if m.get('produto_id') else None
+                if prod:
+                    m['produto_nome'] = prod.get('nome')
+                    m['produto_marca'] = prod.get('marca')
+            except Exception:
+                pass
+        return jsonify({'success': True, 'movimentacoes': convert_objectid(movs)})
+    except Exception as e:
+        logger.error(f"Erro ao listar movimentações: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+# Aprovar movimentação individual
+@app.route('/api/estoque/movimentacoes/<id>/aprovar', methods=['POST'])
+@login_required
+def aprovar_mov(id):
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    try:
+        oid = to_objectid(id)
+        if not oid:
+            return jsonify({'success': False, 'message': 'ID inválido'}), 400
+        m = db.estoque_movimentacoes.find_one({'_id': oid})
+        if not m:
+            return jsonify({'success': False, 'message': 'Movimentação não encontrada'}), 404
+        if m.get('status') == 'aprovado':
+            return jsonify({'success': True})
+        if m.get('tipo') == 'entrada' and m.get('produto_id'):
+            db.produtos.update_one({'_id': m['produto_id']}, {'$inc': {'estoque': int(m.get('quantidade',0))}})
+        db.estoque_movimentacoes.update_one({'_id': oid}, {'$set': {'status':'aprovado','aprovado_em': datetime.now()}})
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro aprovar movimentação: {e}")
+        return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
+
+# Reprovar movimentação individual
+@app.route('/api/estoque/movimentacoes/<id>/reprovar', methods=['POST'])
+@login_required
+def reprovar_mov(id):
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+    try:
+        oid = to_objectid(id)
+        if not oid:
+            return jsonify({'success': False, 'message': 'ID inválido'}), 400
+        m = db.estoque_movimentacoes.find_one({'_id': oid})
+        if not m:
+            return jsonify({'success': False, 'message': 'Movimentação não encontrada'}), 404
+        if m.get('status') == 'reprovado':
+            return jsonify({'success': True})
+        db.estoque_movimentacoes.update_one({'_id': oid}, {'$set': {'status':'reprovado','reprovado_em': datetime.now()}})
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro reprovar movimentação: {e}")
         return jsonify({'success': False, 'message': 'Erro interno do servidor'}), 500
 
 
@@ -2117,6 +2580,3 @@ if __name__ == '__main__':
     
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
-
-
-

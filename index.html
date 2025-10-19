@@ -157,6 +157,12 @@
             <div class="page-header">
                 <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
             </div>
+            <!-- Logo em destaque (exibido quando configurado) -->
+            <div id="logo-hero" class="card" style="display:none; text-align:center; padding:28px; margin:12px auto 28px; background: var(--bg-card); border:2px solid var(--border-color); border-radius:20px; box-shadow: var(--shadow); max-width:1100px;">
+                <div id="hero-bar" style="height:6px; background:linear-gradient(90deg, var(--primary), var(--secondary)); border-radius:6px; margin:-8px -8px 18px -8px;"></div>
+                <h2 id="hero-title" style="display:none; margin:0 0 12px 0; font-weight:900; font-size:clamp(1.1rem, 2.2vw, 1.6rem); background:linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;"></h2>
+                <img id="hero-logo" alt="Logo da Empresa" loading="lazy" style="max-width:96%; max-height:clamp(180px, 26vh, 300px); object-fit:contain; filter:none; border-radius:14px; box-shadow:0 8px 26px rgba(0,0,0,0.08); transition:opacity .35s ease, transform .35s ease;">
+            </div>
             <div class="row g-4 mb-4">
                 <div class="col-lg-3 col-md-6">
                     <div class="stat-card">
@@ -592,6 +598,26 @@
             <div class="card mt-4">
                 <div class="card-header"><i class="bi bi-people-fill"></i> Top 10 Clientes VIP</div>
                 <div class="card-body">
+                    <div class="row g-3 align-items-end" style="margin-bottom:12px">
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo</label>
+                            <select id="relatorio-tipo" class="form-select">
+                                <option value="vendas" selected>Vendas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Início</label>
+                            <input type="date" id="relatorio-data-inicio" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fim</label>
+                            <input type="date" id="relatorio-data-fim" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-success w-100" onclick="exportarRelatorioExcel()"><i class="bi bi-file-earmark-arrow-down"></i> Exportar Excel</button>
+                            <button class="btn btn-primary w-100 mt-2" onclick="exportarRelatorioPDF()"><i class="bi bi-filetype-pdf"></i> Exportar PDF</button>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -814,7 +840,7 @@
         </div>
 
         <!-- ==================== ESTOQUE (COMPLETAMENTE CORRIGIDO) ==================== -->
-        <div id="section-estoque" class="content-section">
+        <div id="section-estoque" class="content-section">            <div class="mb-3"><button class="btn btn-success btn-sm" onclick="aprovarTodasMovimentacoes()"><i class="bi bi-check2-circle"></i> Aprovar Todas</button> <button class="btn btn-danger btn-sm" onclick="reprovarTodasMovimentacoes()"><i class="bi bi-x-circle"></i> Reprovar Todas</button></div>
             <div class="page-header">
                 <h1><i class="bi bi-box-seam-fill"></i> Gerenciamento de Estoque Avançado</h1>
                 <div style="display: flex; gap: 10px;">
@@ -1276,13 +1302,63 @@
                         O logo aparecerá no sistema, na tela de login e nos documentos gerados
                     </p>
                     <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <input type="file" id="cfgLogoFile" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" style="display:none" onchange="uploadLogo(this.files[0])">
                         <button class="btn btn-primary" onclick="configurarLogoEmpresa()">
-                            <i class="bi bi-upload"></i> Fazer Upload do Logo
+                            <i class="bi bi-upload"></i> Adicionar/Alterar Logo
+                        </button>
+                        <button class="btn btn-secondary" onclick="removerLogoEmpresa()">
+                            <i class="bi bi-arrow-counterclockwise"></i> Restaurar Logo Padrão
                         </button>
                         <button class="btn btn-danger" onclick="removerLogoEmpresa()">
                             <i class="bi bi-trash"></i> Remover Logo
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- PREFERÊNCIAS DO DESTAQUE DO LOGO (HERO) -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="bi bi-aspect-ratio"></i> Exibição do Logo no Dashboard
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <label style="display:block;font-weight:700;margin-bottom:10px">Exibir logo em destaque</label>
+                            <label style="display:flex;align-items:center;gap:10px">
+                                <input type="checkbox" id="cfgLogoHeroEnabled" checked style="width:20px;height:20px">
+                                <span>Exibir card com o logo no topo do Dashboard</span>
+                            </label>
+                        </div>
+                        <div class="col-md-4">
+                            <label style="display:block;font-weight:700;margin-bottom:10px">Tamanho do destaque</label>
+                            <select id="cfgLogoHeroSize" class="form-select" onchange="previewLayoutLogo()">
+                                <option value="compacto">Compacto</option>
+                                <option value="medio">Médio</option>
+                                <option value="grande" selected>Grande</option>
+                                <option value="xl">Extra</option>
+                            </select>
+                            <small class="text-muted">Aplica proporções e largura para harmonizar o layout.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label style="display:block;font-weight:700;margin-bottom:10px">Aparência do destaque</label>
+                            <select id="cfgLogoHeroStyle" class="form-select" onchange="previewLayoutLogo()">
+                                <option value="card" selected>Cartão (padrão)</option>
+                                <option value="minimal">Minimalista</option>
+                            </select>
+                            <small class="text-muted">Minimalista: sem borda e sem faixa; foca apenas no logo.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-center mt-2">
+                        <div class="col-12">
+                            <label style="display:block;font-weight:700;margin-bottom:10px">Título do destaque (opcional)</label>
+                            <input type="text" id="cfgLogoHeroTitle" class="form-control" placeholder="Ex.: Sua Marca, BIOMA Uberaba, etc.">
+                            <small class="text-muted">Deixe em branco para ocultar o título acima do logo.</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-success mt-3" onclick="salvarLayoutLogo()">
+                        <i class="bi bi-check-circle"></i> Salvar Preferências
+                    </button>
                 </div>
             </div>
 
@@ -1425,9 +1501,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============ AUTENTICAÇÃO ============
 async function checkAuth() {
     try {
-        const res = await fetch('/api/auth/check', { credentials: 'include' });
+        const res = await fetch('/api/current-user', { credentials: 'include' });
         const data = await res.json();
-        if (data.success && data.authenticated && data.user) {
+        if (data && data.success && data.user) {
             currentUser = data.user;
             currentTheme = (data.user && data.user.theme) || localStorage.getItem('bioma_theme') || 'light';
             applyTheme(currentTheme);
@@ -1442,6 +1518,9 @@ async function checkAuth() {
 }
 
 function showAuth() {
+    if (typeof carregarLogoEmpresa === 'function') {
+        try { carregarLogoEmpresa(); } catch(e) {}
+    }
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
 }
@@ -1450,6 +1529,12 @@ function showApp() {
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     setTimeout(() => { loadDashboard(); }, 100);
+    if (typeof carregarLogoEmpresa === 'function') {
+        try { carregarLogoEmpresa(); } catch(e) {}
+    }
+    if (typeof carregarMovimentacoesEstoque === 'function') {
+        carregarMovimentacoesEstoque();
+    }
 }
 
 function switchTab(tab) {
@@ -1471,14 +1556,14 @@ async function handleLogin(e) {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     try {
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ username, password })
         });
         const data = await res.json();
-        if (data.success && data.authenticated && data.user) {
+        if (data && data.success && data.user) {
             currentUser = data.user;
             currentTheme = (data.user && data.user.theme) || localStorage.getItem('bioma_theme') || 'light';
             Swal.fire({
@@ -1506,7 +1591,7 @@ async function handleRegister(e) {
     const telefone = document.getElementById('registerTelefone').value.trim();
     const password = document.getElementById('registerPassword').value.trim();
     try {
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -1541,7 +1626,7 @@ async function doLogout() {
         cancelButtonText: 'Cancelar'
     });
     if (result.isConfirmed) {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
         Swal.fire({
             icon: 'success',
             title: 'Até logo!',
@@ -1761,6 +1846,64 @@ async function loadProfissionais() {
     } catch (e) {
         console.error(e);
     }
+}
+
+// Visualização completa do profissional com cálculo de comissões
+async function visualizarProfissionalCompleto(id){
+    try{
+        const [profRes, orcRes] = await Promise.all([
+            fetch(`/api/profissionais/${id}`,{credentials:'include'}),
+            fetch('/api/orcamentos',{credentials:'include'})
+        ]);
+        const profData = await profRes.json();
+        const orcData = await orcRes.json();
+        if(!(profData.success && profData.profissional)) { Swal.fire('Erro','Profissional não encontrado','error'); return; }
+        const p = profData.profissional;
+        const orcamentos = (orcData.success && orcData.orcamentos) ? orcData.orcamentos : [];
+        const foto = p.foto_url ? `<img src="${p.foto_url}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #7C3AED">` : `<div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#EC4899);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:2rem">${(p.nome||'?').charAt(0)}</div>`;
+        const assistHtml = (p.assistentes||[]).map(a=>`<li><strong>${a.nome||'-'}</strong> — ${a.comissao_perc_sobre_profissional||0}% sobre a comissão do profissional</li>`).join('')||'<li class="text-muted">Sem assistentes</li>';
+        const sel = `<select id="sel_orcamento" class="form-select">${orcamentos.map(o=>`<option value="${o._id}">#${o.numero||o._id} - ${o.cliente_nome||''} - R$ ${(o.total_final||0).toFixed(2)}</option>`).join('')}</select>`;
+        Swal.fire({
+            title: 'Detalhes do Profissional',
+            width: '800px',
+            html: `
+                <div class="row">
+                    <div class="col-md-3" style="text-align:center">${foto}</div>
+                    <div class="col-md-9">
+                        <h3 style="margin:0">${p.nome||'-'}</h3>
+                        <p style="margin:4px 0 10px 0;color:var(--text-secondary)">${p.especialidade||'-'} — Comissão: ${p.comissao_perc||0}%</p>
+                        <div class="alert alert-info"><strong>Assistentes</strong><ul style="margin:8px 0 0 18px">${assistHtml}</ul></div>
+                        <div class="mb-2"><label style="font-weight:700">Selecionar Orçamento</label>${sel}</div>
+                        <button class="btn btn-primary" onclick="calcularComissoesProf('${id}')"><i class="bi bi-cash-coin"></i> Calcular Comissões</button>
+                        <div id="resultado-comissoes" style="margin-top:15px"></div>
+                    </div>
+                </div>
+            `
+        });
+    }catch(e){ Swal.fire('Erro','Falha ao carregar dados','error'); }
+}
+
+async function calcularComissoesProf(profId){
+    const sel = document.getElementById('sel_orcamento');
+    if(!sel || !sel.value){ Swal.fire('Atenção','Selecione um orçamento','warning'); return; }
+    try{
+        const res = await fetch('/api/comissoes/calcular',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({orcamento_id: sel.value})});
+        const data = await res.json();
+        if(data.success){
+            const list = (data.comissoes||[]).map(c=>{
+                const assist = (c.assistentes||[]).map(a=>`<div style="margin-left:12px">Assistente <strong>${a.assistente_nome||'-'}</strong>: R$ ${a.comissao_valor.toFixed(2)} (${a.comissao_perc_sobre_profissional}%)</div>`).join('');
+                return `<div style="padding:8px;border:1px solid var(--border-color);border-radius:8px;margin-bottom:8px">
+                    <div><strong>${c.servico_nome||'-'}</strong> — Valor: R$ ${c.valor_servico.toFixed(2)}</div>
+                    <div>Profissional: R$ ${c.comissao_valor.toFixed(2)} (${c.comissao_perc}%)</div>
+                    ${assist}
+                </div>`;
+            }).join('') || '<p class="text-muted">Sem comissões para este orçamento</p>';
+            const cont = document.getElementById('resultado-comissoes');
+            if(cont) cont.innerHTML = list;
+        } else {
+            Swal.fire('Erro', data.message||'Falha ao calcular', 'error');
+        }
+    }catch(e){ Swal.fire('Erro','Falha de conexão','error'); }
 }
 
 // [CONTINUAR COM AS DEMAIS FUNÇÕES DO ARQUIVO ORIGINAL...]
@@ -3982,6 +4125,44 @@ async function aprovarTodas() {
     }
 }
 
+// Carregar lista de movimentações de estoque
+async function carregarMovimentacoesEstoque(){
+    try{
+        const tbody = document.getElementById('movimentacoes-body');
+        if(!tbody) return;
+        const res = await fetch('/api/estoque/movimentacoes',{credentials:'include'});
+        const data = await res.json();
+        if(data.success){
+            const rows = (data.movimentacoes||[]).map(m=>{
+                const dt = m.data ? new Date(m.data).toLocaleString('pt-BR') : '';
+                const status = (m.status||'pendente').toLowerCase();
+                const badge = status==='aprovado'?'success':(status==='reprovado'?'danger':'warning');
+                const acoes = status==='pendente'
+                  ? `<button class="btn btn-sm btn-success" onclick="aprovarMov('${m._id}')"><i class="bi bi-check"></i></button> <button class="btn btn-sm btn-danger" onclick="reprovarMov('${m._id}')"><i class="bi bi-x"></i></button>`
+                  : '';
+                return `<tr>
+                    <td>${dt}</td>
+                    <td>${m.produto_nome||'-'}</td>
+                    <td>${m.tipo}</td>
+                    <td>${m.quantidade}</td>
+                    <td>${m.motivo||''}</td>
+                    <td>${m.usuario||''}</td>
+                    <td><span class="badge ${badge}">${status}</span></td>
+                    <td>${acoes}</td>
+                </tr>`;
+            }).join('');
+            tbody.innerHTML = rows || '<tr><td colspan="8" class="text-center text-muted">Sem movimentações</td></tr>';
+        }
+    }catch(e){ console.error('Erro ao carregar movimentações', e); }
+}
+
+async function aprovarMov(id){
+    try{ const res = await fetch(`/api/estoque/movimentacoes/${id}/aprovar`,{method:'POST',credentials:'include'}); const data=await res.json(); if(data.success){ carregarMovimentacoesEstoque(); if (typeof loadEstoqueMelhorado === 'function') loadEstoqueMelhorado(); } }catch(e){ console.error(e); }
+}
+async function reprovarMov(id){
+    try{ const res = await fetch(`/api/estoque/movimentacoes/${id}/reprovar`,{method:'POST',credentials:'include'}); const data=await res.json(); if(data.success){ carregarMovimentacoesEstoque(); } }catch(e){ console.error(e); }
+}
+
 // Função para reprovar todas movimentações pendentes
 async function reprovarTodas() {
     const result = await Swal.fire({
@@ -4038,8 +4219,21 @@ document.addEventListener('keydown', function(e) {
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed && result.value) {
-                console.log('Buscar:', result.value);
-                // Implementar busca global aqui
+                const termo = result.value.trim();
+                if (!termo) return;
+                fetch(`/api/busca/global?termo=${encodeURIComponent(termo)}`, {credentials:'include'})
+                  .then(r=>r.json()).then(data=>{
+                    if(!data.success){ Swal.fire('Erro','Falha na busca','error'); return; }
+                    const r = data.resultados||{};
+                    const render = (titulo, itens) => {
+                        if(!itens||itens.length===0) return '';
+                        return `<div style="margin:10px 0"><div style="font-weight:700;color:var(--text-secondary);margin-bottom:6px">${titulo}</div>`+
+                          itens.map(i=>`<div style="padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="navegarResultado('${i.tipo}','${i.id}')">${i.nome}</div>`).join('')+
+                          `</div>`;
+                    };
+                    const html = render('Clientes', r.clientes)+render('Profissionais', r.profissionais)+render('Serviços', r.servicos)+render('Produtos', r.produtos)+render('Orçamentos', r.orcamentos);
+                    Swal.fire({title:'Resultados', html: html||'<p class="text-muted">Nenhum resultado</p>'});
+                  }).catch(()=>Swal.fire('Erro','Erro ao buscar','error'));
             }
         });
     }
@@ -4390,10 +4584,18 @@ function modalEntradaEstoque() {
             };
 
             try {
-                const res = await fetch('/api/estoque/entrada', {
+                const res = await fetch('/api/estoque/movimentacao', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(dados),
+                    body: JSON.stringify({
+                        produto_id: dados.produto_id,
+                        quantidade: dados.quantidade,
+                        tipo: 'entrada',
+                        preco_compra: dados.custo,
+                        fornecedor: dados.fornecedor,
+                        nota_fiscal: dados.nota_fiscal,
+                        motivo: dados.observacoes
+                    }),
                     credentials: 'include'
                 });
                 const data = await res.json();
@@ -4513,6 +4715,8 @@ async function carregarCalendarioAvancado() {
                 calendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
                     locale: 'pt-br',
+                    editable: true,
+                    eventResizableFromStart: true,
                     headerToolbar: {
                         left: 'prev,next today',
                         center: 'title',
@@ -4539,6 +4743,22 @@ async function carregarCalendarioAvancado() {
                     height: 'auto',
                     eventDidMount: function(info) {
                         info.el.style.cursor = 'pointer';
+                    },
+                    eventDrop: async function(info){
+                        try{
+                            await fetch(`/api/agendamentos/${info.event.id}`,{
+                                method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include',
+                                body: JSON.stringify({ start: info.event.start.toISOString() })
+                            });
+                        }catch(e){ console.error('Falha ao mover agendamento', e); info.revert(); }
+                    },
+                    eventResize: async function(info){
+                        try{
+                            await fetch(`/api/agendamentos/${info.event.id}`,{
+                                method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include',
+                                body: JSON.stringify({ start: info.event.start.toISOString() })
+                            });
+                        }catch(e){ console.error('Falha ao redimensionar agendamento', e); info.revert(); }
                     }
                 });
 
@@ -4613,6 +4833,27 @@ async function exportarRelatorioExcel(tipo) {
         console.error('Erro ao exportar:', error);
         Swal.fire('Erro', 'Erro ao conectar ao servidor', 'error');
     }
+}
+
+// Exportar relatórios em PDF
+async function exportarRelatorioPDF(){
+    const tipoRel=(document.getElementById('tipoRelatorio')||{value:'vendas'}).value;
+    const di=document.getElementById('dataInicio');
+    const df=document.getElementById('dataFim');
+    try{
+        const url=`/api/relatorios/exportar/pdf?tipo=${tipoRel}&data_inicio=${di?di.value:''}&data_fim=${df?df.value:''}`;
+        const res=await fetch(url,{credentials:'include'});
+        if(res.ok){
+            const blob=await res.blob();
+            const link=document.createElement('a');
+            link.href=URL.createObjectURL(blob);
+            link.download=`relatorio_${tipoRel}_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(link); link.click(); link.remove();
+            Swal.fire({icon:'success',title:'PDF Exportado!',timer:1600,showConfirmButton:false});
+        }else{
+            const data=await res.json(); Swal.fire('Erro',data.message||'Erro ao exportar PDF','error');
+        }
+    }catch(e){ Swal.fire('Erro','Erro de conexão ao exportar PDF','error'); }
 }
 
 // ✅ 5. SISTEMA DE BACKUP
@@ -4744,6 +4985,10 @@ async function uploadLogo(file) {
                 timer: 2000,
                 showConfirmButton: false
             });
+            // toast na sidebar (após atualização)
+            window.__logoToast = { text: 'Logo atualizado', color: '#10B981' };
+            if (typeof carregarLogoEmpresa === 'function') { try { carregarLogoEmpresa(); } catch(e) {} }
+if (typeof showSidebarLogoBadge === 'function') { try { showSidebarLogoBadge('Logo atualizado!', 'success'); } catch(e) {} }
         } else {
             Swal.fire('Erro', data.message || 'Erro ao fazer upload', 'error');
         }
@@ -4784,6 +5029,10 @@ async function removerLogo() {
                 timer: 2000,
                 showConfirmButton: false
             });
+            // toast na sidebar
+            window.__logoToast = { text: 'Logo removido', color: '#EF4444' };
+            if (typeof carregarLogoEmpresa === 'function') { try { carregarLogoEmpresa(); } catch(e) {} }
+if (typeof showSidebarLogoBadge === 'function') { try { showSidebarLogoBadge('Logo removido!', 'danger'); } catch(e) {} }
         } else {
             Swal.fire('Erro', data.message || 'Erro ao remover logo', 'error');
         }
@@ -4791,6 +5040,210 @@ async function removerLogo() {
         console.error('Erro ao remover logo:', error);
         Swal.fire('Erro', 'Erro ao conectar ao servidor', 'error');
     }
+}
+
+// Ações de UI de Configurações
+function configurarLogoEmpresa(){
+    const inp = document.getElementById('cfgLogoFile');
+    if (inp) inp.click();
+}
+function removerLogoEmpresa(){
+    removerLogo();
+}
+
+// Carrega logo da empresa em login e sidebar
+async function carregarLogoEmpresa(){
+    try{
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if(data.success && data.config && data.config.logo_url){
+            const logoUrl = data.config.logo_url;
+            // Sidebar
+            const box = document.querySelector('.sidebar-logo');
+            if(box){
+                const content = (box.innerHTML.includes('<p>')? box.innerHTML.slice(box.innerHTML.indexOf('<p>')):'' );
+                box.innerHTML = `<img class="sidebar-logo-img" src="${logoUrl}" alt="Logo" style="max-height:60px;opacity:0;transition:opacity .4s ease">` + content;
+                // animação de fade-in
+                requestAnimationFrame(()=>{
+                    const img = box.querySelector('.sidebar-logo-img');
+                    if(img) img.style.opacity = '1';
+                });
+            }
+            // Auth
+            const authLogo = document.querySelector('.auth-logo');
+            if(authLogo){
+                authLogo.innerHTML = `<img class="auth-logo-img" src="${logoUrl}" alt="Logo" style="max-height:80px;display:block;margin:0 auto 10px;opacity:0;transition:opacity .4s ease">` + authLogo.innerHTML;
+                requestAnimationFrame(()=>{
+                    const img = authLogo.querySelector('.auth-logo-img');
+                    if(img) img.style.opacity = '1';
+                });
+            }
+            // Pré-visualizações
+            const prev = document.querySelector('#logo-preview, #logo-preview-config, [data-logo-empresa]');
+            if(prev) prev.src = logoUrl;
+            // Buscar preferências do hero e exibir conforme config
+            try{
+                const hr = await fetch('/api/config/hero');
+                const hp = await hr.json();
+                const heroWrap = document.getElementById('logo-hero');
+                const heroImg = document.getElementById('hero-logo');
+                const heroTitle = document.getElementById('hero-title');
+                const heroBar = document.getElementById('hero-bar');
+                if (heroWrap && heroImg){
+                    const enabled = (hp && hp.logo_hero_enabled) !== false;
+                    if (enabled){
+                        heroImg.style.opacity = '0';
+                        heroImg.style.transform = 'scale(0.996)';
+                        heroImg.src = logoUrl;
+                        if (heroTitle){
+                            const t = (hp && hp.logo_hero_title) ? String(hp.logo_hero_title).trim() : '';
+                            if (t){ heroTitle.textContent = t; heroTitle.style.display = 'block'; }
+                            else { heroTitle.style.display = 'none'; }
+                        }
+                        // aplicar tamanho preferido
+                        aplicarEstiloHero(hp && hp.logo_hero_size ? hp.logo_hero_size : 'grande');
+                        // aplicar aparência
+                        aplicarAparenciaHero(hp && hp.logo_hero_style ? hp.logo_hero_style : 'card');
+                        heroWrap.style.display = 'block';
+                        requestAnimationFrame(()=>{
+                            heroImg.style.opacity = '1';
+                            heroImg.style.transform = 'scale(1)';
+                        });
+                    } else {
+                        heroWrap.style.display = 'none';
+                    }
+                }
+                // preencher UI de Configurações se existir
+                const chk = document.getElementById('cfgLogoHeroEnabled');
+                const txt = document.getElementById('cfgLogoHeroTitle');
+                const sel = document.getElementById('cfgLogoHeroSize');
+                const styleSel = document.getElementById('cfgLogoHeroStyle');
+                if (chk) chk.checked = (hp && hp.logo_hero_enabled) !== false;
+                if (txt) txt.value = (hp && hp.logo_hero_title) ? hp.logo_hero_title : '';
+                if (sel) sel.value = (hp && hp.logo_hero_size) ? hp.logo_hero_size : 'grande';
+                if (styleSel) styleSel.value = (hp && hp.logo_hero_style) ? hp.logo_hero_style : 'card';
+            }catch(e){ /* opcional */ }
+        } else {
+            // Fallback quando não houver logo definido
+            const box = document.querySelector('.sidebar-logo');
+            if (box) {
+                const img = box.querySelector('.sidebar-logo-img');
+                if (img) img.remove();
+                if (!box.querySelector('h1')) {
+                    box.innerHTML = '<h1>BIOMA</h1><p>Uberaba v4.2</p>';
+                }
+            }
+            const authLogo = document.querySelector('.auth-logo');
+            if (authLogo) {
+                const img = authLogo.querySelector('.auth-logo-img');
+                if (img) img.remove();
+            }
+            const prev = document.querySelector('#logo-preview, #logo-preview-config, [data-logo-empresa]');
+            if (prev) {
+                const placeholder = 'https://via.placeholder.com/400x200/7C3AED/FFFFFF?text=Logo+BIOMA';
+                prev.src = placeholder;
+            }
+            // Ocultar hero no dashboard se não houver logo
+            const heroWrap = document.getElementById('logo-hero');
+            if (heroWrap){ heroWrap.style.display = 'none'; }
+        }
+    }catch(e){ console.debug('Config logo não carregada (ok antes de login)'); }
+}
+
+// Salvar preferências do destaque de logo
+async function salvarLayoutLogo(){
+    try{
+        const enabled = document.getElementById('cfgLogoHeroEnabled')?.checked;
+        const title = (document.getElementById('cfgLogoHeroTitle')?.value || '').trim();
+        const size = (document.getElementById('cfgLogoHeroSize')?.value || 'grande');
+        const style = (document.getElementById('cfgLogoHeroStyle')?.value || 'card');
+        const res = await fetch('/api/config/hero', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ logo_hero_enabled: enabled, logo_hero_title: title, logo_hero_size: size, logo_hero_style: style })
+        });
+        const data = await res.json();
+        if (data && data.success){
+            Swal.fire({ icon:'success', title:'Preferências salvas!', timer:1500, showConfirmButton:false });
+            try{ await carregarLogoEmpresa(); }catch(e){}
+        } else {
+            Swal.fire('Erro', data.message || 'Falha ao salvar preferências', 'error');
+        }
+    }catch(e){
+        Swal.fire('Erro', 'Erro de conexão ao salvar', 'error');
+    }
+}
+
+// Aplica tamanhos no hero dinamicamente
+function aplicarEstiloHero(size){
+    const wrap = document.getElementById('logo-hero');
+    const img = document.getElementById('hero-logo');
+    if (!wrap || !img) return;
+    const map = {
+        compacto: { mw: '840px', mh: 'clamp(140px, 18vh, 220px)' },
+        medio:    { mw: '900px', mh: 'clamp(160px, 20vh, 240px)' },
+        grande:   { mw: '1100px', mh: 'clamp(180px, 26vh, 300px)' },
+        xl:       { mw: '1200px', mh: 'clamp(200px, 30vh, 340px)' },
+    };
+    const cfg = map[size] || map['grande'];
+    wrap.style.maxWidth = cfg.mw;
+    img.style.maxHeight = cfg.mh;
+}
+
+// Pré-visualiza alteração antes de salvar (Configurações)
+function previewLayoutLogo(){
+    const sel = document.getElementById('cfgLogoHeroSize');
+    if (!sel) return;
+    aplicarEstiloHero(sel.value);
+    const styleSel = document.getElementById('cfgLogoHeroStyle');
+    if (styleSel) aplicarAparenciaHero(styleSel.value);
+}
+
+// Aplicar aparência: card (padrão) ou minimalista
+function aplicarAparenciaHero(style){
+    const wrap = document.getElementById('logo-hero');
+    const bar = document.getElementById('hero-bar');
+    if (!wrap) return;
+    if (style === 'minimal'){
+        wrap.style.background = 'transparent';
+        wrap.style.border = '1px solid transparent';
+        wrap.style.boxShadow = 'none';
+        wrap.style.padding = '18px';
+        if (bar) bar.style.display = 'none';
+    } else {
+        wrap.style.background = 'var(--bg-card)';
+        wrap.style.border = '2px solid var(--border-color)';
+        wrap.style.boxShadow = 'var(--shadow)';
+        wrap.style.padding = '28px';
+        if (bar) bar.style.display = '';
+    }
+}
+
+// Badge visual de atualização do logo na sidebar
+function showSidebarLogoBadge(text, color, ms){
+    const box = document.querySelector('.sidebar-logo');
+    if(!box) return;
+    try { box.style.position = 'relative'; } catch(e) {}
+    // remove toasts anteriores
+    try { box.querySelectorAll('.sidebar-logo-toast').forEach(n=>n.remove()); } catch(e) {}
+    const badge = document.createElement('div');
+    badge.className = 'sidebar-logo-toast';
+    // Mapear cor para var() e escolher ícone
+    const isKeyword = color && !(color.startsWith('#') || color.startsWith('rgb'));
+    const bg = isKeyword ? `var(--${color})` : (color || 'var(--success)');
+    let icon = 'bi-info-circle';
+    if ((isKeyword && color === 'danger') || (!isKeyword && (bg.includes('EF4444') || bg.includes('danger')))) {
+        icon = 'bi-x-lg';
+    } else if ((isKeyword && color === 'success')) {
+        icon = 'bi-check2-circle';
+    }
+    badge.style.cssText = 'position:absolute; bottom:10px; right:12px; background:'+ bg +'; color:#fff; padding:7px 12px; border-radius:999px; font-weight:800; font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,0.25); opacity:0; transform:translateY(6px); transition:opacity .25s ease, transform .25s ease; z-index:5; display:flex; align-items:center; gap:8px; pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.35);';
+    badge.innerHTML = `<i class="bi ${icon}"></i> ${text || 'Logo atualizado!'}`;
+    box.appendChild(badge);
+    requestAnimationFrame(()=>{ badge.style.opacity='1'; badge.style.transform='translateY(0)'; });
+    const duration = (typeof ms === 'number' && ms > 0) ? ms : 2000;
+    setTimeout(()=>{ badge.style.opacity='0'; badge.style.transform='translateY(6px)'; setTimeout(()=>{ try{badge.remove();}catch(e){} },300); }, duration);
 }
 
 // Log de carregamento das correções
@@ -4810,3 +5263,5 @@ console.log('%c🎯 Frontend 100% compatível com Backend v4.2.2', 'color:#7C3AE
 
 </body>
 </html>
+
+
