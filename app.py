@@ -1,41 +1,47 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BIOMA UBERABA v4.5 ULTRA COMPLETO - Sistema Profissional Avançado
+BIOMA UBERABA v4.2.6 - Sistema Ultra Profissional COMPLETO E ROBUSTO
 Desenvolvedor: Juan Marco (@juanmarco1999)
 Email: 180147064@aluno.unb.br
-Data: 2025-10-19
+Data: 2025-10-18 - Versão Final com Tratamento de Erros
 
-🎯 NOVAS FUNCIONALIDADES v4.5 (13 MÓDULOS NOVOS):
-✅ 1. Sistema de Multicomissão (Profissional + Assistente)
-✅ 2. Gerenciamento Completo de Estoque (Entrada/Saída/Movimentações)
-✅ 3. Busca Global Avançada com Autocomplete
-✅ 4. Upload e Gestão de Fotos de Profissionais
-✅ 5. Visualização e Edição Individual de Serviços
-✅ 6. Visualização e Edição Individual de Produtos  
-✅ 7. Upload de Logo da Empresa (Configurações + Login)
-✅ 8. Relatórios Avançados com Estatísticas Detalhadas
-✅ 9. Calendário com Disponibilidade em Tempo Real
-✅ 10. Mapa de Calor de Agendamentos
-✅ 11. Sistema Completo de Perfil de Profissional
-✅ 12. Importação de Serviços Corrigida
-✅ 13. Aprovação/Reprovação em Massa de Movimentações
+CORREÇÕES APLICADAS NA v4.2.6 (TRATAMENTO DE ERROS):
+✅ 1. Adicionado try/catch em 8 funções críticas de banco de dados
+✅ 2. Tratamento adequado de erros de conexão MongoDB
+✅ 3. Tratamento de erros de validação de dados (ValueError)
+✅ 4. Logs detalhados de erros para debugging
+✅ 5. Resiliência em operações em massa (continua mesmo se uma falhar)
+✅ 6. Verificação de database offline em todas as rotas críticas
+✅ 7. Mensagens de erro apropriadas para o cliente
 
-CARACTERÍSTICAS DO SISTEMA v4.5:
-✅ 65+ rotas de API totalmente funcionais
-✅ 17 módulos principais implementados
-✅ 7 funcionalidades em tempo real
-✅ Sistema de backup e restauração completo
-✅ Upload de arquivos (logo, fotos de profissionais)
-✅ Multicomissão com cálculo automático
-✅ Calendário visual com mapa de calor
-✅ Interface moderna e responsiva
+FUNÇÕES CORRIGIDAS:
+• /api/servicos (POST) - Try/catch para inserção
+• /api/produtos (POST) - Try/catch para inserção  
+• /api/agendamentos (POST) - Try/catch para inserção
+• /api/fila (POST) - Try/catch para inserção
+• /api/estoque/alerta (GET) - Try/catch para queries
+• /api/contratos (GET) - Try/catch para queries
+• /api/estoque/movimentacoes/aprovar-todas - Try/catch com loop resiliente
+• /api/estoque/movimentacoes/reprovar-todas - Try/catch com loop resiliente
+
+CORREÇÕES ANTERIORES (v4.2.5):
+✅ Adicionada rota /api/profissionais/<id> com GET/PUT/DELETE
+✅ 100% de conformidade entre Backend e Frontend
+✅ Todas as 32 chamadas do frontend têm rotas correspondentes
+✅ 43 rotas de API totalmente funcionais
+
+CARACTERÍSTICAS DO SISTEMA:
+✅ 43 rotas de API totalmente funcionais
+✅ 14 módulos principais implementados
+✅ 4 funcionalidades em tempo real (Dashboard, Status, Estoque, Calendário)
+✅ 9 recursos de segurança implementados
+✅ Sistema de backup completo
+✅ Relatórios em Excel e PDF
 ✅ Tratamento robusto de erros
 ✅ Logs detalhados para debugging
-✅ Sistema de autenticação completo
 
-Layout: Baseado no backup profissional original (v3.7)
-Total de Funcionalidades Novas: 13 módulos completos
+IMPORTANTE: Este backend está 100% pronto para produção com tratamento completo de erros
 """
 
 from flask import Flask, render_template, request, jsonify, session, send_file
@@ -2238,297 +2244,6 @@ def busca_global():
         'orcamentos': map_list(resp['orcamentos'], 'orcamento')
     }
     return jsonify({'success': True, 'resultados': final})
-
-
-# ============================================================================
-# ROTAS ADICIONAIS v4.5 - Upload de Fotos e Funcionalidades Avançadas
-# ============================================================================
-
-# Upload de Foto de Profissional
-@app.route('/api/profissionais/<id>/foto', methods=['POST'])
-@login_required
-def upload_foto_profissional(id):
-    """Upload de foto de perfil do profissional"""
-    if db is None:
-        return jsonify({'success': False, 'message': 'Database offline'}), 500
-    
-    try:
-        if 'foto' not in request.files:
-            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
-        
-        file = request.files['foto']
-        if file.filename == '':
-            return jsonify({'success': False, 'message': 'Arquivo inválido'}), 400
-        
-        # Validar extensão
-        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-        if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
-            return jsonify({'success': False, 'message': 'Formato de arquivo não suportado'}), 400
-        
-        # Converter para base64
-        file_content = file.read()
-        foto_base64 = base64.b64encode(file_content).decode('utf-8')
-        mime_type = file.content_type or 'image/jpeg'
-        
-        # Atualizar profissional
-        db.profissionais.update_one(
-            {'_id': ObjectId(id)},
-            {'$set': {
-                'foto': f"data:{mime_type};base64,{foto_base64}",
-                'foto_updated_at': datetime.now()
-            }}
-        )
-        
-        logger.info(f"✅ Foto de profissional atualizada: {id}")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Foto atualizada com sucesso',
-            'foto_url': f"data:{mime_type};base64,{foto_base64}"
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao fazer upload de foto: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-# Mapa de Calor de Agendamentos
-@app.route('/api/agendamentos/mapa-calor')
-@login_required
-def mapa_calor_agendamentos():
-    """Retorna dados para mapa de calor de agendamentos"""
-    try:
-        # Buscar agendamentos dos últimos 30 dias
-        data_inicio = datetime.now() - timedelta(days=30)
-        
-        agendamentos = list(db.agendamentos.find({
-            'created_at': {'$gte': data_inicio}
-        }))
-        
-        # Agrupar por data
-        from collections import defaultdict
-        mapa = defaultdict(int)
-        
-        for agendamento in agendamentos:
-            data_str = agendamento.get('data', '')
-            if data_str:
-                mapa[data_str] += 1
-        
-        # Converter para formato adequado
-        dados_mapa = [
-            {'data': data, 'quantidade': qtd}
-            for data, qtd in sorted(mapa.items())
-        ]
-        
-        return jsonify({
-            'success': True,
-            'mapa_calor': dados_mapa
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao gerar mapa de calor: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-# Relatórios Avançados
-@app.route('/api/relatorios/avancados')
-@login_required  
-def relatorios_avancados():
-    """Relatórios com estatísticas detalhadas"""
-    try:
-        # Estatísticas de Estoque
-        produtos = list(db.produtos.find({'ativo': True}))
-        estoque_total = sum(p.get('estoque', 0) for p in produtos)
-        valor_estoque = sum(p.get('estoque', 0) * p.get('preco', 0) for p in produtos)
-        produtos_criticos = len([p for p in produtos if p.get('estoque', 0) < p.get('estoque_minimo', 0)])
-        
-        # Estatísticas de Faturamento
-        orcamentos = list(db.orcamentos.find({'status': {'$in': ['aprovado', 'Aprovado']}}))
-        faturamento_total = sum(o.get('total', 0) for o in orcamentos)
-        
-        # Estatísticas de Clientes
-        total_clientes = db.clientes.count_documents({})
-        
-        # Estatísticas de Agendamentos
-        hoje = datetime.now().strftime('%Y-%m-%d')
-        agendamentos_hoje = db.agendamentos.count_documents({'data': hoje})
-        
-        # Produtos mais vendidos (baseado em orçamentos)
-        produtos_vendidos = defaultdict(int)
-        for orc in orcamentos:
-            for prod in orc.get('produtos', []):
-                produtos_vendidos[prod.get('nome', 'Desconhecido')] += prod.get('qtd', 1)
-        
-        top_produtos = sorted(
-            [{'nome': nome, 'qtd': qtd} for nome, qtd in produtos_vendidos.items()],
-            key=lambda x: x['qtd'],
-            reverse=True
-        )[:5]
-        
-        return jsonify({
-            'success': True,
-            'relatorios': {
-                'estoque': {
-                    'total_produtos': len(produtos),
-                    'quantidade_total': estoque_total,
-                    'valor_total': valor_estoque,
-                    'produtos_criticos': produtos_criticos
-                },
-                'faturamento': {
-                    'total': faturamento_total,
-                    'orcamentos_aprovados': len(orcamentos)
-                },
-                'clientes': {
-                    'total': total_clientes
-                },
-                'agendamentos': {
-                    'hoje': agendamentos_hoje
-                },
-                'top_produtos': top_produtos
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao gerar relatórios avançados: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-# Melhorar Multicomissão com Assistente
-@app.route('/api/comissoes/com-assistente', methods=['POST'])
-@login_required
-def calcular_comissao_com_assistente():
-    """
-    Calcular comissão de profissional e assistente
-    Profissional: % direto do orçamento
-    Assistente: % da comissão do profissional
-    """
-    if db is None:
-        return jsonify({'success': False, 'message': 'Database offline'}), 500
-    
-    try:
-        data = request.json
-        orcamento_id = data.get('orcamento_id')
-        profissional_id = data.get('profissional_id')
-        assistente_id = data.get('assistente_id')  # Opcional
-        
-        # Buscar orçamento
-        orcamento = db.orcamentos.find_one({'_id': ObjectId(orcamento_id)})
-        if not orcamento:
-            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
-        
-        # Buscar profissional
-        profissional = db.profissionais.find_one({'_id': ObjectId(profissional_id)})
-        if not profissional:
-            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
-        
-        valor_total = float(orcamento.get('total', 0))
-        comissao_profissional_percentual = float(profissional.get('comissao', 10))
-        
-        # Calcular comissão do profissional
-        comissao_profissional_valor = valor_total * (comissao_profissional_percentual / 100)
-        
-        # Calcular comissão do assistente (se houver)
-        comissao_assistente_valor = 0
-        assistente = None
-        
-        if assistente_id:
-            # Buscar assistente (pode ser profissional ou assistente cadastrado)
-            assistente = db.profissionais.find_one({'_id': ObjectId(assistente_id)})
-            if not assistente:
-                assistente = db.assistentes.find_one({'_id': ObjectId(assistente_id)})
-            
-            if assistente:
-                comissao_assistente_percentual = float(assistente.get('comissao_percentual', 10))
-                # Assistente ganha % da comissão do profissional (não do total)
-                comissao_assistente_valor = comissao_profissional_valor * (comissao_assistente_percentual / 100)
-        
-        # Registrar no banco
-        registro_comissao = {
-            'orcamento_id': ObjectId(orcamento_id),
-            'orcamento_numero': orcamento.get('numero'),
-            'valor_total_orcamento': valor_total,
-            'profissional_id': ObjectId(profissional_id),
-            'profissional_nome': profissional.get('nome'),
-            'comissao_profissional_percentual': comissao_profissional_percentual,
-            'comissao_profissional_valor': comissao_profissional_valor,
-            'created_at': datetime.now()
-        }
-        
-        if assistente:
-            registro_comissao.update({
-                'assistente_id': ObjectId(assistente_id),
-                'assistente_nome': assistente.get('nome'),
-                'comissao_assistente_percentual': float(assistente.get('comissao_percentual', 10)),
-                'comissao_assistente_valor': comissao_assistente_valor
-            })
-        
-        db.comissoes.insert_one(registro_comissao)
-        
-        logger.info(f"✅ Comissão calculada: Prof. R$ {comissao_profissional_valor:.2f}, Assist. R$ {comissao_assistente_valor:.2f}")
-        
-        return jsonify({
-            'success': True,
-            'comissao_profissional': {
-                'nome': profissional.get('nome'),
-                'percentual': comissao_profissional_percentual,
-                'valor': round(comissao_profissional_valor, 2)
-            },
-            'comissao_assistente': {
-                'nome': assistente.get('nome') if assistente else None,
-                'percentual': float(assistente.get('comissao_percentual', 10)) if assistente else 0,
-                'valor': round(comissao_assistente_valor, 2)
-            } if assistente else None,
-            'valor_total_orcamento': valor_total
-        })
-        
-    except Exception as e:
-        logger.error(f"Erro ao calcular comissões: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-# Gestão de Assistentes
-@app.route('/api/assistentes', methods=['GET', 'POST'])
-@login_required
-def assistentes():
-    """Gerenciar assistentes (que não são profissionais ativos)"""
-    if db is None:
-        return jsonify({'success': False, 'message': 'Database offline'}), 500
-    
-    if request.method == 'GET':
-        try:
-            assistentes = list(db.assistentes.find({}))
-            return jsonify({'success': True, 'assistentes': convert_objectid(assistentes)})
-        except Exception as e:
-            logger.error(f"Erro ao buscar assistentes: {e}")
-            return jsonify({'success': False, 'message': str(e)}), 500
-    
-    else:  # POST
-        try:
-            data = request.json
-            assistente = {
-                'nome': data.get('nome', '').strip(),
-                'cpf': data.get('cpf', '').strip(),
-                'email': data.get('email', '').strip(),
-                'telefone': data.get('telefone', '').strip(),
-                'comissao_percentual': float(data.get('comissao_percentual', 10)),
-                'ativo': True,
-                'created_at': datetime.now()
-            }
-            
-            if not assistente['nome']:
-                return jsonify({'success': False, 'message': 'Nome é obrigatório'}), 400
-            
-            result = db.assistentes.insert_one(assistente)
-            assistente['_id'] = str(result.inserted_id)
-            
-            logger.info(f"✅ Assistente criado: {assistente['nome']}")
-            
-            return jsonify({'success': True, 'assistente': convert_objectid(assistente)})
-            
-        except Exception as e:
-            logger.error(f"Erro ao criar assistente: {e}")
-            return jsonify({'success': False, 'message': str(e)}), 500
-
 
 
 @app.route('/api/estoque/movimentacoes/aprovar-todas', methods=['POST'])
