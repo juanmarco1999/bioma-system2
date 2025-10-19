@@ -50,8 +50,12 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = '/tmp'
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 CORS(app, supports_credentials=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def get_db():
     try:
@@ -447,7 +451,20 @@ def profissionais():
     
     data = request.json
     try:
-        db.profissionais.insert_one({'nome': data['nome'], 'cpf': data['cpf'], 'email': data.get('email', ''), 'telefone': data.get('telefone', ''), 'especialidade': data.get('especialidade', ''), 'comissao_perc': float(data.get('comissao_perc', 0)), 'ativo': True, 'created_at': datetime.now()})
+        profissional_data = {
+            'nome': data['nome'],
+            'cpf': data['cpf'],
+            'email': data.get('email', ''),
+            'telefone': data.get('telefone', ''),
+            'especialidade': data.get('especialidade', ''),
+            'comissao_perc': float(data.get('comissao_perc', 0)),
+            'foto_url': data.get('foto_url', ''),
+            'assistente_id': data.get('assistente_id', None),
+            'comissao_assistente_perc': float(data.get('comissao_assistente_perc', 0)),
+            'ativo': True,
+            'created_at': datetime.now()
+        }
+        db.profissionais.insert_one(profissional_data)
         return jsonify({'success': True})
     except:
         return jsonify({'success': False}), 500
@@ -466,13 +483,45 @@ def delete_profissional(id):
 @app.route('/api/profissionais/<id>', methods=['GET'])
 @login_required
 def get_profissional(id):
-    """Visualizar um profissional específico"""
+    """Visualizar um profissional específico com estatísticas completas"""
     if db is None:
         return jsonify({'success': False}), 500
     try:
         profissional = db.profissionais.find_one({'_id': ObjectId(id)})
         if not profissional:
             return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+        
+        # Buscar orçamentos relacionados ao profissional
+        orcamentos_prof = list(db.orcamentos.find({
+            'servicos.profissional_id': str(profissional['_id'])
+        }))
+        
+        # Calcular estatísticas
+        total_comissao = 0
+        servicos_realizados = 0
+        assistente = None
+        
+        # Buscar assistente se existir
+        if profissional.get('assistente_id'):
+            assistente = db.profissionais.find_one({'_id': ObjectId(profissional['assistente_id'])})
+        
+        for orc in orcamentos_prof:
+            if orc.get('status') == 'Aprovado':
+                for servico in orc.get('servicos', []):
+                    if servico.get('profissional_id') == str(profissional['_id']):
+                        servicos_realizados += 1
+                        comissao_valor = servico.get('total', 0) * (profissional.get('comissao_perc', 0) / 100)
+                        total_comissao += comissao_valor
+        
+        profissional['estatisticas'] = {
+            'total_comissao': total_comissao,
+            'servicos_realizados': servicos_realizados,
+            'total_orcamentos': len(orcamentos_prof)
+        }
+        
+        if assistente:
+            profissional['assistente'] = convert_objectid(assistente)
+        
         return jsonify({'success': True, 'profissional': convert_objectid(profissional)})
     except Exception as e:
         logger.error(f"Erro ao buscar profissional: {e}")
@@ -504,6 +553,9 @@ def update_profissional(id):
             'telefone': data.get('telefone', profissional_existente.get('telefone', '')),
             'especialidade': data.get('especialidade', profissional_existente.get('especialidade', '')),
             'comissao_perc': float(data.get('comissao_perc', profissional_existente.get('comissao_perc', 0))),
+            'foto_url': data.get('foto_url', profissional_existente.get('foto_url', '')),
+            'assistente_id': data.get('assistente_id', profissional_existente.get('assistente_id', None)),
+            'comissao_assistente_perc': float(data.get('comissao_assistente_perc', profissional_existente.get('comissao_assistente_perc', 0))),
             'ativo': data.get('ativo', profissional_existente.get('ativo', True)),
             'updated_at': datetime.now()
         }
@@ -627,6 +679,32 @@ def buscar_servicos():
         logger.error(f"Erro ao buscar serviços: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@app.route('/api/profissionais/buscar')
+@login_required
+def buscar_profissionais():
+    """Buscar profissionais com sugestões de preenchimento"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    termo = request.args.get('termo', '').strip()
+    try:
+        regex = {'$regex': termo, '$options': 'i'}
+        profissionais = list(db.profissionais.find({
+            '$or': [
+                {'nome': regex},
+                {'cpf': regex},
+                {'especialidade': regex}
+            ],
+            'ativo': True
+        }).sort('nome', ASCENDING).limit(50))
+        
+        for p in profissionais:
+            p['display_name'] = f"{p.get('nome', '')} - {p.get('especialidade', 'Profissional')}"
+        
+        return jsonify({'success': True, 'profissionais': convert_objectid(profissionais)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar profissionais: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/produtos', methods=['GET', 'POST'])
 @login_required
 def produtos():
@@ -740,6 +818,264 @@ def buscar_produtos():
         return jsonify({'success': True, 'produtos': convert_objectid(produtos)})
     except Exception as e:
         logger.error(f"Erro ao buscar produtos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/movimentacoes', methods=['GET'])
+@login_required
+def get_movimentacoes_estoque():
+    """Listar todas as movimentações de estoque"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        movimentacoes = list(db.estoque_movimentacoes.find({}).sort('data', DESCENDING).limit(100))
+        
+        # Enriquecer com dados do produto
+        for mov in movimentacoes:
+            if mov.get('produto_id'):
+                produto = db.produtos.find_one({'_id': ObjectId(mov['produto_id'])})
+                if produto:
+                    mov['produto_nome'] = produto.get('nome', 'N/A')
+                    mov['produto_sku'] = produto.get('sku', 'N/A')
+        
+        return jsonify({'success': True, 'movimentacoes': convert_objectid(movimentacoes)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar movimentações: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/entrada', methods=['POST'])
+@login_required
+def entrada_estoque():
+    """Registrar entrada de estoque (com aprovação pendente)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        entrada_data = {
+            'produto_id': ObjectId(data['produto_id']),
+            'quantidade': int(data['quantidade']),
+            'custo_unitario': float(data.get('custo_unitario', 0)),
+            'fornecedor': data.get('fornecedor', ''),
+            'nota_fiscal': data.get('nota_fiscal', ''),
+            'motivo': data.get('motivo', 'Compra de estoque'),
+            'status': 'Pendente',
+            'usuario': session.get('username', 'system'),
+            'data': datetime.now()
+        }
+        
+        entrada_id = db.estoque_entradas_pendentes.insert_one(entrada_data).inserted_id
+        logger.info(f"✅ Entrada de estoque registrada (pendente): Produto {data['produto_id']}")
+        
+        return jsonify({'success': True, 'message': 'Entrada registrada! Aguardando aprovação.', 'id': str(entrada_id)})
+    except Exception as e:
+        logger.error(f"Erro ao registrar entrada: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/entrada/pendentes', methods=['GET'])
+@login_required
+def get_entradas_pendentes():
+    """Listar entradas de estoque pendentes de aprovação"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        entradas = list(db.estoque_entradas_pendentes.find({'status': 'Pendente'}).sort('data', DESCENDING))
+        
+        # Enriquecer com dados do produto
+        for entrada in entradas:
+            if entrada.get('produto_id'):
+                produto = db.produtos.find_one({'_id': ObjectId(entrada['produto_id'])})
+                if produto:
+                    entrada['produto_nome'] = produto.get('nome', 'N/A')
+                    entrada['produto_sku'] = produto.get('sku', 'N/A')
+                    entrada['estoque_atual'] = produto.get('estoque', 0)
+        
+        return jsonify({'success': True, 'entradas': convert_objectid(entradas)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar entradas pendentes: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/entrada/<id>/aprovar', methods=['POST'])
+@login_required
+def aprovar_entrada_estoque(id):
+    """Aprovar uma entrada de estoque pendente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    try:
+        entrada = db.estoque_entradas_pendentes.find_one({'_id': ObjectId(id)})
+        if not entrada:
+            return jsonify({'success': False, 'message': 'Entrada não encontrada'}), 404
+        
+        if entrada.get('status') != 'Pendente':
+            return jsonify({'success': False, 'message': 'Entrada já foi processada'}), 400
+        
+        # Atualizar estoque do produto
+        produto = db.produtos.find_one({'_id': ObjectId(entrada['produto_id'])})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+        
+        novo_estoque = produto.get('estoque', 0) + entrada['quantidade']
+        db.produtos.update_one(
+            {'_id': ObjectId(entrada['produto_id'])},
+            {'$set': {'estoque': novo_estoque, 'updated_at': datetime.now()}}
+        )
+        
+        # Registrar movimentação
+        db.estoque_movimentacoes.insert_one({
+            'produto_id': entrada['produto_id'],
+            'tipo': 'entrada',
+            'quantidade': entrada['quantidade'],
+            'motivo': f"{entrada.get('motivo', 'Entrada aprovada')} (NF: {entrada.get('nota_fiscal', 'N/A')})",
+            'usuario': session.get('username', 'system'),
+            'data': datetime.now()
+        })
+        
+        # Atualizar status da entrada
+        db.estoque_entradas_pendentes.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': {'status': 'Aprovado', 'aprovado_por': session.get('username'), 'aprovado_em': datetime.now()}}
+        )
+        
+        logger.info(f"✅ Entrada de estoque aprovada: {id}")
+        return jsonify({'success': True, 'message': 'Entrada aprovada com sucesso!'})
+        
+    except Exception as e:
+        logger.error(f"Erro ao aprovar entrada: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/entrada/<id>/rejeitar', methods=['POST'])
+@login_required
+def rejeitar_entrada_estoque(id):
+    """Rejeitar uma entrada de estoque pendente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        entrada = db.estoque_entradas_pendentes.find_one({'_id': ObjectId(id)})
+        if not entrada:
+            return jsonify({'success': False, 'message': 'Entrada não encontrada'}), 404
+        
+        if entrada.get('status') != 'Pendente':
+            return jsonify({'success': False, 'message': 'Entrada já foi processada'}), 400
+        
+        # Atualizar status da entrada
+        db.estoque_entradas_pendentes.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': {
+                'status': 'Rejeitado',
+                'rejeitado_por': session.get('username'),
+                'rejeitado_em': datetime.now(),
+                'motivo_rejeicao': data.get('motivo', 'Não especificado')
+            }}
+        )
+        
+        logger.info(f"❌ Entrada de estoque rejeitada: {id}")
+        return jsonify({'success': True, 'message': 'Entrada rejeitada com sucesso!'})
+        
+    except Exception as e:
+        logger.error(f"Erro ao rejeitar entrada: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/saida', methods=['POST'])
+@login_required
+def saida_estoque():
+    """Registrar saída manual de estoque"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        produto = db.produtos.find_one({'_id': ObjectId(data['produto_id'])})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+        
+        quantidade = int(data['quantidade'])
+        estoque_atual = produto.get('estoque', 0)
+        
+        if quantidade > estoque_atual:
+            return jsonify({'success': False, 'message': 'Quantidade maior que o estoque disponível'}), 400
+        
+        novo_estoque = estoque_atual - quantidade
+        db.produtos.update_one(
+            {'_id': ObjectId(data['produto_id'])},
+            {'$set': {'estoque': novo_estoque, 'updated_at': datetime.now()}}
+        )
+        
+        # Registrar movimentação
+        db.estoque_movimentacoes.insert_one({
+            'produto_id': ObjectId(data['produto_id']),
+            'tipo': 'saida',
+            'quantidade': quantidade,
+            'motivo': data.get('motivo', 'Saída manual'),
+            'usuario': session.get('username', 'system'),
+            'data': datetime.now()
+        })
+        
+        logger.info(f"✅ Saída de estoque registrada: Produto {data['produto_id']}")
+        return jsonify({'success': True, 'message': 'Saída registrada com sucesso!'})
+        
+    except Exception as e:
+        logger.error(f"Erro ao registrar saída: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/alertas', methods=['GET'])
+@login_required
+def alertas_estoque():
+    """Listar produtos com estoque baixo"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        # Buscar produtos onde estoque <= estoque_minimo
+        produtos_baixo_estoque = list(db.produtos.find({
+            '$expr': {'$lte': ['$estoque', '$estoque_minimo']},
+            'ativo': True
+        }).sort('estoque', ASCENDING))
+        
+        alertas = []
+        for produto in produtos_baixo_estoque:
+            alertas.append({
+                'produto_id': str(produto['_id']),
+                'nome': produto.get('nome', 'N/A'),
+                'sku': produto.get('sku', 'N/A'),
+                'estoque_atual': produto.get('estoque', 0),
+                'estoque_minimo': produto.get('estoque_minimo', 5),
+                'diferenca': produto.get('estoque_minimo', 5) - produto.get('estoque', 0),
+                'status': 'CRÍTICO' if produto.get('estoque', 0) == 0 else 'BAIXO'
+            })
+        
+        return jsonify({'success': True, 'alertas': alertas, 'total': len(alertas)})
+    except Exception as e:
+        logger.error(f"Erro ao buscar alertas de estoque: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/estoque/relatorio', methods=['GET'])
+@login_required
+def relatorio_estoque():
+    """Relatório completo de estoque"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        produtos = list(db.produtos.find({'ativo': True}))
+        
+        total_valor_estoque = sum(p.get('estoque', 0) * p.get('custo', 0) for p in produtos)
+        total_valor_venda = sum(p.get('estoque', 0) * p.get('preco', 0) for p in produtos)
+        total_produtos = len(produtos)
+        produtos_zerados = len([p for p in produtos if p.get('estoque', 0) == 0])
+        produtos_baixo_estoque = len([p for p in produtos if p.get('estoque', 0) <= p.get('estoque_minimo', 5)])
+        
+        relatorio = {
+            'total_produtos': total_produtos,
+            'produtos_zerados': produtos_zerados,
+            'produtos_baixo_estoque': produtos_baixo_estoque,
+            'valor_total_custo': total_valor_estoque,
+            'valor_total_venda': total_valor_venda,
+            'margem_potencial': total_valor_venda - total_valor_estoque
+        }
+        
+        return jsonify({'success': True, 'relatorio': relatorio})
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório de estoque: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/orcamentos', methods=['GET', 'POST'])
@@ -877,6 +1213,283 @@ def update_orcamento(id):
     except Exception as e:
         logger.error(f"❌ Erro ao atualizar orçamento: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/upload/imagem', methods=['POST'])
+@login_required
+def upload_imagem():
+    """Upload de imagem (foto de perfil ou logo)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    try:
+        import base64
+        data = request.json
+        
+        if not data.get('image_data'):
+            return jsonify({'success': False, 'message': 'Imagem não fornecida'}), 400
+        
+        # Extrair dados da imagem base64
+        image_data = data['image_data']
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Decodificar e salvar
+        image_bytes = base64.b64decode(image_data)
+        tipo = data.get('tipo', 'profissional')  # profissional ou logo
+        filename = f"{tipo}_{datetime.now().timestamp()}.png"
+        
+        # Salvar no banco de dados como base64 (simplificado)
+        db.imagens.insert_one({
+            'tipo': tipo,
+            'filename': filename,
+            'data': image_data,
+            'uploaded_by': session.get('username'),
+            'uploaded_at': datetime.now()
+        })
+        
+        logger.info(f"✅ Imagem uploaded: {filename}")
+        return jsonify({
+            'success': True,
+            'url': f'/api/imagem/{filename}',
+            'filename': filename
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao fazer upload de imagem: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/imagem/<filename>')
+def get_imagem(filename):
+    """Recuperar uma imagem"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    try:
+        import base64
+        imagem = db.imagens.find_one({'filename': filename})
+        if not imagem:
+            return jsonify({'success': False, 'message': 'Imagem não encontrada'}), 404
+        
+        # Retornar a imagem como base64
+        return jsonify({'success': True, 'data': imagem['data']})
+    except Exception as e:
+        logger.error(f"Erro ao recuperar imagem: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/busca/global')
+@login_required
+def busca_global():
+    """Busca global em todo o sistema"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    termo = request.args.get('termo', '').strip()
+    if len(termo) < 2:
+        return jsonify({'success': True, 'resultados': []})
+    
+    try:
+        regex = {'$regex': termo, '$options': 'i'}
+        resultados = {
+            'clientes': [],
+            'produtos': [],
+            'servicos': [],
+            'profissionais': [],
+            'orcamentos': []
+        }
+        
+        # Buscar clientes
+        clientes = list(db.clientes.find({
+            '$or': [
+                {'nome': regex},
+                {'cpf': regex},
+                {'email': regex}
+            ]
+        }).limit(5))
+        for c in clientes:
+            resultados['clientes'].append({
+                'id': str(c['_id']),
+                'tipo': 'Cliente',
+                'nome': c.get('nome', ''),
+                'detalhe': f"CPF: {c.get('cpf', '')}"
+            })
+        
+        # Buscar produtos
+        produtos = list(db.produtos.find({
+            '$or': [
+                {'nome': regex},
+                {'sku': regex},
+                {'marca': regex}
+            ],
+            'ativo': True
+        }).limit(5))
+        for p in produtos:
+            resultados['produtos'].append({
+                'id': str(p['_id']),
+                'tipo': 'Produto',
+                'nome': p.get('nome', ''),
+                'detalhe': f"SKU: {p.get('sku', '')} - R$ {p.get('preco', 0):.2f}"
+            })
+        
+        # Buscar serviços
+        servicos = list(db.servicos.find({
+            '$or': [
+                {'nome': regex},
+                {'sku': regex}
+            ],
+            'ativo': True
+        }).limit(5))
+        for s in servicos:
+            resultados['servicos'].append({
+                'id': str(s['_id']),
+                'tipo': 'Serviço',
+                'nome': s.get('nome', ''),
+                'detalhe': f"{s.get('tamanho', '')} - R$ {s.get('preco', 0):.2f}"
+            })
+        
+        # Buscar profissionais
+        profissionais = list(db.profissionais.find({
+            '$or': [
+                {'nome': regex},
+                {'cpf': regex}
+            ],
+            'ativo': True
+        }).limit(5))
+        for p in profissionais:
+            resultados['profissionais'].append({
+                'id': str(p['_id']),
+                'tipo': 'Profissional',
+                'nome': p.get('nome', ''),
+                'detalhe': p.get('especialidade', 'Profissional')
+            })
+        
+        # Buscar orçamentos (por número ou nome do cliente)
+        orcamentos = list(db.orcamentos.find({
+            '$or': [
+                {'cliente_nome': regex},
+                {'numero': {'$regex': str(termo), '$options': 'i'}}
+            ]
+        }).sort('created_at', DESCENDING).limit(5))
+        for o in orcamentos:
+            resultados['orcamentos'].append({
+                'id': str(o['_id']),
+                'tipo': 'Orçamento',
+                'nome': f"#{o.get('numero', '')} - {o.get('cliente_nome', '')}",
+                'detalhe': f"R$ {o.get('total_final', 0):.2f} - {o.get('status', 'Pendente')}"
+            })
+        
+        return jsonify({'success': True, 'resultados': resultados})
+    except Exception as e:
+        logger.error(f"Erro na busca global: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/comissao/calcular', methods=['POST'])
+@login_required
+def calcular_comissao():
+    """Calcular comissões de profissional e assistente para um orçamento"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        orcamento_id = data.get('orcamento_id')
+        if not orcamento_id:
+            return jsonify({'success': False, 'message': 'ID do orçamento não fornecido'}), 400
+        
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(orcamento_id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+        
+        comissoes = []
+        total_comissoes = 0
+        
+        for servico in orcamento.get('servicos', []):
+            if servico.get('profissional_id'):
+                profissional = db.profissionais.find_one({'_id': ObjectId(servico['profissional_id'])})
+                if profissional:
+                    valor_servico = servico.get('total', 0)
+                    comissao_perc = profissional.get('comissao_perc', 0)
+                    comissao_valor = valor_servico * (comissao_perc / 100)
+                    
+                    comissao_info = {
+                        'profissional_id': str(profissional['_id']),
+                        'profissional_nome': profissional.get('nome', ''),
+                        'servico': servico.get('nome', ''),
+                        'valor_servico': valor_servico,
+                        'comissao_perc': comissao_perc,
+                        'comissao_valor': comissao_valor
+                    }
+                    
+                    # Calcular comissão do assistente (se existir)
+                    if profissional.get('assistente_id'):
+                        assistente = db.profissionais.find_one({'_id': ObjectId(profissional['assistente_id'])})
+                        if assistente:
+                            comissao_assistente_perc = profissional.get('comissao_assistente_perc', 0)
+                            # Assistente ganha X% da comissão do profissional
+                            comissao_assistente_valor = comissao_valor * (comissao_assistente_perc / 100)
+                            
+                            comissao_info['assistente'] = {
+                                'assistente_id': str(assistente['_id']),
+                                'assistente_nome': assistente.get('nome', ''),
+                                'comissao_perc': comissao_assistente_perc,
+                                'comissao_valor': comissao_assistente_valor
+                            }
+                            
+                            total_comissoes += comissao_assistente_valor
+                    
+                    comissoes.append(comissao_info)
+                    total_comissoes += comissao_valor
+        
+        return jsonify({
+            'success': True,
+            'orcamento_numero': orcamento.get('numero'),
+            'comissoes': comissoes,
+            'total_comissoes': total_comissoes
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular comissões: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/assistentes', methods=['GET', 'POST'])
+@login_required
+def assistentes():
+    """Gerenciar assistentes (que podem não ser profissionais ativos)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    if request.method == 'GET':
+        try:
+            # Listar todos os assistentes
+            assistentes_list = list(db.assistentes.find({}).sort('nome', ASCENDING))
+            return jsonify({'success': True, 'assistentes': convert_objectid(assistentes_list)})
+        except:
+            return jsonify({'success': False}), 500
+    
+    data = request.json
+    try:
+        assistente_data = {
+            'nome': data['nome'],
+            'cpf': data.get('cpf', ''),
+            'email': data.get('email', ''),
+            'telefone': data.get('telefone', ''),
+            'ativo': True,
+            'created_at': datetime.now()
+        }
+        db.assistentes.insert_one(assistente_data)
+        return jsonify({'success': True})
+    except:
+        return jsonify({'success': False}), 500
+
+@app.route('/api/assistentes/<id>', methods=['DELETE'])
+@login_required
+def delete_assistente(id):
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        result = db.assistentes.delete_one({'_id': ObjectId(id)})
+        return jsonify({'success': result.deleted_count > 0})
+    except:
+        return jsonify({'success': False}), 500
 
 # --- INÍCIO DA SEÇÃO MODIFICADA ---
 class GradientHeader(Flowable):
@@ -1128,6 +1741,121 @@ def agendamentos():
     except:
         return jsonify({'success': False}), 500
 
+@app.route('/api/agendamentos/horarios-disponiveis', methods=['GET'])
+@login_required
+def horarios_disponiveis():
+    """Verificar horários disponíveis para uma data específica"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    try:
+        data_str = request.args.get('data')
+        profissional_id = request.args.get('profissional_id')
+        
+        if not data_str:
+            return jsonify({'success': False, 'message': 'Data não fornecida'}), 400
+        
+        # Converter a data
+        data = datetime.fromisoformat(data_str.replace('Z', '+00:00'))
+        data_inicio = data.replace(hour=0, minute=0, second=0)
+        data_fim = data.replace(hour=23, minute=59, second=59)
+        
+        # Buscar agendamentos do dia
+        query = {'data': {'$gte': data_inicio, '$lte': data_fim}}
+        if profissional_id:
+            query['profissional_id'] = profissional_id
+        
+        agendamentos = list(db.agendamentos.find(query))
+        horarios_ocupados = [a.get('horario') for a in agendamentos if a.get('horario')]
+        
+        # Gerar horários disponíveis (08:00 - 18:00)
+        horarios_todos = []
+        for hora in range(8, 18):
+            for minuto in [0, 30]:
+                horarios_todos.append(f"{hora:02d}:{minuto:02d}")
+        
+        horarios_disponiveis = [h for h in horarios_todos if h not in horarios_ocupados]
+        
+        return jsonify({
+            'success': True,
+            'horarios_disponiveis': horarios_disponiveis,
+            'horarios_ocupados': horarios_ocupados,
+            'total_slots': len(horarios_todos),
+            'slots_disponiveis': len(horarios_disponiveis)
+        })
+    except Exception as e:
+        logger.error(f"Erro ao buscar horários disponíveis: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/agendamentos/mapa-calor', methods=['GET'])
+@login_required
+def mapa_calor_agendamentos():
+    """Gerar mapa de calor de agendamentos e orçamentos"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    try:
+        # Últimos 30 dias
+        data_inicio = datetime.now() - timedelta(days=30)
+        data_fim = datetime.now()
+        
+        # Buscar agendamentos
+        agendamentos = list(db.agendamentos.find({
+            'created_at': {'$gte': data_inicio, '$lte': data_fim}
+        }))
+        
+        # Buscar orçamentos
+        orcamentos = list(db.orcamentos.find({
+            'created_at': {'$gte': data_inicio, '$lte': data_fim}
+        }))
+        
+        # Agrupar por dia
+        mapa_calor = {}
+        
+        for agend in agendamentos:
+            data_agend = agend.get('created_at', datetime.now())
+            dia = data_agend.strftime('%Y-%m-%d')
+            if dia not in mapa_calor:
+                mapa_calor[dia] = {'agendamentos': 0, 'orcamentos': 0, 'total': 0}
+            mapa_calor[dia]['agendamentos'] += 1
+            mapa_calor[dia]['total'] += 1
+        
+        for orc in orcamentos:
+            data_orc = orc.get('created_at', datetime.now())
+            dia = data_orc.strftime('%Y-%m-%d')
+            if dia not in mapa_calor:
+                mapa_calor[dia] = {'agendamentos': 0, 'orcamentos': 0, 'total': 0}
+            mapa_calor[dia]['orcamentos'] += 1
+            mapa_calor[dia]['total'] += 1
+        
+        # Converter para lista ordenada
+        mapa_lista = [
+            {
+                'data': dia,
+                'agendamentos': dados['agendamentos'],
+                'orcamentos': dados['orcamentos'],
+                'total': dados['total']
+            }
+            for dia, dados in sorted(mapa_calor.items())
+        ]
+        
+        return jsonify({'success': True, 'mapa_calor': mapa_lista})
+    except Exception as e:
+        logger.error(f"Erro ao gerar mapa de calor: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/agendamentos/<id>', methods=['DELETE'])
+@login_required
+def delete_agendamento(id):
+    """Deletar um agendamento"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    try:
+        result = db.agendamentos.delete_one({'_id': ObjectId(id)})
+        return jsonify({'success': result.deleted_count > 0})
+    except:
+        return jsonify({'success': False}), 500
+
 @app.route('/api/fila', methods=['GET', 'POST'])
 @login_required
 def fila():
@@ -1304,6 +2032,91 @@ def importar():
                     count_success += 1
                 except:
                     count_error += 1
+        elif tipo == 'servicos':
+            # Importação de serviços
+            for idx, row in enumerate(rows, 1):
+                try:
+                    r = {k.lower().strip(): v for k, v in row.items() if k and v is not None}
+                    if not r or all(not v for v in r.values()):
+                        continue
+                    
+                    # Nome do serviço
+                    nome = None
+                    for col in ['nome', 'servico', 'name']:
+                        if col in r and r[col]:
+                            nome = str(r[col]).strip()
+                            break
+                    if not nome or len(nome) < 2:
+                        count_error += 1
+                        continue
+                    
+                    # Categoria
+                    categoria = 'Serviço'
+                    for col in ['categoria', 'category']:
+                        if col in r and r[col]:
+                            categoria = str(r[col]).strip().title()
+                            break
+                    
+                    # Preços por tamanho
+                    tamanhos_map = {
+                        'kids': ['kids', 'crianca', 'infantil'],
+                        'masculino': ['masculino', 'male', 'homem'],
+                        'curto': ['curto', 'short'],
+                        'medio': ['medio', 'médio', 'medium'],
+                        'longo': ['longo', 'long'],
+                        'extra_longo': ['extra_longo', 'extra longo', 'extralongo', 'extralong']
+                    }
+                    
+                    tamanhos_precos = {}
+                    for tamanho_key, col_aliases in tamanhos_map.items():
+                        preco = 0.0
+                        for col_alias in col_aliases:
+                            if col_alias in r and r[col_alias]:
+                                try:
+                                    val = str(r[col_alias]).replace('R$', '').strip()
+                                    if ',' in val:
+                                        val = val.replace(',', '.')
+                                    preco = float(val)
+                                    break
+                                except:
+                                    continue
+                        if preco > 0:
+                            tamanhos_precos[tamanho_key] = preco
+                    
+                    # Se não há nenhum preço válido, erro
+                    if not tamanhos_precos:
+                        count_error += 1
+                        continue
+                    
+                    # Criar um serviço para cada tamanho com preço definido
+                    tamanhos_labels = {
+                        'kids': 'Kids',
+                        'masculino': 'Masculino',
+                        'curto': 'Curto',
+                        'medio': 'Médio',
+                        'longo': 'Longo',
+                        'extra_longo': 'Extra Longo'
+                    }
+                    
+                    for tamanho_key, preco in tamanhos_precos.items():
+                        tamanho_label = tamanhos_labels.get(tamanho_key, tamanho_key.title())
+                        sku = f"{nome.upper().replace(' ', '-')}-{tamanho_label.upper().replace(' ', '-')}"
+                        
+                        db.servicos.insert_one({
+                            'nome': nome,
+                            'sku': sku,
+                            'tamanho': tamanho_label,
+                            'preco': preco,
+                            'categoria': categoria,
+                            'duracao': 60,
+                            'ativo': True,
+                            'created_at': datetime.now()
+                        })
+                    
+                    count_success += 1
+                except Exception as e:
+                    logger.error(f"Erro ao importar serviço: {e}")
+                    count_error += 1
         if os.path.exists(filepath):
             os.remove(filepath)
         return jsonify({'success': True, 'message': f'{count_success} importados!', 'count_success': count_success, 'count_error': count_error})
@@ -1362,10 +2175,232 @@ def config():
             return jsonify({'success': False}), 500
     data = request.json
     try:
-        db.config.update_one({'key': 'unidade'}, {'$set': data}, upsert=True)
-        return jsonify({'success': True})
-    except:
+        # Atualizar configurações incluindo logo_url
+        config_data = {
+            'key': 'unidade',
+            'nome_empresa': data.get('nome_empresa', 'BIOMA UBERABA'),
+            'logo_url': data.get('logo_url', ''),
+            'logo_login_url': data.get('logo_login_url', ''),
+            'endereco': data.get('endereco', ''),
+            'telefone': data.get('telefone', ''),
+            'email': data.get('email', ''),
+            'cnpj': data.get('cnpj', ''),
+            'cor_primaria': data.get('cor_primaria', '#7C3AED'),
+            'cor_secundaria': data.get('cor_secundaria', '#EC4899'),
+            'updated_at': datetime.now()
+        }
+        
+        db.config.update_one({'key': 'unidade'}, {'$set': config_data}, upsert=True)
+        logger.info("✅ Configurações atualizadas")
+        return jsonify({'success': True, 'message': 'Configurações salvas com sucesso!'})
+    except Exception as e:
+        logger.error(f"Erro ao salvar configurações: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
         return jsonify({'success': False}), 500
+
+@app.route('/api/relatorios/completo', methods=['GET'])
+@login_required
+def relatorio_completo():
+    """Relatório completo com todas as estatísticas do sistema"""
+    if db is None:
+        return jsonify({'success': False}), 500
+    
+    try:
+        periodo = request.args.get('periodo', '30')  # Padrão 30 dias
+        dias = int(periodo)
+        data_inicio = datetime.now() - timedelta(days=dias)
+        
+        # === ESTATÍSTICAS GERAIS ===
+        total_clientes = db.clientes.count_documents({})
+        total_produtos = db.produtos.count_documents({'ativo': True})
+        total_servicos = db.servicos.count_documents({'ativo': True})
+        total_profissionais = db.profissionais.count_documents({'ativo': True})
+        
+        # === FATURAMENTO ===
+        orcamentos_aprovados = list(db.orcamentos.find({
+            'status': 'Aprovado',
+            'created_at': {'$gte': data_inicio}
+        }))
+        
+        faturamento_total = sum(o.get('total_final', 0) for o in orcamentos_aprovados)
+        faturamento_servicos = sum(
+            sum(s.get('total', 0) for s in o.get('servicos', []))
+            for o in orcamentos_aprovados
+        )
+        faturamento_produtos = sum(
+            sum(p.get('total', 0) for p in o.get('produtos', []))
+            for o in orcamentos_aprovados
+        )
+        
+        # === VENDAS ===
+        total_orcamentos = db.orcamentos.count_documents({
+            'created_at': {'$gte': data_inicio}
+        })
+        orcamentos_aprovados_count = len(orcamentos_aprovados)
+        orcamentos_pendentes = db.orcamentos.count_documents({
+            'status': 'Pendente',
+            'created_at': {'$gte': data_inicio}
+        })
+        taxa_conversao = (orcamentos_aprovados_count / total_orcamentos * 100) if total_orcamentos > 0 else 0
+        ticket_medio = faturamento_total / orcamentos_aprovados_count if orcamentos_aprovados_count > 0 else 0
+        
+        # === ESTOQUE ===
+        produtos = list(db.produtos.find({'ativo': True}))
+        estoque_total_valor_custo = sum(p.get('estoque', 0) * p.get('custo', 0) for p in produtos)
+        estoque_total_valor_venda = sum(p.get('estoque', 0) * p.get('preco', 0) for p in produtos)
+        produtos_zerados = len([p for p in produtos if p.get('estoque', 0) == 0])
+        produtos_baixo_estoque = len([p for p in produtos if p.get('estoque', 0) <= p.get('estoque_minimo', 5) and p.get('estoque', 0) > 0])
+        produtos_criticos = len([p for p in produtos if p.get('estoque', 0) == 0])
+        
+        # === CLIENTES ===
+        novos_clientes = db.clientes.count_documents({
+            'created_at': {'$gte': data_inicio}
+        })
+        
+        # Top 10 clientes por gasto
+        pipeline_clientes = [
+            {'$match': {'status': 'Aprovado', 'created_at': {'$gte': data_inicio}}},
+            {'$group': {
+                '_id': '$cliente_cpf',
+                'total_gasto': {'$sum': '$total_final'},
+                'total_compras': {'$sum': 1},
+                'cliente_nome': {'$first': '$cliente_nome'}
+            }},
+            {'$sort': {'total_gasto': -1}},
+            {'$limit': 10}
+        ]
+        top_clientes = list(db.orcamentos.aggregate(pipeline_clientes))
+        
+        # === PRODUTOS MAIS VENDIDOS ===
+        produtos_vendidos = {}
+        for orc in orcamentos_aprovados:
+            for prod in orc.get('produtos', []):
+                prod_id = prod.get('id')
+                if prod_id:
+                    if prod_id not in produtos_vendidos:
+                        produtos_vendidos[prod_id] = {
+                            'nome': prod.get('nome', 'N/A'),
+                            'quantidade': 0,
+                            'faturamento': 0
+                        }
+                    produtos_vendidos[prod_id]['quantidade'] += prod.get('qtd', 1)
+                    produtos_vendidos[prod_id]['faturamento'] += prod.get('total', 0)
+        
+        top_produtos = sorted(
+            [{'id': k, **v} for k, v in produtos_vendidos.items()],
+            key=lambda x: x['faturamento'],
+            reverse=True
+        )[:10]
+        
+        # === SERVIÇOS MAIS REALIZADOS ===
+        servicos_realizados = {}
+        for orc in orcamentos_aprovados:
+            for serv in orc.get('servicos', []):
+                serv_id = serv.get('id')
+                if serv_id:
+                    if serv_id not in servicos_realizados:
+                        servicos_realizados[serv_id] = {
+                            'nome': serv.get('nome', 'N/A'),
+                            'tamanho': serv.get('tamanho', ''),
+                            'quantidade': 0,
+                            'faturamento': 0
+                        }
+                    servicos_realizados[serv_id]['quantidade'] += 1
+                    servicos_realizados[serv_id]['faturamento'] += serv.get('total', 0)
+        
+        top_servicos = sorted(
+            [{'id': k, **v} for k, v in servicos_realizados.items()],
+            key=lambda x: x['faturamento'],
+            reverse=True
+        )[:10]
+        
+        # === FATURAMENTO POR DIA (para gráficos) ===
+        faturamento_por_dia = {}
+        for orc in orcamentos_aprovados:
+            data = orc.get('created_at', datetime.now())
+            dia = data.strftime('%Y-%m-%d')
+            if dia not in faturamento_por_dia:
+                faturamento_por_dia[dia] = 0
+            faturamento_por_dia[dia] += orc.get('total_final', 0)
+        
+        faturamento_timeline = [
+            {'data': dia, 'valor': valor}
+            for dia, valor in sorted(faturamento_por_dia.items())
+        ]
+        
+        # === PROFISSIONAIS COM MELHOR DESEMPENHO ===
+        desempenho_profissionais = {}
+        for orc in orcamentos_aprovados:
+            for serv in orc.get('servicos', []):
+                prof_id = serv.get('profissional_id')
+                if prof_id:
+                    if prof_id not in desempenho_profissionais:
+                        prof = db.profissionais.find_one({'_id': ObjectId(prof_id)})
+                        nome = prof.get('nome', 'N/A') if prof else 'N/A'
+                        desempenho_profissionais[prof_id] = {
+                            'nome': nome,
+                            'servicos_realizados': 0,
+                            'faturamento': 0
+                        }
+                    desempenho_profissionais[prof_id]['servicos_realizados'] += 1
+                    desempenho_profissionais[prof_id]['faturamento'] += serv.get('total', 0)
+        
+        top_profissionais = sorted(
+            [{'id': k, **v} for k, v in desempenho_profissionais.items()],
+            key=lambda x: x['faturamento'],
+            reverse=True
+        )[:10]
+        
+        relatorio = {
+            'periodo': f'Últimos {dias} dias',
+            'data_inicio': data_inicio.isoformat(),
+            'data_fim': datetime.now().isoformat(),
+            
+            'geral': {
+                'total_clientes': total_clientes,
+                'total_produtos': total_produtos,
+                'total_servicos': total_servicos,
+                'total_profissionais': total_profissionais,
+                'novos_clientes': novos_clientes
+            },
+            
+            'faturamento': {
+                'total': faturamento_total,
+                'servicos': faturamento_servicos,
+                'produtos': faturamento_produtos,
+                'timeline': faturamento_timeline
+            },
+            
+            'vendas': {
+                'total_orcamentos': total_orcamentos,
+                'aprovados': orcamentos_aprovados_count,
+                'pendentes': orcamentos_pendentes,
+                'taxa_conversao': taxa_conversao,
+                'ticket_medio': ticket_medio
+            },
+            
+            'estoque': {
+                'valor_total_custo': estoque_total_valor_custo,
+                'valor_total_venda': estoque_total_valor_venda,
+                'margem_potencial': estoque_total_valor_venda - estoque_total_valor_custo,
+                'produtos_zerados': produtos_zerados,
+                'produtos_baixo_estoque': produtos_baixo_estoque,
+                'produtos_criticos': produtos_criticos
+            },
+            
+            'rankings': {
+                'top_clientes': convert_objectid(top_clientes),
+                'top_produtos': top_produtos,
+                'top_servicos': top_servicos,
+                'top_profissionais': top_profissionais
+            }
+        }
+        
+        return jsonify({'success': True, 'relatorio': relatorio})
+        
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 def init_db():
     if db is None:

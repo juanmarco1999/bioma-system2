@@ -115,12 +115,42 @@
         </div>
 
         <div id="section-contratos" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-file-earmark-check"></i> Contratos Aprovados</h1></div>
-            <div class="card"><div class="card-header"><i class="bi bi-file-check-fill"></i> Contratos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Ações</th></tr></thead><tbody id="contratosBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
+            <div class="page-header">
+                <h1><i class="bi bi-file-earmark-check"></i> Contratos Aprovados</h1>
+                <button class="btn btn-success" onclick="loadContratos()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
+            </div>
+            <div class="card">
+                <div class="card-header"><i class="bi bi-file-check-fill"></i> Orçamentos Aprovados como Contratos</div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nº Orçamento</th>
+                                    <th>Data Aprovação</th>
+                                    <th>Cliente</th>
+                                    <th>Valor Total</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contratosBody">
+                                <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="section-relatorios" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-bar-chart-line"></i> Relatórios</h1><button class="btn btn-outline" onclick="loadRelatorios()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button></div>
+            <div class="page-header">
+                <h1><i class="bi bi-bar-chart-line"></i> Relatórios e Análises</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-outline" onclick="loadRelatorios()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
+                    <button class="btn btn-success" onclick="exportarRelatorio()"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
+                </div>
+            </div>
             <div class="row g-4 mb-4">
                 <div class="col-md-3"><div class="stat-card"><div class="icon"><i class="bi bi-cash-stack"></i></div><h3 id="relFaturamentoTotal">R$ 0</h3><p>Faturamento Total</p></div></div>
                 <div class="col-md-3"><div class="stat-card"><div class="icon"><i class="bi bi-calendar-month"></i></div><h3 id="relFaturamentoMes">R$ 0</h3><p>Faturamento Mês</p></div></div>
@@ -136,13 +166,55 @@
         </div>
 
         <div id="section-agendamentos" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-calendar-check"></i> Agendamentos</h1><button class="btn btn-primary" onclick="showModalAgendamento()"><i class="bi bi-plus-circle"></i> Novo</button></div>
-            <div class="card"><div class="card-header"><i class="bi bi-calendar3"></i> Calendário</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Status</th></tr></thead><tbody id="agendamentosBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
+            <div class="page-header">
+                <h1><i class="bi bi-calendar-check"></i> Agendamentos</h1>
+                <button class="btn btn-primary" onclick="showModalAgendamento()"><i class="bi bi-plus-circle"></i> Novo Agendamento</button>
+            </div>
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-calendar3"></i> Lista de Agendamentos</div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Horário</th>
+                                            <th>Cliente</th>
+                                            <th>Serviço</th>
+                                            <th>Profissional</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="agendamentosBody">
+                                        <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="section-fila" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-people-fill"></i> Fila</h1><button class="btn btn-primary" onclick="showModalFila()"><i class="bi bi-plus-circle"></i> Adicionar</button></div>
-            <div class="card"><div class="card-header"><i class="bi bi-list-ol"></i> Fila Atual (<span id="totalFila">0</span>)</div><div class="card-body" id="filaContainer"><div class="spinner"></div></div></div>
+            <div class="page-header">
+                <h1><i class="bi bi-people-fill"></i> Fila de Atendimento</h1>
+                <button class="btn btn-primary" onclick="showModalFila()"><i class="bi bi-plus-circle"></i> Adicionar à Fila</button>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list-ol"></i> Fila Atual 
+                    <span class="badge success" style="margin-left: 10px; font-size: 1rem;">
+                        <i class="bi bi-people"></i> <span id="totalFila">0</span> pessoas
+                    </span>
+                </div>
+                <div class="card-body" id="filaContainer">
+                    <div class="spinner"></div>
+                </div>
+            </div>
         </div>
 
         <div id="section-clientes" class="content-section">
@@ -180,10 +252,79 @@
         </div>
 
         <div id="section-importar" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-cloud-upload"></i> Importar Dados</h1></div>
+            <div class="page-header">
+                <h1><i class="bi bi-cloud-upload"></i> Importar Dados em Massa</h1>
+            </div>
+            <div class="alert alert-info">
+                <strong><i class="bi bi-info-circle"></i> Informação:</strong> 
+                Faça upload de arquivos CSV ou Excel (.xlsx, .xls) para importar dados em massa. 
+                Baixe os templates para garantir o formato correto.
+            </div>
             <div class="row g-4">
-                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-box-seam"></i> Produtos</div><div class="card-body"><div style="border:3px dashed var(--border-color);border-radius:20px;padding:60px 20px;text-align:center;cursor:pointer" onclick="document.getElementById('uploadProdutos').click()"><i class="bi bi-cloud-upload" style="font-size:4rem;color:var(--primary)"></i><h4>Clique para selecionar</h4><input type="file" id="uploadProdutos" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this,'produtos')"></div><a href="/api/template/download/produtos" class="btn btn-outline w-100 mt-3"><i class="bi bi-download"></i> Template</a></div></div></div>
-                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-scissors"></i> Serviços</div><div class="card-body"><div style="border:3px dashed var(--border-color);border-radius:20px;padding:60px 20px;text-align:center;cursor:pointer" onclick="document.getElementById('uploadServicos').click()"><i class="bi bi-cloud-upload" style="font-size:4rem;color:var(--primary)"></i><h4>Clique para selecionar</h4><input type="file" id="uploadServicos" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this,'servicos')"></div><a href="/api/template/download/servicos" class="btn btn-outline w-100 mt-3"><i class="bi bi-download"></i> Template</a></div></div></div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-people"></i> Clientes</div>
+                        <div class="card-body">
+                            <div style="border:3px dashed var(--border-color);border-radius:20px;padding:60px 20px;text-align:center;cursor:pointer;transition: all 0.3s;" onclick="document.getElementById('uploadClientes').click()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                                <i class="bi bi-cloud-upload" style="font-size:4rem;color:var(--primary)"></i>
+                                <h4 style="margin-top:15px;">Clique para selecionar arquivo</h4>
+                                <p class="text-muted">CSV ou Excel (xlsx, xls)</p>
+                                <input type="file" id="uploadClientes" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this,'clientes')">
+                            </div>
+                            <a href="/api/template/download/clientes" class="btn btn-outline w-100 mt-3">
+                                <i class="bi bi-download"></i> Baixar Template CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-person-workspace"></i> Profissionais</div>
+                        <div class="card-body">
+                            <div style="border:3px dashed var(--border-color);border-radius:20px;padding:60px 20px;text-align:center;cursor:pointer;transition: all 0.3s;" onclick="document.getElementById('uploadProfissionais').click()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                                <i class="bi bi-cloud-upload" style="font-size:4rem;color:var(--primary)"></i>
+                                <h4 style="margin-top:15px;">Clique para selecionar arquivo</h4>
+                                <p class="text-muted">CSV ou Excel (xlsx, xls)</p>
+                                <input type="file" id="uploadProfissionais" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this,'profissionais')">
+                            </div>
+                            <a href="/api/template/download/profissionais" class="btn btn-outline w-100 mt-3">
+                                <i class="bi bi-download"></i> Baixar Template CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-box-seam"></i> Produtos</div>
+                        <div class="card-body">
+                            <div style="border:3px dashed var(--border-color);border-radius:20px;padding:60px 20px;text-align:center;cursor:pointer;transition: all 0.3s;" onclick="document.getElementById('uploadProdutos').click()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                                <i class="bi bi-cloud-upload" style="font-size:4rem;color:var(--primary)"></i>
+                                <h4 style="margin-top:15px;">Clique para selecionar arquivo</h4>
+                                <p class="text-muted">CSV ou Excel (xlsx, xls)</p>
+                                <input type="file" id="uploadProdutos" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this,'produtos')">
+                            </div>
+                            <a href="/api/template/download/produtos" class="btn btn-outline w-100 mt-3">
+                                <i class="bi bi-download"></i> Baixar Template CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><i class="bi bi-scissors"></i> Serviços</div>
+                        <div class="card-body">
+                            <div style="border:3px dashed var(--border-color);border-radius:20px;padding:60px 20px;text-align:center;cursor:pointer;transition: all 0.3s;" onclick="document.getElementById('uploadServicos').click()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                                <i class="bi bi-cloud-upload" style="font-size:4rem;color:var(--primary)"></i>
+                                <h4 style="margin-top:15px;">Clique para selecionar arquivo</h4>
+                                <p class="text-muted">CSV ou Excel (xlsx, xls)</p>
+                                <input type="file" id="uploadServicos" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleUpload(this,'servicos')">
+                            </div>
+                            <a href="/api/template/download/servicos" class="btn btn-outline w-100 mt-3">
+                                <i class="bi bi-download"></i> Baixar Template CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -755,13 +896,31 @@ async function loadContratos(){
         const data=await res.json();
         const tbody=document.getElementById('contratosBody');
         if(data.success&&data.contratos&&data.contratos.length>0){
-            const html=data.contratos.map(c=>`<tr><td><strong>#${c.numero}</strong></td><td>${new Date(c.created_at).toLocaleDateString('pt-BR')}</td><td>${c.cliente_nome}</td><td><strong>R$ ${c.total_final.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-info" onclick="visualizarOrcamento('${c._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px"><i class="bi bi-eye"></i></button><a href="/api/orcamento/${c._id}/pdf" target="_blank" class="btn btn-sm btn-primary"><i class="bi bi-file-pdf"></i> PDF</a></td></tr>`).join('');
+            const html=data.contratos.map(c=>{
+                const dataFormatada = new Date(c.created_at).toLocaleDateString('pt-BR');
+                return `<tr>
+                    <td><strong style="color: var(--primary); font-size: 1.1rem;">#${c.numero}</strong></td>
+                    <td>${dataFormatada}</td>
+                    <td><strong>${c.cliente_nome}</strong></td>
+                    <td><strong style="color: var(--success); font-size: 1.1rem;">R$ ${c.total_final.toFixed(2)}</strong></td>
+                    <td><span class="badge success">APROVADO</span></td>
+                    <td>
+                        <button class="btn btn-sm" onclick="visualizarOrcamento('${c._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px" title="Visualizar">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <a href="/api/orcamento/${c._id}/pdf" target="_blank" class="btn btn-sm btn-danger" title="Gerar PDF">
+                            <i class="bi bi-file-pdf"></i>
+                        </a>
+                    </td>
+                </tr>`;
+            }).join('');
             tbody.innerHTML=html;
         }else{
-            tbody.innerHTML='<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+            tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i><br>Nenhum contrato aprovado ainda</td></tr>';
         }
     }catch(e){
-        console.error(e);
+        console.error('❌ Erro ao carregar contratos:',e);
+        Swal.fire('Erro','Não foi possível carregar os contratos','error');
     }
 }
 
@@ -770,42 +929,176 @@ async function loadFila(){
         const res=await fetch('/api/fila',{credentials:'include'});
         const data=await res.json();
         const container=document.getElementById('filaContainer');
+        
         if(data.success&&data.fila&&data.fila.length>0){
             document.getElementById('totalFila').textContent=data.fila.length;
-            const html=data.fila.map((f,idx)=>`<div style="padding:15px;border:2px solid var(--border-color);border-radius:15px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center"><div><strong style="font-size:1.5rem;color:var(--primary)">#${idx+1}</strong> <strong style="margin-left:15px">${f.cliente_nome}</strong></div><button class="btn btn-sm btn-danger" onclick="removeFila('${f._id}')"><i class="bi bi-trash"></i></button></div>`).join('');
+            
+            const html=data.fila.map((f,idx)=>`
+                <div style="padding:20px;border:2px solid var(--border-color);border-radius:15px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);transition:all 0.3s;box-shadow:var(--shadow);" onmouseover="this.style.transform='translateX(5px)';this.style.borderColor='var(--primary)'" onmouseout="this.style.transform='translateX(0)';this.style.borderColor='var(--border-color)'">
+                    <div style="flex:1">
+                        <div style="display:flex;align-items:center;gap:15px;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;box-shadow:0 5px 15px rgba(124,58,237,0.3);">
+                                #${idx+1}
+                            </div>
+                            <div>
+                                <strong style="font-size:1.2rem;color:var(--text-primary);display:block;">${f.cliente_nome}</strong>
+                                <small style="color:var(--text-secondary);display:flex;align-items:center;gap:5px;margin-top:5px;">
+                                    <i class="bi bi-telephone"></i> ${f.cliente_telefone||'Sem telefone'}
+                                </small>
+                                <small style="color:var(--text-muted);display:block;margin-top:3px;">
+                                    <i class="bi bi-clock"></i> Adicionado: ${new Date(f.created_at || new Date()).toLocaleTimeString('pt-BR')}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-success" onclick="chamarProximo('${f._id}')" style="margin-right:8px;" title="Chamar para atendimento">
+                            <i class="bi bi-check-circle"></i> Chamar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="removeFila('${f._id}')" title="Remover da fila">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
             container.innerHTML=html;
         }else{
             document.getElementById('totalFila').textContent='0';
-            container.innerHTML='<p class="text-center text-muted">Fila vazia</p>';
+            container.innerHTML=`
+                <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+                    <i class="bi bi-people" style="font-size:5rem;opacity:0.3;"></i>
+                    <h3 style="margin-top:20px;color:var(--text-secondary);">Fila Vazia</h3>
+                    <p>Nenhuma pessoa aguardando atendimento</p>
+                </div>
+            `;
         }
     }catch(e){
-        console.error(e);
+        console.error('❌ Erro ao carregar fila:',e);
+        Swal.fire('Erro','Não foi possível carregar a fila','error');
+    }
+}
+
+async function chamarProximo(id){
+    const result = await Swal.fire({
+        title: 'Chamar para Atendimento?',
+        text: 'Este cliente será atendido e removido da fila',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, chamar',
+        cancelButtonText: 'Cancelar'
+    });
+    
+    if(result.isConfirmed){
+        try{
+            await fetch(`/api/fila/${id}`,{method:'DELETE',credentials:'include'});
+            Swal.fire({
+                icon: 'success',
+                title: '✅ Cliente Chamado!',
+                text: 'Cliente pronto para atendimento',
+                timer: 2000
+            });
+            loadFila();
+        }catch(e){
+            Swal.fire('Erro','Não foi possível processar','error');
+        }
     }
 }
 
 async function removeFila(id){
-    try{
-        await fetch(`/api/fila/${id}`,{method:'DELETE',credentials:'include'});
-        loadFila();
-    }catch(e){
-        console.error(e);
+    const result = await Swal.fire({
+        title: 'Remover da Fila?',
+        text: 'O cliente será removido da fila de atendimento',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, remover',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EF4444'
+    });
+    
+    if(result.isConfirmed){
+        try{
+            await fetch(`/api/fila/${id}`,{method:'DELETE',credentials:'include'});
+            Swal.fire({
+                icon: 'success',
+                title: 'Removido!',
+                text: 'Cliente removido da fila',
+                timer: 1500
+            });
+            loadFila();
+        }catch(e){
+            console.error('❌ Erro ao remover da fila:',e);
+            Swal.fire('Erro','Não foi possível remover da fila','error');
+        }
     }
 }
 
 function showModalFila(){
-    Swal.fire({title:'Adicionar à Fila',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-telefone" class="form-control" placeholder="Telefone">`,showCancelButton:true,preConfirm:()=>{
-        const cliente_nome=document.getElementById('swal-nome').value;
-        const cliente_telefone=document.getElementById('swal-telefone').value;
-        if(!cliente_nome){Swal.showValidationMessage('Nome obrigatório');return false;}
-        return {cliente_nome,cliente_telefone};
-    }}).then(async(result)=>{
+    Swal.fire({
+        title: '<strong>👥 Adicionar à Fila</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-person"></i> Nome do Cliente:
+                    </label>
+                    <input type="text" id="swal-nome" class="form-control" placeholder="Digite o nome completo">
+                </div>
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-telephone"></i> Telefone (opcional):
+                    </label>
+                    <input type="text" id="swal-telefone" class="form-control" placeholder="(00) 00000-0000">
+                </div>
+                <div class="alert alert-info" style="margin-top: 15px; font-size: 0.9rem;">
+                    <i class="bi bi-info-circle"></i> O cliente será adicionado ao final da fila de atendimento
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-plus-circle"></i> Adicionar',
+        cancelButtonText: 'Cancelar',
+        width: '500px',
+        preConfirm: () => {
+            const cliente_nome = document.getElementById('swal-nome').value.trim();
+            const cliente_telefone = document.getElementById('swal-telefone').value.trim();
+            
+            if(!cliente_nome){
+                Swal.showValidationMessage('Nome do cliente é obrigatório');
+                return false;
+            }
+            
+            return {
+                cliente_nome,
+                cliente_telefone: cliente_telefone || 'Não informado'
+            };
+        }
+    }).then(async(result) => {
         if(result.isConfirmed){
             try{
-                await fetch('/api/fila',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(result.value)});
-                Swal.fire('Adicionado!','','success');
-                loadFila();
+                const response = await fetch('/api/fila',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    credentials:'include',
+                    body:JSON.stringify(result.value)
+                });
+                
+                const data = await response.json();
+                
+                if(data.success){
+                    Swal.fire({
+                        icon: 'success',
+                        title: '✅ Adicionado!',
+                        text: 'Cliente adicionado à fila com sucesso',
+                        timer: 2000
+                    });
+                    loadFila();
+                } else {
+                    Swal.fire('Erro', data.message || 'Erro ao adicionar à fila', 'error');
+                }
             }catch(e){
-                Swal.fire('Erro','','error');
+                console.error('Erro:', e);
+                Swal.fire('Erro','Não foi possível adicionar à fila','error');
             }
         }
     });
@@ -833,32 +1126,194 @@ async function loadAgendamentos(){
         const data=await res.json();
         const tbody=document.getElementById('agendamentosBody');
         if(data.success&&data.agendamentos&&data.agendamentos.length>0){
-            const html=data.agendamentos.map(a=>`<tr><td>${new Date(a.data).toLocaleDateString('pt-BR')}</td><td>${a.horario}</td><td>${a.cliente_nome}</td><td>${a.servico_nome||'-'}</td><td><span class="badge success">${a.status}</span></td></tr>`).join('');
+            const html=data.agendamentos.map(a=>{
+                const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
+                const statusBadge = a.status === 'Confirmado' ? 'success' : 
+                                   a.status === 'Pendente' ? 'warning' : 
+                                   a.status === 'Cancelado' ? 'danger' : 'secondary';
+                return `<tr>
+                    <td><strong>${dataFormatada}</strong></td>
+                    <td><strong style="color: var(--primary); font-size: 1.1rem;">${a.horario}</strong></td>
+                    <td>${a.cliente_nome}</td>
+                    <td>${a.servico_nome||'<span class="text-muted">Não especificado</span>'}</td>
+                    <td>${a.profissional_nome||'<span class="text-muted">Não atribuído</span>'}</td>
+                    <td><span class="badge ${statusBadge}">${a.status||'Pendente'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="cancelarAgendamento('${a._id}')" title="Cancelar">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
             tbody.innerHTML=html;
         }else{
-            tbody.innerHTML='<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+            tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted"><i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.3;"></i><br>Nenhum agendamento cadastrado</td></tr>';
         }
     }catch(e){
-        console.error(e);
+        console.error('❌ Erro ao carregar agendamentos:',e);
+        Swal.fire('Erro','Não foi possível carregar os agendamentos','error');
     }
 }
 
-function showModalAgendamento(){
-    Swal.fire({title:'Novo Agendamento',html:`<input type="text" id="swal-cliente" class="form-control mb-3" placeholder="Cliente"><input type="text" id="swal-servico" class="form-control mb-3" placeholder="Serviço"><input type="date" id="swal-data" class="form-control mb-3"><select id="swal-horario" class="form-select"><option value="">Horário...</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="14:00">14:00</option><option value="15:00">15:00</option><option value="16:00">16:00</option></select>`,showCancelButton:true,preConfirm:()=>{
-        const cliente_nome=document.getElementById('swal-cliente').value;
-        const servico_nome=document.getElementById('swal-servico').value;
-        const data=document.getElementById('swal-data').value;
-        const horario=document.getElementById('swal-horario').value;
-        if(!cliente_nome||!data||!horario){Swal.showValidationMessage('Preencha todos os campos');return false;}
-        return {cliente_nome,servico_nome,data:new Date(data+'T12:00:00').toISOString(),horario};
-    }}).then(async(result)=>{
+async function cancelarAgendamento(id){
+    const result = await Swal.fire({
+        title: 'Cancelar Agendamento?',
+        text: 'Esta ação não pode ser desfeita',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, cancelar',
+        cancelButtonText: 'Não'
+    });
+    
+    if(result.isConfirmed){
+        try{
+            await fetch(`/api/agendamentos/${id}`,{method:'DELETE',credentials:'include'});
+            Swal.fire('Cancelado!','Agendamento cancelado com sucesso','success');
+            loadAgendamentos();
+        }catch(e){
+            Swal.fire('Erro','Não foi possível cancelar o agendamento','error');
+        }
+    }
+}
+
+async function showModalAgendamento(){
+    // Buscar clientes e serviços para preencher os selects
+    let clientesOptions = '<option value="">Selecione o cliente...</option>';
+    let servicosOptions = '<option value="">Selecione o serviço...</option>';
+    let profissionaisOptions = '<option value="">Selecione o profissional...</option>';
+    
+    try {
+        const [clientesRes, servicosRes, profissionaisRes] = await Promise.all([
+            fetch('/api/clientes',{credentials:'include'}),
+            fetch('/api/servicos',{credentials:'include'}),
+            fetch('/api/profissionais',{credentials:'include'})
+        ]);
+        
+        const [clientesData, servicosData, profissionaisData] = await Promise.all([
+            clientesRes.json(),
+            servicosRes.json(),
+            profissionaisRes.json()
+        ]);
+        
+        if(clientesData.success && clientesData.clientes){
+            clientesOptions += clientesData.clientes.map(c => 
+                `<option value="${c.nome}">${c.nome} - ${c.cpf}</option>`
+            ).join('');
+        }
+        
+        if(servicosData.success && servicosData.servicos){
+            servicosOptions += servicosData.servicos.map(s => 
+                `<option value="${s.nome}">${s.nome} - R$ ${s.preco.toFixed(2)}</option>`
+            ).join('');
+        }
+        
+        if(profissionaisData.success && profissionaisData.profissionais){
+            profissionaisOptions += profissionaisData.profissionais.map(p => 
+                `<option value="${p.nome}">${p.nome} - ${p.especialidade||'Geral'}</option>`
+            ).join('');
+        }
+    } catch(e) {
+        console.error('Erro ao buscar dados:', e);
+    }
+    
+    Swal.fire({
+        title: '<strong>🗓️ Novo Agendamento</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Cliente:</label>
+                    <select id="swal-cliente" class="form-select">${clientesOptions}</select>
+                </div>
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Serviço:</label>
+                    <select id="swal-servico" class="form-select">${servicosOptions}</select>
+                </div>
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Profissional:</label>
+                    <select id="swal-profissional" class="form-select">${profissionaisOptions}</select>
+                </div>
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Data:</label>
+                    <input type="date" id="swal-data" class="form-control" min="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Horário:</label>
+                    <select id="swal-horario" class="form-select">
+                        <option value="">Selecione o horário...</option>
+                        <option value="08:00">08:00</option>
+                        <option value="08:30">08:30</option>
+                        <option value="09:00">09:00</option>
+                        <option value="09:30">09:30</option>
+                        <option value="10:00">10:00</option>
+                        <option value="10:30">10:30</option>
+                        <option value="11:00">11:00</option>
+                        <option value="11:30">11:30</option>
+                        <option value="13:00">13:00</option>
+                        <option value="13:30">13:30</option>
+                        <option value="14:00">14:00</option>
+                        <option value="14:30">14:30</option>
+                        <option value="15:00">15:00</option>
+                        <option value="15:30">15:30</option>
+                        <option value="16:00">16:00</option>
+                        <option value="16:30">16:30</option>
+                        <option value="17:00">17:00</option>
+                        <option value="17:30">17:30</option>
+                        <option value="18:00">18:00</option>
+                    </select>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-check-circle"></i> Agendar',
+        cancelButtonText: 'Cancelar',
+        width: '600px',
+        preConfirm: () => {
+            const cliente_nome = document.getElementById('swal-cliente').value;
+            const servico_nome = document.getElementById('swal-servico').value;
+            const profissional_nome = document.getElementById('swal-profissional').value;
+            const data = document.getElementById('swal-data').value;
+            const horario = document.getElementById('swal-horario').value;
+            
+            if(!cliente_nome || !data || !horario){
+                Swal.showValidationMessage('Cliente, data e horário são obrigatórios');
+                return false;
+            }
+            
+            return {
+                cliente_nome,
+                servico_nome: servico_nome || 'Não especificado',
+                profissional_nome: profissional_nome || 'Não atribuído',
+                data: new Date(data+'T12:00:00').toISOString(),
+                horario,
+                status: 'Confirmado'
+            };
+        }
+    }).then(async(result) => {
         if(result.isConfirmed){
             try{
-                await fetch('/api/agendamentos',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(result.value)});
-                Swal.fire('Agendado!','','success');
-                loadAgendamentos();
+                const response = await fetch('/api/agendamentos',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    credentials:'include',
+                    body:JSON.stringify(result.value)
+                });
+                
+                const data = await response.json();
+                
+                if(data.success){
+                    Swal.fire({
+                        icon: 'success',
+                        title: '✅ Agendado!',
+                        text: 'Agendamento criado com sucesso',
+                        timer: 2000
+                    });
+                    loadAgendamentos();
+                } else {
+                    Swal.fire('Erro', data.message || 'Erro ao criar agendamento', 'error');
+                }
             }catch(e){
-                Swal.fire('Erro','','error');
+                console.error('Erro:', e);
+                Swal.fire('Erro','Não foi possível criar o agendamento','error');
             }
         }
     });
@@ -866,24 +1321,113 @@ function showModalAgendamento(){
 
 async function handleUpload(input,tipo){
     const file=input.files[0];
-    if(!file)return;
+    if(!file){
+        return;
+    }
+    
+    // Validar tipo de arquivo
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const fileName = file.name.toLowerCase();
+    const isValidFile = validExtensions.some(ext => fileName.endsWith(ext));
+    
+    if(!isValidFile){
+        Swal.fire({
+            icon: 'error',
+            title: 'Arquivo Inválido',
+            text: 'Por favor, selecione um arquivo CSV ou Excel (.xlsx, .xls)'
+        });
+        input.value = '';
+        return;
+    }
+    
     const formData=new FormData();
     formData.append('file',file);
     formData.append('tipo',tipo);
-    Swal.fire({title:'Importando...',html:'Aguarde',allowOutsideClick:false,didOpen:()=>{Swal.showLoading();}});
+    
+    Swal.fire({
+        title: `Importando ${tipo}...`,
+        html: `
+            <div style="padding: 20px;">
+                <div class="spinner" style="margin: 20px auto;"></div>
+                <p style="margin-top: 20px;">Processando arquivo: <strong>${file.name}</strong></p>
+                <p class="text-muted">Aguarde, isso pode levar alguns segundos...</p>
+            </div>
+        `,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false
+    });
+    
     try{
-        const res=await fetch('/api/importar',{method:'POST',credentials:'include',body:formData});
+        const res=await fetch('/api/importar',{
+            method:'POST',
+            credentials:'include',
+            body:formData
+        });
+        
         const data=await res.json();
+        
         if(data.success){
-            Swal.fire({icon:'success',title:'✅ Importado!',html:`<p>${data.count_success} registros</p>${data.count_error>0?`<p class="text-danger">${data.count_error} erros</p>`:''}`});
-            if(tipo==='produtos')loadProdutosLista();
-            if(tipo==='servicos')loadServicosLista();
+            const totalRegistros = data.count_success + (data.count_error || 0);
+            const porcentagemSucesso = ((data.count_success / totalRegistros) * 100).toFixed(1);
+            
+            Swal.fire({
+                icon: data.count_error > 0 ? 'warning' : 'success',
+                title: data.count_error > 0 ? '⚠️ Importação Parcial' : '✅ Importação Concluída!',
+                html: `
+                    <div style="padding: 20px;">
+                        <div style="background: var(--bg-main); border-radius: 12px; padding: 20px; margin: 15px 0;">
+                            <h3 style="color: var(--success); margin: 0;">
+                                <i class="bi bi-check-circle"></i> ${data.count_success} registros importados
+                            </h3>
+                            ${data.count_error > 0 ? `
+                                <h4 style="color: var(--danger); margin-top: 10px;">
+                                    <i class="bi bi-x-circle"></i> ${data.count_error} erros encontrados
+                                </h4>
+                            ` : ''}
+                            <p style="margin-top: 15px; font-size: 0.9rem; color: var(--text-secondary);">
+                                Taxa de sucesso: <strong style="color: var(--primary);">${porcentagemSucesso}%</strong>
+                            </p>
+                        </div>
+                        ${data.errors && data.errors.length > 0 ? `
+                            <div style="margin-top: 20px; text-align: left;">
+                                <strong>Detalhes dos erros:</strong>
+                                <ul style="max-height: 150px; overflow-y: auto; margin-top: 10px; padding-left: 20px;">
+                                    ${data.errors.slice(0, 5).map(err => `<li style="margin: 5px 0;">${err}</li>`).join('')}
+                                    ${data.errors.length > 5 ? `<li style="color: var(--text-muted);">... e mais ${data.errors.length - 5} erros</li>` : ''}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `,
+                confirmButtonText: 'Entendi'
+            });
+            
+            // Recarregar a lista apropriada
+            if(tipo==='produtos') loadProdutosLista();
+            else if(tipo==='servicos') loadServicosLista();
+            else if(tipo==='clientes') loadClientes();
+            else if(tipo==='profissionais') loadProfissionais();
+            
         }else{
-            Swal.fire('Erro',data.message,'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro na Importação',
+                text: data.message || 'Ocorreu um erro ao processar o arquivo',
+                footer: '<small>Verifique se o arquivo está no formato correto</small>'
+            });
         }
     }catch(e){
-        Swal.fire('Erro','Erro ao importar','error');
+        console.error('❌ Erro na importação:',e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro no Upload',
+            text: 'Não foi possível enviar o arquivo. Tente novamente.',
+            footer: '<small>Verifique sua conexão e o tamanho do arquivo</small>'
+        });
     }
+    
+    // Limpar o input para permitir upload do mesmo arquivo novamente
     input.value='';
 }
 
@@ -1217,6 +1761,61 @@ async function loadRelatorios(){
         }
     }catch(e){
         console.error('❌ Relatórios error:',e);
+    }
+}
+
+async function exportarRelatorio(){
+    Swal.fire({
+        title: 'Exportando Relatório...',
+        html: '<div class="spinner"></div><p style="margin-top: 20px;">Gerando arquivo Excel...</p>',
+        allowOutsideClick: false,
+        showConfirmButton: false
+    });
+    
+    try{
+        const response = await fetch('/api/relatorios/completo', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if(!response.ok){
+            throw new Error('Erro ao gerar relatório');
+        }
+        
+        // Obter o blob do arquivo
+        const blob = await response.blob();
+        
+        // Criar URL temporária para download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Nome do arquivo com data atual
+        const dataAtual = new Date().toISOString().split('T')[0];
+        a.download = `relatorio_bioma_${dataAtual}.xlsx`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpar
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        Swal.fire({
+            icon: 'success',
+            title: '✅ Relatório Exportado!',
+            text: 'O arquivo foi baixado com sucesso',
+            timer: 2000
+        });
+        
+    }catch(e){
+        console.error('❌ Erro ao exportar relatório:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro na Exportação',
+            text: 'Não foi possível gerar o relatório. Tente novamente.'
+        });
     }
 }
 
