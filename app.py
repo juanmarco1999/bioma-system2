@@ -7,7 +7,21 @@ Email: 180147064@aluno.unb.br
 Data: 2025-10-05 21:57:49 UTC
 """
 
-from flask import Flask, render_template, request, jsonify, session, send_file
+# --- helpers de resposta seguras ---
+def ok(data=None, **extra):
+    payload = {'success': True}
+    if data is not None:
+        payload.update(data)
+    if extra:
+        payload.update(extra)
+    return jsonify(payload), 200
+
+def fail(msg="Erro no servidor", code=500):
+    return jsonify({'success': False, 'message': msg}), code
+
+
+from flask import Flask, render_template, request, jsonify, session, send_file, send_from_directory
+from flask import Response
 from flask_cors import CORS
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +34,7 @@ import urllib.parse
 import os
 import io
 import csv
+import uuid
 import json
 import re
 import requests
@@ -53,23 +68,6 @@ app.config['UPLOAD_FOLDER'] = '/tmp'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 CORS(app, supports_credentials=True)
-# ---- Cookie/CORS robustez para desenvolvimento cross-origin ----
-FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN')  # ex: http://127.0.0.1:5500 ou http://localhost:5173
-if os.getenv('CROSS_SITE_DEV','0') == '1':
-    # Para permitir cookies em requisições XHR cross-site durante desenvolvimento
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-    app.config['SESSION_COOKIE_SECURE'] = False  # Em produção use True (HTTPS)
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    try:
-        # Ajusta CORS para refletir a origem do front
-        from flask_cors import CORS
-        if FRONTEND_ORIGIN:
-            CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": FRONTEND_ORIGIN}})
-        else:
-            CORS(app, supports_credentials=True)
-    except Exception as _e:
-        pass
-
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -2296,13 +2294,6 @@ def importar():
             os.remove(filepath)
         return jsonify({'success': False}), 500
 
-
-@app.route('/api/estoque/importar', methods=['POST'])
-@login_required
-def estoque_importar_alias():
-    """Alias para importação de planilhas do estoque; reutiliza a rota /api/importar existente."""
-    return importar()
-
 @app.route('/api/template/download/<tipo>')
 @login_required
 def download_template(tipo):
@@ -2313,49 +2304,33 @@ def download_template(tipo):
     border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     if tipo == 'produtos':
         ws.title = 'Produtos BIOMA'
-        headers = ['nome','marca','sku','preco','custo','estoque','estoque_minimo','categoria']
-    elif tipo == 'clientes':
-        ws.title = 'Clientes BIOMA'
-        headers = ['cpf','nome','email','telefone','genero','data_nascimento','endereco']
-    elif tipo == 'profissionais':
-        ws.title = 'Profissionais BIOMA'
-        headers = ['cpf','nome','especialidade','email','telefone','comissao_perc','assistente_id','comissao_assistente_perc']
-    else:
-        # serviços (padrão)
-        ws.title = 'Servicos BIOMA'
-        headers = ['nome','tamanho','sku','preco','categoria','duracao_min']
-    ws.append(headers)
-    for cell in ws[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        cell.border = border
-    # largura de colunas básica (A..I)
-    for i, col in enumerate(['A','B','C','D','E','F','G','H','I'], start=1):
-        try:
+        headers = ['nome', 'marca', 'sku', 'preco', 'custo', 'estoque', 'categoria']
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        ws.append(['Shampoo 500ml', 'Loreal', 'SHAMP-500', 49.90, 20.00, 50, 'SHAMPOO'])
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
             ws.column_dimensions[col].width = 18
-        except Exception:
-            pass
+    else:
+        ws.title = 'Serviços BIOMA'
+        headers = ['nome', 'categoria', 'kids', 'masculino', 'curto', 'medio', 'longo', 'extra_longo']
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        ws.append(['Hidratação', 'Tratamento', 50, 60, 80, 100, 120, 150])
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
+            ws.column_dimensions[col].width = 15
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'template_{tipo}_bioma.xlsx')
 
-
-
-@app.route('/api/clientes/formularios', methods=['GET'])
-@login_required
-def clientes_formularios():
-    """Retorna a configuração dos formulários de Anamnese e Prontuário para renderização dinâmica no front."""
-    try:
-        return jsonify({
-            'success': True,
-            'anamnese': ANAMNESE_FORM,
-            'prontuario': PRONTUARIO_FORM
-        })
-    except Exception as e:
-        logger.exception("Erro ao carregar formulários")
-        return jsonify({'success': False, 'message': str(e)}), 500
 @app.route('/api/config', methods=['GET', 'POST'])
 @login_required
 def config():
@@ -2659,3 +2634,436 @@ if __name__ == '__main__':
     print("=" * 80 + "\n")
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
+
+
+@app.route('/api/estoque/exportar')
+@login_required
+def estoque_exportar():
+    try:
+        wb = Workbook(); ws = wb.active; ws.title = "Estoque"
+        ws.append(['SKU','Produto','Marca','Estoque Atual','Estoque Mínimo'])
+        if db is not None and 'produtos' in db.list_collection_names():
+            for p in db.produtos.find({}).sort('nome', ASCENDING):
+                ws.append([p.get('sku',''), p.get('nome',''), p.get('marca',''),
+                           float(p.get('estoque_atual',0)), float(p.get('estoque_minimo',0))])
+        bio = io.BytesIO(); wb.save(bio); bio.seek(0)
+        return send_file(bio, as_attachment=True, download_name='estoque.xlsx',
+                         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    except Exception as e:
+        logger.exception("estoque_exportar")
+        return fail("Erro ao exportar estoque", 500)
+
+
+@app.route('/api/importar/servicos', methods=['POST'])
+@login_required
+def importar_servicos():
+    if 'arquivo' not in request.files:
+        return fail('Arquivo não enviado', 400)
+    f = request.files['arquivo']
+    fname = (f.filename or '').lower()
+    if not (fname.endswith('.csv') or fname.endswith('.tsv') or fname.endswith('.txt')):
+        return fail('Formato inválido. Use CSV/TSV.', 400)
+    try:
+        txt = f.stream.read().decode('utf-8', errors='ignore').splitlines()
+        try:
+            rdr = csv.DictReader(txt, delimiter=';')
+            # se não achar ;, tenta vírgula
+            if rdr.fieldnames and len(rdr.fieldnames) == 1:
+                rdr = csv.DictReader(txt, delimiter=',')
+        except Exception:
+            rdr = csv.DictReader(txt, delimiter=',')
+        ok_count = 0
+        if db is None:
+            return ok({'importados': 0})
+        for row in rdr:
+            nome = (row.get('nome') or row.get('servico') or '').strip()
+            if not nome: 
+                continue
+            item = {
+                'nome': nome,
+                'preco': float(row.get('preco',0) or 0),
+                'duracao_min': int(float(row.get('duracao_min', 0) or 0)),
+                'categoria': (row.get('categoria') or '').strip(),
+                'ativo': True,
+                'criado_em': datetime.now()
+            }
+            db.servicos.update_one({'nome': nome}, {'$set': item}, upsert=True)
+            ok_count += 1
+        return ok({'importados': ok_count})
+    except Exception as e:
+        logger.exception("importar_servicos")
+        return fail('Erro ao importar serviços', 500)
+
+
+# --- Upload de foto para profissionais ---
+UPLOAD_PROF_DIR = os.path.join(app.config.get('UPLOAD_FOLDER', '/tmp'), 'fotos_profissionais')
+try:
+    os.makedirs(UPLOAD_PROF_DIR, exist_ok=True)
+except Exception:
+    pass
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png','jpg','jpeg','gif','webp'}
+
+@app.route('/uploads/profissionais/<path:filename>')
+def serve_prof_pic(filename):
+    return send_from_directory(UPLOAD_PROF_DIR, filename, as_attachment=False)
+
+@app.route('/api/profissionais/<id>/foto', methods=['POST'])
+@login_required
+def upload_prof_foto(id):
+    if 'foto' not in request.files:
+        return fail('Arquivo não enviado', 400)
+    file = request.files['foto']
+    if file.filename == '' or not allowed_file(file.filename):
+        return fail('Extensão inválida', 400)
+    ext = file.filename.rsplit('.',1)[1].lower()
+    fname = f"{uuid.uuid4().hex}.{ext}"
+    path = os.path.join(UPLOAD_PROF_DIR, secure_filename(fname))
+    file.save(path)
+    foto_url = f"/uploads/profissionais/{fname}"
+    try:
+        if db is not None:
+            db.profissionais.update_one({'_id': ObjectId(id)}, {'$set': {'foto_url': foto_url}})
+    except Exception:
+        pass
+    return ok({'foto_url': foto_url})
+
+
+@app.route('/api/comissoes/calcular', methods=['POST'])
+@login_required
+def calcular_comissao():
+    try:
+        data = request.json or {}
+        val = float(data.get('valor_orcamento', 0) or 0)
+        prof_id = data.get('profissional_id')
+        if db is None or not prof_id:
+            return ok({'comissoes': {'profissional': {'valor': 0}, 'assistente': {'valor': 0}, 'total_comissoes': 0}})
+        prof = db.profissionais.find_one({'_id': ObjectId(prof_id)})
+        if not prof:
+            return fail('Profissional não encontrado', 404)
+        cperc = float(prof.get('comissao_perc',0) or 0)
+        c_prof = round(val * cperc/100.0, 2)
+        asst = prof.get('assistente', {}) or {}
+        asst_perc = float(asst.get('perc_sobre_prof',0) or 0)
+        c_asst = round(c_prof * asst_perc/100.0, 2)
+        asst_nome = data.get('assistente_nome') or asst.get('nome')
+        return ok({'comissoes': {
+            'profissional': {'nome': prof.get('nome'), 'perc': cperc, 'valor': c_prof},
+            'assistente': {'nome': asst_nome, 'perc_sobre_prof': asst_perc, 'valor': c_asst},
+            'total_comissoes': round(c_prof + c_asst, 2)
+        }})
+    except Exception as e:
+        logger.exception("calcular_comissao")
+        return fail('Erro ao calcular comissão', 500)
+
+@app.route('/api/comissoes/lancar', methods=['POST'])
+@login_required
+def lancar_comissao():
+    try:
+        d = request.json or {}
+        if db is None:
+            return fail('DB offline', 500)
+        prof = db.profissionais.find_one({'_id': ObjectId(d['profissional_id'])})
+        if not prof:
+            return fail('Profissional não encontrado', 404)
+        val = float(d.get('valor_orcamento',0) or 0)
+        c_prof = round(val * float(prof.get('comissao_perc',0) or 0)/100.0, 2)
+        asst_cfg = prof.get('assistente', {}) or {}
+        asst_perc = float(asst_cfg.get('perc_sobre_prof',0) or 0)
+        c_asst = round(c_prof * asst_perc/100.0, 2)
+        asst_nome = d.get('assistente_nome') or asst_cfg.get('nome')
+        doc = {
+            'orcamento_id': d.get('orcamento_id'),
+            'profissional_id': str(prof['_id']),
+            'profissional_nome': prof.get('nome'),
+            'assistente_nome': asst_nome,
+            'valor_orcamento': val,
+            'comissao_profissional': c_prof,
+            'comissao_assistente': c_asst,
+            'criado_em': datetime.now()
+        }
+        db.comissoes.insert_one(doc)
+        return ok({'lancado': True, 'comissao': convert_objectid(doc)})
+    except Exception as e:
+        logger.exception("lancar_comissao")
+        return fail('Erro ao lançar comissão', 500)
+
+@app.route('/api/comissoes/relatorio')
+@login_required
+def comissoes_relatorio():
+    ini = request.args.get('ini')
+    fim = request.args.get('fim')
+    try:
+        dt_ini = datetime.fromisoformat(ini) if ini else datetime.now().replace(day=1, hour=0, minute=0, second=0)
+        dt_fim = datetime.fromisoformat(fim) if fim else datetime.now()
+        if db is None:
+            return ok({'itens': []})
+        cur = db.comissoes.find({'criado_em': {'$gte': dt_ini, '$lte': dt_fim}})
+        por_prof = {}
+        for c in cur:
+            k = c.get('profissional_nome','(sem nome)')
+            p = por_prof.setdefault(k, {'comissao_prof':0.0, 'comissao_asst':0.0, 'qtd':0})
+            p['comissao_prof'] += float(c.get('comissao_profissional',0) or 0)
+            p['comissao_asst'] += float(c.get('comissao_assistente',0) or 0)
+            p['qtd'] += 1
+        itens = []
+        for nome, agg in por_prof.items():
+            itens.append({
+                'profissional': nome,
+                'qtd_servicos': agg['qtd'],
+                'valor_profissional': round(agg['comissao_prof'],2),
+                'valor_assistente': round(agg['comissao_asst'],2),
+                'total': round(agg['comissao_prof']+agg['comissao_asst'],2)
+            })
+        return ok({'itens': itens})
+    except Exception as e:
+        logger.exception("comissoes_relatorio")
+        return ok({'itens': []})
+
+
+@app.route('/api/analytics/heatmap')
+@login_required
+def analytics_heatmap():
+    dias = int(request.args.get('dias', 90))
+    fim = datetime.now().replace(hour=23, minute=59, second=59)
+    ini = fim - timedelta(days=dias-1)
+
+    def serie(col, campo_dt):
+        if db is None or col not in db.list_collection_names():
+            return {}
+        pipe = [
+            {'$match': { campo_dt: {'$gte': ini, '$lte': fim} }},
+            {'$group': {
+                '_id': { '$dateToString': { 'format': '%Y-%m-%d', 'date': f'${campo_dt}' } },
+                'qtd': {'$sum': 1}
+            }}
+        ]
+        out = {}
+        for d in db[col].aggregate(pipe):
+            out[d['_id']] = d['qtd']
+        return out
+
+    ag = serie('agendamentos', 'data')
+    orc = serie('orcamentos', 'created_at')
+
+    resp = []
+    cur = ini
+    while cur <= fim:
+        key = cur.strftime('%Y-%m-%d')
+        resp.append({
+            'dia': key,
+            'agendamentos': ag.get(key, 0),
+            'orcamentos': orc.get(key, 0),
+            'score': ag.get(key, 0) + orc.get(key, 0)
+        })
+        cur += timedelta(days=1)
+    return ok({'heatmap': resp})
+
+
+@app.route('/api/search')
+@login_required
+def search():
+    termo = (request.args.get('q') or '').strip()
+    if not termo:
+        return ok({'clientes':[], 'profissionais':[], 'servicos':[], 'produtos':[], 'orcamentos':[]})
+    rgx = {'$regex': termo, '$options':'i'}
+    if db is None:
+        return ok({'clientes':[], 'profissionais':[], 'servicos':[], 'produtos':[], 'orcamentos':[]})
+    out = {
+      'clientes': [ {'_id': str(x['_id']), 'nome': x.get('nome',''), 'cpf': x.get('cpf','')} for x in db.clientes.find({'$or':[{'nome':rgx},{'cpf':rgx},{'email':rgx},{'telefone':rgx}]}).limit(10) ] if 'clientes' in db.list_collection_names() else [],
+      'profissionais': [ {'_id': str(x['_id']), 'nome': x.get('nome',''), 'foto_url': x.get('foto_url','')} for x in db.profissionais.find({'nome':rgx}).limit(10) ] if 'profissionais' in db.list_collection_names() else [],
+      'servicos': [ {'_id': str(x['_id']), 'nome': x.get('nome','')} for x in db.servicos.find({'$or':[{'nome':rgx},{'categoria':rgx}]}).limit(10) ] if 'servicos' in db.list_collection_names() else [],
+      'produtos': [ {'_id': str(x['_id']), 'nome': x.get('nome',''), 'sku': x.get('sku','')} for x in db.produtos.find({'$or':[{'nome':rgx},{'marca':rgx},{'sku':rgx}]}).limit(10) ] if 'produtos' in db.list_collection_names() else [],
+      'orcamentos': [ {'_id': str(x['_id']), 'numero': x.get('numero',''), 'cliente': x.get('cliente_nome','')} for x in db.orcamentos.find({'$or':[{'cliente_nome':rgx},{'numero':rgx}]}).limit(10) ] if 'orcamentos' in db.list_collection_names() else []
+    }
+    return ok(out)
+
+@app.route('/api/clientes/formularios')
+@login_required
+def clientes_formularios():
+    try:
+        return ok({'anamnese': ANAMNESE_FORM, 'prontuario': PRONTUARIO_FORM})
+    except Exception as e:
+        logger.exception("clientes_formularios")
+        return fail('Erro ao carregar formulários', 500)
+
+@app.route('/api/clientes/lista/pdf')
+@login_required
+def clientes_lista_pdf():
+    try:
+        q = request.args.get('q','').strip()
+        buffer = io.BytesIO()
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        c = canvas.Canvas(buffer, pagesize=A4)
+        w, h = A4
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(20*mm, h-20*mm, "Clientes - Lista")
+        y = h-30*mm
+        c.setFont("Helvetica", 9)
+        filtro = {}
+        if q:
+            rgx = {'$regex': q, '$options': 'i'}
+            filtro = {'$or':[{'nome':rgx},{'cpf':rgx},{'email':rgx},{'telefone':rgx}]}
+        cur = db.clientes.find(filtro).sort('nome', ASCENDING) if db is not None and 'clientes' in db.list_collection_names() else []
+        for cli in cur:
+            linha = f"{cli.get('nome','')}  |  {cli.get('telefone','')}  |  {cli.get('email','')}"
+            c.drawString(20*mm, y, linha[:100])
+            y -= 6*mm
+            if y < 20*mm:
+                c.showPage(); y = h-20*mm; c.setFont("Helvetica", 9)
+        c.showPage(); c.save()
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="clientes.pdf", mimetype="application/pdf")
+    except Exception as e:
+        logger.exception("clientes_lista_pdf")
+        return fail('Erro ao gerar PDF de clientes', 500)
+
+@app.route('/api/profissionais/comissoes/pdf')
+@login_required
+def prof_comissoes_pdf():
+    try:
+        ini = request.args.get('ini')
+        fim = request.args.get('fim')
+        # Reaproveita a agregação de /api/comissoes/relatorio
+        dt_ini = datetime.fromisoformat(ini) if ini else datetime.now().replace(day=1, hour=0, minute=0, second=0)
+        dt_fim = datetime.fromisoformat(fim) if fim else datetime.now()
+        cur = db.comissoes.find({'criado_em': {'$gte': dt_ini, '$lte': dt_fim}}) if db is not None and 'comissoes' in db.list_collection_names() else []
+        agrup = {}
+        for cdoc in cur:
+            nome = cdoc.get('profissional_nome','(sem nome)')
+            g = agrup.setdefault(nome, {'prof':0.0,'asst':0.0,'qtd':0})
+            g['prof'] += float(cdoc.get('comissao_profissional',0) or 0)
+            g['asst'] += float(cdoc.get('comissao_assistente',0) or 0)
+            g['qtd'] += 1
+        # PDF
+        buffer = io.BytesIO()
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        c = canvas.Canvas(buffer, pagesize=A4)
+        w, h = A4
+        c.setFont("Helvetica-Bold", 12)
+        titulo = f"Comissões por Profissional ({dt_ini.date()} a {dt_fim.date()})"
+        c.drawString(20*mm, h-20*mm, titulo)
+        y = h-30*mm
+        c.setFont("Helvetica", 9)
+        for nome, g in sorted(agrup.items(), key=lambda x: x[0].lower()):
+            total = g['prof']+g['asst']
+            linha = f"{nome}  |  Prof: R$ {g['prof']:.2f}  |  Assist: R$ {g['asst']:.2f}  |  Total: R$ {total:.2f}  |  Itens: {g['qtd']}"
+            c.drawString(20*mm, y, linha[:115])
+            y -= 6*mm
+            if y < 20*mm: c.showPage(); y=h-20*mm; c.setFont("Helvetica", 9)
+        c.showPage(); c.save()
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="comissoes_profissionais.pdf", mimetype="application/pdf")
+    except Exception as e:
+        logger.exception("prof_comissoes_pdf")
+        return fail('Erro ao gerar PDF de comissões', 500)
+
+@app.route('/api/relatorios/completo.xlsx')
+@login_required
+def relatorio_completo_xlsx():
+    try:
+        wb = Workbook()
+        # Aba Resumo
+        ws = wb.active; ws.title = "Resumo"
+        ws.append(['Métrica','Valor'])
+        # KPIs básicos
+        total_cli = db.clientes.count_documents({}) if db is not None and 'clientes' in db.list_collection_names() else 0
+        total_prof = db.profissionais.count_documents({}) if db is not None and 'profissionais' in db.list_collection_names() else 0
+        total_prod = db.produtos.count_documents({}) if db is not None and 'produtos' in db.list_collection_names() else 0
+        total_serv = db.servicos.count_documents({}) if db is not None and 'servicos' in db.list_collection_names() else 0
+        ws.append(['Clientes', total_cli]); ws.append(['Profissionais', total_prof]); ws.append(['Produtos', total_prod]); ws.append(['Serviços', total_serv])
+        # Aba Estoque
+        ws2 = wb.create_sheet("Estoque")
+        ws2.append(['SKU','Produto','Marca','Estoque Atual','Estoque Mínimo'])
+        if db is not None and 'produtos' in db.list_collection_names():
+            for pdoc in db.produtos.find({}).sort('nome', ASCENDING):
+                ws2.append([pdoc.get('sku',''), pdoc.get('nome',''), pdoc.get('marca',''), pdoc.get('estoque_atual',0), pdoc.get('estoque_minimo',0)])
+        # Aba Comissões
+        ws3 = wb.create_sheet("Comissões")
+        ws3.append(['Profissional','Qtd','Valor Prof.','Valor Assist.','Total'])
+        if db is not None and 'comissoes' in db.list_collection_names():
+            agr = {}
+            for c in db.comissoes.find({}):
+                nome = c.get('profissional_nome','(sem nome)')
+                g = agr.setdefault(nome, {'prof':0.0,'asst':0.0,'qtd':0})
+                g['prof'] += float(c.get('comissao_profissional',0) or 0)
+                g['asst'] += float(c.get('comissao_assistente',0) or 0)
+                g['qtd'] += 1
+            for nome, g in agr.items():
+                ws3.append([nome, g['qtd'], round(g['prof'],2), round(g['asst'],2), round(g['prof']+g['asst'],2)])
+        # Retorno
+        output = io.BytesIO(); wb.save(output); output.seek(0)
+        return send_file(output, as_attachment=True, download_name="relatorio_completo.xlsx", mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    except Exception as e:
+        logger.exception("relatorio_completo_xlsx")
+        return fail('Erro ao gerar relatório completo', 500)
+
+@app.route('/api/agendamentos/disponibilidade')
+@login_required
+def ag_disponibilidade():
+    try:
+        data_str = request.args.get('data')  # YYYY-MM-DD
+        prof_id = request.args.get('profissional_id')
+        if not data_str: 
+            data_ref = datetime.now().date()
+        else:
+            data_ref = datetime.fromisoformat(data_str).date()
+        # slots base (exemplo 09:00-18:00 de hora em hora)
+        base = [f"{h:02d}:00" for h in range(9, 19)]
+        ocupados = set()
+        if db is not None and 'agendamentos' in db.list_collection_names():
+            q = {'data': {'$gte': datetime.combine(data_ref, datetime.min.time()), '$lte': datetime.combine(data_ref, datetime.max.time())}}
+            if prof_id: q['profissional_id'] = prof_id
+            for ag in db.agendamentos.find(q):
+                hr = ag.get('hora') or ag.get('hora_inicio')
+                if hr: ocupados.add(hr[:5])
+        livres = [h for h in base if h not in ocupados]
+        return ok({'data': str(data_ref), 'livres': livres, 'ocupados': sorted(list(ocupados))})
+    except Exception as e:
+        logger.exception("ag_disponibilidade")
+        return ok({'data': data_str or '', 'livres': [], 'ocupados': []})
+
+@app.route('/api/agendamentos/heatmap')
+@login_required
+def ag_heatmap():
+    try:
+        # proxy para /api/analytics/heatmap (compatibilidade com front antigo)
+        return analytics_heatmap()
+    except Exception as e:
+        logger.exception("ag_heatmap")
+        return ok({'heatmap': []})
+
+import time
+from queue import Queue
+
+_sse_clients = []
+
+def sse_format(event, data):
+    return f"event: {event}\ndata: {data}\n\n"
+
+@app.route('/api/stream')
+def sse_stream():
+    def gen():
+        q = Queue()
+        _sse_clients.append(q)
+        try:
+            # heartbeat
+            yield sse_format('ping', '{"ok":true}')
+            while True:
+                try:
+                    item = q.get(timeout=25)
+                    yield item
+                except Exception:
+                    yield sse_format('ping', '{"t":%d}' % int(time.time()))
+        finally:
+            try:
+                _sse_clients.remove(q)
+            except Exception:
+                pass
+    headers = {'Content-Type':'text/event-stream', 'Cache-Control':'no-cache', 'Connection':'keep-alive'}
+    return Response(gen(), headers=headers)
