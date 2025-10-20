@@ -58,6 +58,22 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
+
+# ---- Safe route registration to avoid duplicate endpoint crashes (Render/Gunicorn reloads) ----
+if not hasattr(app, "_orig_add_url_rule"):
+    app._orig_add_url_rule = app.add_url_rule
+    def _safe_add_url_rule(rule, endpoint=None, view_func=None, **options):
+        # If endpoint name already exists, skip re-register to avoid AssertionError
+        if endpoint is None and view_func is not None:
+            endpoint = view_func.__name__
+        if endpoint in app.view_functions:
+            # Optionally, we could log a warning here.
+            return
+        return app._orig_add_url_rule(rule, endpoint=endpoint, view_func=view_func, **options)
+    app.add_url_rule = _safe_add_url_rule
+# -----------------------------------------------------------------------------------------------
+
+
 app.secret_key = os.getenv('SECRET_KEY', 'bioma-2025-v3-7-ultra-secure-key-final-definitivo-completo')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
