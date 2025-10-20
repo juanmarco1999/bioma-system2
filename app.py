@@ -7,7 +7,7 @@ Email: 180147064@aluno.unb.br
 Data: 2025-10-05 21:57:49 UTC
 """
 
-from flask import Flask, render_template, request, jsonify, session, send_file, Response
+from flask import Flask, render_template, request, jsonify, session, send_file
 from flask_cors import CORS
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -53,6 +53,23 @@ app.config['UPLOAD_FOLDER'] = '/tmp'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 CORS(app, supports_credentials=True)
+# ---- Cookie/CORS robustez para desenvolvimento cross-origin ----
+FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN')  # ex: http://127.0.0.1:5500 ou http://localhost:5173
+if os.getenv('CROSS_SITE_DEV','0') == '1':
+    # Para permitir cookies em requisições XHR cross-site durante desenvolvimento
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+    app.config['SESSION_COOKIE_SECURE'] = False  # Em produção use True (HTTPS)
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    try:
+        # Ajusta CORS para refletir a origem do front
+        from flask_cors import CORS
+        if FRONTEND_ORIGIN:
+            CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": FRONTEND_ORIGIN}})
+        else:
+            CORS(app, supports_credentials=True)
+    except Exception as _e:
+        pass
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -1018,7 +1035,6 @@ def entrada_estoque():
         
         entrada_id = db.estoque_entradas_pendentes.insert_one(entrada_data).inserted_id
         logger.info(f"✅ Entrada de estoque registrada (pendente): Produto {data['produto_id']}")
-
         
         return jsonify({'success': True, 'message': 'Entrada registrada! Aguardando aprovação.', 'id': str(entrada_id)})
     except Exception as e:
@@ -1167,7 +1183,6 @@ def saida_estoque():
         })
         
         logger.info(f"✅ Saída de estoque registrada: Produto {data['produto_id']}")
-
         return jsonify({'success': True, 'message': 'Saída registrada com sucesso!'})
         
     except Exception as e:
@@ -2275,12 +2290,18 @@ def importar():
                     count_error += 1
         if os.path.exists(filepath):
             os.remove(filepath)
-
         return jsonify({'success': True, 'message': f'{count_success} importados!', 'count_success': count_success, 'count_error': count_error})
     except Exception as e:
         if os.path.exists(filepath):
             os.remove(filepath)
         return jsonify({'success': False}), 500
+
+
+@app.route('/api/estoque/importar', methods=['POST'])
+@login_required
+def estoque_importar_alias():
+    """Alias para importação de planilhas do estoque; reutiliza a rota /api/importar existente."""
+    return importar()
 
 @app.route('/api/template/download/<tipo>')
 @login_required
@@ -2292,33 +2313,49 @@ def download_template(tipo):
     border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     if tipo == 'produtos':
         ws.title = 'Produtos BIOMA'
-        headers = ['nome', 'marca', 'sku', 'preco', 'custo', 'estoque', 'categoria']
-        ws.append(headers)
-        for cell in ws[1]:
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = border
-        ws.append(['Shampoo 500ml', 'Loreal', 'SHAMP-500', 49.90, 20.00, 50, 'SHAMPOO'])
-        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G']:
-            ws.column_dimensions[col].width = 18
+        headers = ['nome','marca','sku','preco','custo','estoque','estoque_minimo','categoria']
+    elif tipo == 'clientes':
+        ws.title = 'Clientes BIOMA'
+        headers = ['cpf','nome','email','telefone','genero','data_nascimento','endereco']
+    elif tipo == 'profissionais':
+        ws.title = 'Profissionais BIOMA'
+        headers = ['cpf','nome','especialidade','email','telefone','comissao_perc','assistente_id','comissao_assistente_perc']
     else:
-        ws.title = 'Serviços BIOMA'
-        headers = ['nome', 'categoria', 'kids', 'masculino', 'curto', 'medio', 'longo', 'extra_longo']
-        ws.append(headers)
-        for cell in ws[1]:
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = border
-        ws.append(['Hidratação', 'Tratamento', 50, 60, 80, 100, 120, 150])
-        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
-            ws.column_dimensions[col].width = 15
+        # serviços (padrão)
+        ws.title = 'Servicos BIOMA'
+        headers = ['nome','tamanho','sku','preco','categoria','duracao_min']
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = border
+    # largura de colunas básica (A..I)
+    for i, col in enumerate(['A','B','C','D','E','F','G','H','I'], start=1):
+        try:
+            ws.column_dimensions[col].width = 18
+        except Exception:
+            pass
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
     return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name=f'template_{tipo}_bioma.xlsx')
 
+
+
+@app.route('/api/clientes/formularios', methods=['GET'])
+@login_required
+def clientes_formularios():
+    """Retorna a configuração dos formulários de Anamnese e Prontuário para renderização dinâmica no front."""
+    try:
+        return jsonify({
+            'success': True,
+            'anamnese': ANAMNESE_FORM,
+            'prontuario': PRONTUARIO_FORM
+        })
+    except Exception as e:
+        logger.exception("Erro ao carregar formulários")
+        return jsonify({'success': False, 'message': str(e)}), 500
 @app.route('/api/config', methods=['GET', 'POST'])
 @login_required
 def config():
@@ -2622,317 +2659,3 @@ if __name__ == '__main__':
     print("=" * 80 + "\n")
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
-
-
-# ======= SSE (Server-Sent Events) =======
-import queue, json
-class EventBroadcaster:
-    def __init__(self):
-        self.subscribers = []  # SimpleQueue per client
-    def subscribe(self):
-        q = queue.SimpleQueue()
-        self.subscribers.append(q)
-        return q
-    def publish(self, channel, payload):
-        msg = json.dumps({'channel': channel, 'payload': payload, 'ts': datetime.utcnow().isoformat()})
-        for q in list(self.subscribers):
-            try:
-                q.put_nowait(msg)
-            except Exception:
-                pass
-
-broadcaster = EventBroadcaster()
-
-def notify(channel, payload):
-    try:
-        broadcaster.publish(channel, payload)
-    except Exception as e:
-        logger.warning(f'notify error: {e}')
-
-@app.route('/api/stream')
-@login_required
-def sse_stream():
-    def gen():
-        q = broadcaster.subscribe()
-        # greet
-        yield "data: " + json.dumps({'channel':'hello','payload':'ok'}) + "\\n\\n"
-        while True:
-            data = q.get()  # blocking
-            yield "data: " + data + "\\n\\n"
-    return Response(gen(), mimetype='text/event-stream')
-
-
-@app.route('/api/estoque/exportar')
-@login_required
-def estoque_exportar():
-    """Exporta itens ou movimentações do estoque em Excel.
-Parâmetros:
-- tipo=movimentacoes -> exporta log, senão exporta itens
-"""
-    try:
-        tipo = request.args.get('tipo','itens')
-        wb = Workbook()
-        ws = wb.active
-        if tipo == 'movimentacoes':
-            ws.title = 'Movimentações'
-            ws.append(['Data','Tipo','Produto','SKU','Quantidade','Valor Unitário','Usuário','Observações'])
-            cur = db.estoque_movimentacoes.find({}).sort('data', DESCENDING)
-            for m in cur:
-                # buscar produto
-                prod = None
-                if m.get('produto_id'):
-                    prod = db.produtos.find_one({'_id': ObjectId(m['produto_id'])})
-                ws.append([
-                    (m.get('data') or datetime.now()).strftime('%Y-%m-%d %H:%M'),
-                    m.get('tipo','-'),
-                    (prod or {}).get('nome',''),
-                    (prod or {}).get('sku',''),
-                    int(m.get('quantidade',0) or 0),
-                    float(m.get('valor_unitario',0) or 0),
-                    m.get('usuario',''),
-                    m.get('observacoes','')
-                ])
-            fn = f"estoque_mov_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-        else:
-            ws.title = 'Estoque'
-            ws.append(['Nome','Marca','SKU','Categoria','Custo (R$)','Preço (R$)','Estoque','Mínimo','Criado em'])
-            cur = db.produtos.find({'ativo': True}).sort('nome', ASCENDING)
-            for pdoc in cur:
-                ws.append([
-                    pdoc.get('nome',''),
-                    pdoc.get('marca',''),
-                    pdoc.get('sku',''),
-                    pdoc.get('categoria',''),
-                    float(pdoc.get('custo',0) or 0),
-                    float(pdoc.get('preco',0) or 0),
-                    int(pdoc.get('estoque',0) or 0),
-                    int(pdoc.get('estoque_minimo',0) or 0),
-                    (pdoc.get('created_at') or datetime.now()).strftime('%Y-%m-%d')
-                ])
-            fn = f"estoque_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-        bio = io.BytesIO()
-        wb.save(bio); bio.seek(0)
-        return send_file(bio, as_attachment=True, download_name=fn, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    except Exception as e:
-        logger.exception("Erro ao exportar estoque")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-def _pdf_doc(buffer, title):
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36)
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Hdr', parent=styles['Heading1'], alignment=TA_CENTER, textColor=HexColor('#111827')))
-    styles.add(ParagraphStyle(name='TblHdr', parent=styles['Normal'], alignment=TA_LEFT, textColor=HexColor('#374151')))
-    return doc, styles
-
-@app.route('/api/estoque/movimentacoes/pdf')
-@login_required
-def estoque_movimentacoes_pdf():
-    try:
-        di = request.args.get('data_inicio'); df = request.args.get('data_fim'); tipo = request.args.get('tipo')
-        q = {}
-        if di or df:
-            di_dt = datetime.fromisoformat(di) if di else datetime.now()-timedelta(days=3650)
-            df_dt = datetime.fromisoformat(df) if df else datetime.now()
-            q['data'] = {'$gte': di_dt, '$lte': df_dt}
-        if tipo in ('entrada','saida'):
-            q['tipo'] = tipo
-        rows = []
-        for m in db.estoque_movimentacoes.find(q).sort('data', DESCENDING):
-            prod = db.produtos.find_one({'_id': ObjectId(m.get('produto_id'))}) if m.get('produto_id') else {}
-            rows.append([
-                (m.get('data') or datetime.now()).strftime('%Y-%m-%d %H:%M'),
-                m.get('tipo','-'),
-                prod.get('nome',''),
-                prod.get('sku',''),
-                int(m.get('quantidade',0) or 0),
-                f"R$ {float(m.get('valor_unitario',0) or 0):.2f}",
-                m.get('usuario',''),
-                m.get('observacoes','')
-            ])
-        buf = io.BytesIO()
-        doc, styles = _pdf_doc(buf, "Movimentações de Estoque")
-        story = [Paragraph("Movimentações de Estoque", styles['Hdr']), Spacer(1,12)]
-        data = [['Data','Tipo','Produto','SKU','Qtd','Valor Unit.','Usuário','Obs.']] + rows
-        table = Table(data, repeatRows=1)
-        table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0), HexColor('#EEF2FF')),
-                                   ('TEXTCOLOR',(0,0),(-1,0), HexColor('#111827')),
-                                   ('GRID',(0,0),(-1,-1),0.25, HexColor('#E5E7EB')),
-                                   ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold')]))
-        story += [table]
-        doc.build(story)
-        buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name='movimentacoes_estoque.pdf', mimetype='application/pdf')
-    except Exception as e:
-        logger.exception("Erro PDF movimentações")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@app.route('/api/clientes/lista/pdf')
-@login_required
-def clientes_lista_pdf():
-    try:
-        q = (request.args.get('q') or '').strip()
-        filtro = {}
-        if q:
-            filtro['$or'] = [{'nome': {'$regex': q, '$options': 'i'}},
-                             {'email': {'$regex': q, '$options': 'i'}},
-                             {'telefone': {'$regex': q, '$options': 'i'}}]
-        rows = []
-        for c in db.clientes.find(filtro).sort('nome', ASCENDING):
-            rows.append([c.get('nome',''), c.get('cpf',''), c.get('email',''), c.get('telefone',''),
-                         c.get('genero',''), c.get('data_nascimento','')])
-        buf = io.BytesIO()
-        doc, styles = _pdf_doc(buf, "Lista de Clientes")
-        story = [Paragraph("Lista de Clientes", styles['Hdr']), Spacer(1,12)]
-        data = [['Nome','CPF','E-mail','Telefone','Gênero','Nascimento']] + rows
-        table = Table(data, repeatRows=1)
-        table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0), HexColor('#EEF2FF')),
-                                   ('GRID',(0,0),(-1,-1),0.25, HexColor('#E5E7EB')),
-                                   ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold')]))
-        story += [table]
-        doc.build(story)
-        buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name='clientes.pdf', mimetype='application/pdf')
-    except Exception as e:
-        logger.exception("Erro PDF clientes")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-def _calc_comissoes(di, df):
-    prof_index = {str(p['_id']): p for p in db.profissionais.find({})}
-    totais = {}
-    cur = db.orcamentos.find({'status':'Aprovado', 'created_at': {'$gte': di, '$lte': df}})
-    for orc in cur:
-        for s in orc.get('servicos', []):
-            val = float(s.get('total', s.get('preco', 0)) or 0)
-            pid = str(s.get('profissional_id') or '')
-            perc = 0.0
-            if pid and pid in prof_index:
-                perc = float(prof_index[pid].get('comissao_perc', 0) or 0)
-            com = val * (perc/100.0)
-            if pid not in totais:
-                totais[pid] = {'valor_servicos': 0.0, 'comissao': 0.0}
-            totais[pid]['valor_servicos'] += val
-            totais[pid]['comissao'] += com
-    out = []
-    for pid, info in totais.items():
-        nome = prof_index.get(pid, {}).get('nome', '—')
-        out.append([nome, f"R$ {info['valor_servicos']:.2f}", f"R$ {info['comissao']:.2f}"])
-    return out
-
-@app.route('/api/profissionais/comissoes/pdf')
-@login_required
-def prof_comissoes_pdf():
-    try:
-        di = request.args.get('data_inicio'); df = request.args.get('data_fim')
-        di_dt = datetime.fromisoformat(di) if di else datetime.now()-timedelta(days=30)
-        df_dt = datetime.fromisoformat(df) if df else datetime.now()
-        rows = _calc_comissoes(di_dt, df_dt)
-        buf = io.BytesIO()
-        doc, styles = _pdf_doc(buf, "Comissões por Profissional")
-        story = [Paragraph("Comissões por Profissional", styles['Hdr']), Spacer(1,12)]
-        data = [['Profissional','Valor em Serviços','Comissão (R$)']] + rows
-        table = Table(data, repeatRows=1)
-        table.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0), HexColor('#EEF2FF')),
-                                   ('GRID',(0,0),(-1,-1),0.25, HexColor('#E5E7EB')),
-                                   ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold')]))
-        story += [table]
-        doc.build(story)
-        buf.seek(0)
-        return send_file(buf, as_attachment=True, download_name='comissoes_profissionais.pdf', mimetype='application/pdf')
-    except Exception as e:
-        logger.exception("Erro PDF comissões")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@app.route('/api/agendamentos/disponibilidade')
-@login_required
-def ag_disponibilidade():
-    prof_id = request.args.get('profissional_id'); data = request.args.get('data')
-    if not (prof_id and data):
-        return jsonify({'success': False, 'message': 'profissional_id e data são obrigatórios'}), 400
-    y,m,d = [int(x) for x in data.split('-')]
-    inicio, fim, passo = 8, 20, 15
-    slots = []
-    dt = datetime(y,m,d, inicio, 0)
-    end = datetime(y,m,d, fim, 0)
-    while dt < end:
-        slots.append(dt.strftime('%H:%M'))
-        dt += timedelta(minutes=passo)
-    ags = list(db.agendamentos.find({'profissional_id': prof_id, 'data': data}))
-    ocupados = set([a.get('hora') for a in ags if a.get('hora')])
-    res = [{'hora': h, 'status': ('ocupado' if h in ocupados else 'livre')} for h in slots]
-    return jsonify({'success': True, 'profissional_id': prof_id, 'data': data, 'slots': res})
-
-
-@app.route('/api/agendamentos/heatmap')
-@login_required
-def ag_heatmap():
-    try:
-        dias = int(request.args.get('dias', 60))
-    except:
-        dias = 60
-    fim = datetime.utcnow()
-    ini = fim - timedelta(days=dias)
-    def agg(col, field='created_at'):
-        pipe = [
-            {'$match': {field: {'$gte': ini, '$lte': fim}}},
-            {'$group': {'_id': {'$dateToString': {'format':'%Y-%m-%d', 'date': f'${field}'}}, 'count': {'$sum': 1}}},
-            {'$sort': {'_id': 1}}
-        ]
-        try:
-            return {x['_id']: x['count'] for x in db[col].aggregate(pipe)}
-        except Exception:
-            return {}
-    a = agg('agendamentos','created_at')
-    o = agg('orcamentos','created_at')
-    v = agg('vendas','created_at') if 'vendas' in db.list_collection_names() else {}
-    keys = sorted(set(list(a.keys())+list(o.keys())+list(v.keys())))
-    out = [{'data': k, 'agendamentos': a.get(k,0), 'orcamentos': o.get(k,0), 'vendas': v.get(k,0)} for k in keys]
-    return jsonify({'success': True, 'heatmap': out})
-
-
-@app.route('/api/relatorios/completo.xlsx')
-@login_required
-def relatorio_completo_xlsx():
-    try:
-        # Reusa a lógica do JSON para obter estatísticas
-        periodo = request.args.get('periodo', '30')
-        dias = int(periodo)
-        data_inicio = datetime.now() - timedelta(days=dias)
-        # KPIs simples
-        total_clientes = db.clientes.count_documents({})
-        total_produtos = db.produtos.count_documents({'ativo': True})
-        total_servicos = db.servicos.count_documents({'ativo': True})
-        total_profissionais = db.profissionais.count_documents({'ativo': True})
-        wb = Workbook()
-        ws = wb.active; ws.title = "Resumo"
-        ws.append(['Métrica','Valor'])
-        ws.append(['Total de clientes', total_clientes])
-        ws.append(['Total de produtos ativos', total_produtos])
-        ws.append(['Total de serviços ativos', total_servicos])
-        ws.append(['Total de profissionais ativos', total_profissionais])
-        # Aprovados por período
-        ws2 = wb.create_sheet("Orçamentos Aprovados")
-        ws2.append(['Número','Cliente','Data','Total (R$)','Status'])
-        for o in db.orcamentos.find({'status':'Aprovado','created_at':{'$gte': data_inicio}}).sort('created_at', DESCENDING):
-            ws2.append([o.get('numero',''), o.get('cliente_nome',''), (o.get('created_at') or datetime.now()).strftime('%Y-%m-%d'), float(o.get('total_final',0) or 0), o.get('status','')])
-        bio = io.BytesIO(); wb.save(bio); bio.seek(0)
-        return send_file(bio, as_attachment=True, download_name='relatorio_completo.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    except Exception as e:
-        logger.exception("Erro Excel relatorio completo")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@app.route('/api/admin/notify', methods=['POST'])
-@login_required
-def admin_notify():
-    try:
-        data = request.json or {}
-        channel = data.get('channel','events')
-        payload = data.get('payload',{})
-        notify(channel, payload)
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
