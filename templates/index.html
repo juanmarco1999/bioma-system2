@@ -95,6 +95,17 @@
         .loading-content{background:var(--bg-card);padding:40px;border-radius:20px;text-align:center;box-shadow:0 15px 50px rgba(0,0,0,0.5)}
         .loading-spinner-large{border:6px solid var(--border-color);border-top:6px solid var(--primary);border-radius:50%;width:60px;height:60px;animation:spin 1s linear infinite;margin:0 auto 20px}
 
+        /* ========== CORREÇÃO OVERFLOW/SCROLL ========== */
+        .content-section{max-height:calc(100vh - 150px);overflow-y:auto;padding:20px}
+        .content-section::-webkit-scrollbar{width:8px}
+        .content-section::-webkit-scrollbar-thumb{background:#888;border-radius:4px}
+        .content-section::-webkit-scrollbar-thumb:hover{background:#555}
+        .table-responsive{max-height:600px;overflow-y:auto;margin-bottom:20px}
+        .table-responsive::-webkit-scrollbar{width:6px}
+        .table-responsive::-webkit-scrollbar-thumb{background:var(--primary);border-radius:3px}
+        .row{margin-left:-10px;margin-right:-10px}
+        .col-md-3,.col-md-4,.col-md-6{padding-left:10px;padding-right:10px}
+
         /* Sub-tabs System */
         .sub-tabs{display:flex;gap:12px;margin-bottom:30px;border-bottom:3px solid var(--border-color);padding-bottom:0;flex-wrap:wrap}
         .sub-tab-btn{background:transparent;border:none;padding:14px 24px;font-weight:700;font-size:0.95rem;color:var(--text-secondary);cursor:pointer;border-bottom:4px solid transparent;transition:all .3s;display:flex;align-items:center;gap:8px;position:relative;bottom:-3px}
@@ -2509,16 +2520,33 @@ async function toggleTheme(){
 }
 
 function goTo(section){
-    console.log('🔄 Navegando:',section);
+    console.log('🔄 Navegando para:',section);
     try{
-        document.querySelectorAll('.content-section').forEach(s=>s.classList.remove('active'));
+        // 1. ESCONDER TODAS as seções
+        document.querySelectorAll('.content-section').forEach(s => {
+            s.classList.remove('active');
+            s.classList.add('d-none');
+        });
+        
+        // 2. MOSTRAR apenas a selecionada
         const sectionElement=document.getElementById('section-'+section);
-        if(sectionElement){sectionElement.classList.add('active');}
+        if(sectionElement){
+            sectionElement.classList.add('active');
+            sectionElement.classList.remove('d-none');
+        } else {
+            console.error('❌ Seção não encontrada:', section);
+        }
+        
+        // 3. ATUALIZAR menu sidebar
         document.querySelectorAll('.sidebar-menu a').forEach(a=>a.classList.remove('active'));
         const menu=document.getElementById('menu-'+section);
         if(menu)menu.classList.add('active');
+        
+        // 4. SCROLL para topo
         const mainContent=document.querySelector('.main-content');
         if(mainContent)mainContent.scrollTo({top:0,behavior:'smooth'});
+        
+        // 5. CARREGAR dados da seção
         if(section==='dashboard')loadDashboard();
         else if(section==='clientes')loadClientes();
         else if(section==='profissionais')loadProfissionais();
@@ -6889,14 +6917,17 @@ async function deletarProntuario(id) {
 }
 // ========== FIM ANAMNESE E PRONTUÁRIO ==========
 
-// ========== SISTEMA DE SUB-TABS GLOBAL ====================
+// ========== SISTEMA DE SUB-TABS GLOBAL (CORRIGIDO) ====================
 function switchSubTab(section, subtab) {
-    // Ocultar todas as sub-tabs da seção
+    console.log(`🔄 Mudando sub-tab: ${section} → ${subtab}`);
+    
+    // 1. ESCONDER TODOS os conteúdos desta seção
     document.querySelectorAll(`[id^="${section}-subtab-"]`).forEach(content => {
         content.classList.remove('active');
+        content.classList.add('d-none');
     });
     
-    // Desativar todos os botões de sub-tab da seção
+    // 2. DESATIVAR todos os botões
     const sectionElement = document.getElementById(`section-${section}`);
     if (sectionElement) {
         sectionElement.querySelectorAll('.sub-tab-btn').forEach(btn => {
@@ -6904,19 +6935,27 @@ function switchSubTab(section, subtab) {
         });
     }
     
-    // Ativar a sub-tab clicada
-    const targetContent = document.getElementById(`${section}-subtab-${subtab}`);
-    if (targetContent) {
-        targetContent.classList.add('active');
+    // 3. MOSTRAR apenas o selecionado
+    const targetId = `${section}-subtab-${subtab}`;
+    const targetContent = document.getElementById(targetId);
+    
+    if (!targetContent) {
+        console.error(`❌ Sub-tab não encontrada: ${targetId}`);
+        return;
     }
     
-    // Ativar o botão clicado
+    targetContent.classList.add('active');
+    targetContent.classList.remove('d-none');
+    
+    // 4. ATIVAR botão clicado
     if (event?.target) {
         event.target.classList.add('active');
     }
     
-    // Carregar dados específicos da sub-tab
+    // 5. Carregar dados
     carregarDadosSubTab(section, subtab);
+    
+    console.log(`✅ Sub-tab ativa: ${targetId}`);
 }
 
 function carregarDadosSubTab(section, subtab) {
@@ -7207,25 +7246,41 @@ async function rejeitarOrcamento(id) {
 }
 // ========== FIM SUB-TABS ORÇAMENTOS ==========
 
-// ========== SISTEMA DE SUB-TABS - AGENDAMENTOS ====================
+// ========== SISTEMA DE SUB-TABS - AGENDAMENTOS (CORRIGIDO) ====================
 async function carregarAgendamentosHoje() {
+    const FUNC_KEY = 'agendamentosHoje';
     const tbody = document.getElementById('agendamentosHojeBody');
     if (!tbody) return;
     
+    // Prevenir múltiplas chamadas
+    if (window.loadingStates && window.loadingStates[FUNC_KEY]) {
+        console.log('⏳ Já está carregando agendamentos hoje...');
+        return;
+    }
+    
     try {
-        const hoje = new Date().toISOString().split('T')[0];
-        const res = await fetch(`/api/agendamentos?data=${hoje}`, {credentials: 'include'});
+        // Marcar como carregando
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
+        console.log('📅 Carregando agendamentos de hoje...');
+        
+        const res = await fetch('/api/agendamentos/hoje', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar agendamentos');
         
-        const agendamentos = await res.json();
+        const data = await res.json();
         
-        // Atualizar estatísticas
-        const total = agendamentos.length;
-        const pendentes = agendamentos.filter(a => a.status === 'Pendente').length;
-        const confirmados = agendamentos.filter(a => a.status === 'Confirmado').length;
-        const cancelados = agendamentos.filter(a => a.status === 'Cancelado').length;
+        if (!data.success) {
+            throw new Error(data.message || 'Erro ao carregar agendamentos');
+        }
         
-        document.getElementById('agendamentosHojeTotal').textContent = total;
+        const agendamentos = data.agendamentos || [];
+        
+        // Atualizar estatísticas (vindas do backend)
+        document.getElementById('agendamentosHojeTotal').textContent = data.total || 0;
+        document.getElementById('agendamentosHojePendentes').textContent = data.pendentes || 0;
+        document.getElementById('agendamentosHojeConfirmados').textContent = data.confirmados || 0;
+        document.getElementById('agendamentosHojeCancelados').textContent = data.cancelados || 0;
         document.getElementById('agendamentosHojePendentes').textContent = pendentes;
         document.getElementById('agendamentosHojeConfirmados').textContent = confirmados;
         document.getElementById('agendamentosHojeCancelados').textContent = cancelados;
@@ -7256,21 +7311,36 @@ async function carregarAgendamentosHoje() {
             `;
         }).join('');
         
+        console.log(`✅ ${total} agendamentos carregados`);
+        
     } catch (error) {
-        console.error('Erro:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+        console.error('❌ Erro ao carregar agendamentos:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os agendamentos de hoje', 'error');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+    } finally {
+        // SEMPRE limpar estado
+        if (window.loadingStates) {
+            window.loadingStates[FUNC_KEY] = false;
+        }
     }
 }
 
 async function carregarAgendamentosSemana() {
+    const FUNC_KEY = 'agendamentosSemana';
     const tbody = document.getElementById('agendamentosSemanaBody');
     if (!tbody) return;
     
+    if (window.loadingStates?.[FUNC_KEY]) return;
+    
     try {
-        const res = await fetch('/api/agendamentos?periodo=semana', {credentials: 'include'});
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
+        const res = await fetch('/api/agendamentos/semana', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar agendamentos');
         
-        const agendamentos = await res.json();
+        const data = await res.json();
+        const agendamentos = data.agendamentos || data;
         
         if (!agendamentos || agendamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento esta semana</td></tr>';
@@ -7278,11 +7348,11 @@ async function carregarAgendamentosSemana() {
         }
         
         tbody.innerHTML = agendamentos.map(ag => {
-            const data = new Date(ag.data).toLocaleDateString('pt-BR');
+            const dataFormatada = new Date(ag.data).toLocaleDateString('pt-BR');
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
             return `
                 <tr>
-                    <td>${data}</td>
+                    <td>${dataFormatada}</td>
                     <td>${ag.horario}</td>
                     <td>${ag.cliente_nome}</td>
                     <td>${ag.servico}</td>
@@ -7301,20 +7371,30 @@ async function carregarAgendamentosSemana() {
         }).join('');
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar agendamentos da semana', 'error');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarAgendamentosMes() {
+    const FUNC_KEY = 'agendamentosMes';
     const tbody = document.getElementById('agendamentosMesBody');
     if (!tbody) return;
     
+    if (window.loadingStates?.[FUNC_KEY]) return;
+    
     try {
-        const res = await fetch('/api/agendamentos?periodo=mes', {credentials: 'include'});
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
+        const res = await fetch('/api/agendamentos/mes', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar agendamentos');
         
-        const agendamentos = await res.json();
+        const data = await res.json();
+        const agendamentos = data.agendamentos || data;
         
         if (!agendamentos || agendamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento este mês</td></tr>';
@@ -7322,11 +7402,11 @@ async function carregarAgendamentosMes() {
         }
         
         tbody.innerHTML = agendamentos.map(ag => {
-            const data = new Date(ag.data).toLocaleDateString('pt-BR');
+            const dataFormatada = new Date(ag.data).toLocaleDateString('pt-BR');
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
             return `
                 <tr>
-                    <td>${data}</td>
+                    <td>${dataFormatada}</td>
                     <td>${ag.horario}</td>
                     <td>${ag.cliente_nome}</td>
                     <td>${ag.servico}</td>
@@ -7345,14 +7425,20 @@ async function carregarAgendamentosMes() {
         }).join('');
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar agendamentos do mês', 'error');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarTodosAgendamentos() {
+    const FUNC_KEY = 'todosAgendamentos';
     const tbody = document.getElementById('agendamentosTodosBody');
     if (!tbody) return;
+    
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     const dataInicio = document.getElementById('filtroAgendamentoDataInicio')?.value || '';
     const dataFim = document.getElementById('filtroAgendamentoDataFim')?.value || '';
@@ -7398,56 +7484,85 @@ async function carregarTodosAgendamentos() {
         }).join('');
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar todos os agendamentos', 'error');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 // ========== FIM SUB-TABS AGENDAMENTOS ==========
 
 // ========== SISTEMA DE SUB-TABS - PRODUTOS ====================
 async function carregarProdutosTodos() {
+    const FUNC_KEY = 'produtosTodos';
     const tbody = document.getElementById('produtosTodosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/produtos', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar produtos');
         
-        const produtos = await res.json();
+        const data = await res.json();
+        const produtos = data.produtos || data;
+        
         renderizarTabelaProdutos(produtos, tbody, true);
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar produtos', 'error');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar produtos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarProdutosAtivos() {
+    const FUNC_KEY = 'produtosAtivos';
     const tbody = document.getElementById('produtosAtivosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/produtos?status=Ativo', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar produtos');
         
-        const produtos = await res.json();
+        const data = await res.json();
+        const produtos = data.produtos || data;
+        
         renderizarTabelaProdutos(produtos, tbody, false);
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar produtos ativos', 'error');
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar produtos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarProdutosInativos() {
+    const FUNC_KEY = 'produtosInativos';
     const tbody = document.getElementById('produtosInativosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/produtos?status=Inativo', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar produtos');
         
-        const produtos = await res.json();
+        const data = await res.json();
+        const produtos = data.produtos || data;
         
         if (!produtos || produtos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
@@ -7457,16 +7572,24 @@ async function carregarProdutosInativos() {
         renderizarTabelaProdutos(produtos, tbody, false);
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar produtos inativos', 'error');
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar produtos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarProdutosBaixoEstoque() {
+    const FUNC_KEY = 'produtosBaixoEstoque';
     const tbody = document.getElementById('produtosBaixoEstoqueBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/produtos/baixo-estoque', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar produtos');
         
@@ -7506,8 +7629,11 @@ async function carregarProdutosBaixoEstoque() {
         }).join('');
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar produtos de baixo estoque', 'error');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar produtos</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
@@ -7595,48 +7721,74 @@ async function toggleStatusProduto(id, statusAtual) {
 
 // ========== SISTEMA DE SUB-TABS - SERVIÇOS ====================
 async function carregarServicosTodos() {
+    const FUNC_KEY = 'servicosTodos';
     const tbody = document.getElementById('servicosTodosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/servicos', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar serviços');
         
-        const servicos = await res.json();
+        const data = await res.json();
+        const servicos = data.servicos || data;
+        
         renderizarTabelaServicos(servicos, tbody, true);
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar serviços', 'error');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar serviços</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarServicosAtivos() {
+    const FUNC_KEY = 'servicosAtivos';
     const tbody = document.getElementById('servicosAtivosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/servicos?status=Ativo', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar serviços');
         
-        const servicos = await res.json();
+        const data = await res.json();
+        const servicos = data.servicos || data;
+        
         renderizarTabelaServicos(servicos, tbody, false);
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar serviços ativos', 'error');
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar serviços</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarServicosInativos() {
+    const FUNC_KEY = 'servicosInativos';
     const tbody = document.getElementById('servicosInativosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/servicos?status=Inativo', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar serviços');
         
-        const servicos = await res.json();
+        const data = await res.json();
+        const servicos = data.servicos || data;
         
         if (!servicos || servicos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum serviço inativo</td></tr>';
@@ -7646,8 +7798,11 @@ async function carregarServicosInativos() {
         renderizarTabelaServicos(servicos, tbody, false);
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar serviços inativos', 'error');
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar serviços</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
@@ -7734,10 +7889,15 @@ async function toggleStatusServico(id, statusAtual) {
 
 // ========== SISTEMA DE SUB-TABS - ESTOQUE ====================
 async function carregarEstoqueVisaoGeral() {
+    const FUNC_KEY = 'estoqueVisaoGeral';
     const tbody = document.getElementById('estoqueProdutosBody');
     if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/estoque/visao-geral', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar estoque');
         
@@ -7775,20 +7935,28 @@ async function carregarEstoqueVisaoGeral() {
         }).join('');
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar visão geral do estoque', 'error');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar estoque</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarMovimentacoesEstoque() {
+    const FUNC_KEY = 'movimentacoesEstoque';
     const tbody = document.getElementById('estoqueMovimentacoesBody');
     if (!tbody) return;
-    
-    const tipo = document.getElementById('filtroTipoMov')?.value || '';
-    const dataInicio = document.getElementById('filtroDataInicioMov')?.value || '';
-    const dataFim = document.getElementById('filtroDataFimMov')?.value || '';
+    if (window.loadingStates?.[FUNC_KEY]) return;
     
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
+        const tipo = document.getElementById('filtroTipoMov')?.value || '';
+        const dataInicio = document.getElementById('filtroDataInicioMov')?.value || '';
+        const dataFim = document.getElementById('filtroDataFimMov')?.value || '';
+        
         let url = '/api/estoque/movimentacoes?';
         if (tipo) url += `tipo=${tipo}&`;
         if (dataInicio) url += `data_inicio=${dataInicio}&`;
@@ -7822,16 +7990,26 @@ async function carregarMovimentacoesEstoque() {
         }).join('');
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar movimentações de estoque', 'error');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar movimentações</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarAlertasEstoque() {
+    const FUNC_KEY = 'alertasEstoque';
     const tbody = document.getElementById('estoqueBaixoBody');
     const ultimasMovBody = document.getElementById('estoqueUltimasMovimentacoesBody');
     
+    if (!tbody) return;
+    if (window.loadingStates?.[FUNC_KEY]) return;
+    
     try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
         const res = await fetch('/api/estoque/alertas', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar alertas');
         
@@ -7894,14 +8072,31 @@ async function carregarAlertasEstoque() {
         }
         
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar alertas de estoque', 'error');
         if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar alertas</td></tr>';
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
 }
 
 async function carregarRelatoriosEstoque() {
-    // Inicializar gráficos se necessário
-    console.log('Relatórios de estoque carregados');
+    const FUNC_KEY = 'relatoriosEstoque';
+    if (window.loadingStates?.[FUNC_KEY]) return;
+    
+    try {
+        if (!window.loadingStates) window.loadingStates = {};
+        window.loadingStates[FUNC_KEY] = true;
+        
+        // Inicializar gráficos se necessário
+        console.log('📊 Relatórios de estoque carregados');
+        
+    } catch (error) {
+        console.error('❌ Erro:', error);
+        Swal.fire('Erro', 'Falha ao carregar relatórios', 'error');
+    } finally {
+        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
+    }
 }
 
 function filtrarEstoqueGeral() {

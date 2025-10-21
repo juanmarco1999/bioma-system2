@@ -1718,6 +1718,171 @@ def delete_agendamento(id):
     except:
         return jsonify({'success': False}), 500
 
+# ========== NOVOS ENDPOINTS AGENDAMENTOS - SUB-TABS ==========
+@app.route('/api/agendamentos/hoje', methods=['GET'])
+@login_required
+def agendamentos_hoje():
+    """Buscar agendamentos de hoje com estatísticas"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
+    
+    try:
+        hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        amanha = hoje + timedelta(days=1)
+        
+        # Buscar agendamentos de hoje
+        agendamentos = list(db.agendamentos.find({
+            'data': {'$gte': hoje, '$lt': amanha}
+        }).sort('horario', ASCENDING))
+        
+        resultado = []
+        confirmados = 0
+        pendentes = 0
+        concluidos = 0
+        cancelados = 0
+        
+        for a in agendamentos:
+            # Buscar dados relacionados
+            cliente = db.clientes.find_one({'_id': ObjectId(a['cliente_id'])}) if a.get('cliente_id') else None
+            servico = db.servicos.find_one({'_id': ObjectId(a['servico_id'])}) if a.get('servico_id') else None
+            prof = db.profissionais.find_one({'_id': ObjectId(a['profissional_id'])}) if a.get('profissional_id') else None
+            
+            status = a.get('status', 'Pendente')
+            
+            # Contar por status
+            if status == 'Confirmado':
+                confirmados += 1
+            elif status == 'Pendente':
+                pendentes += 1
+            elif status == 'Concluído':
+                concluidos += 1
+            elif status == 'Cancelado':
+                cancelados += 1
+            
+            resultado.append({
+                '_id': str(a['_id']),
+                'horario': a.get('horario', ''),
+                'cliente_nome': cliente.get('nome') if cliente else 'Desconhecido',
+                'servico': servico.get('nome') if servico else 'Desconhecido',
+                'profissional': prof.get('nome') if prof else 'Desconhecido',
+                'status': status,
+                'observacoes': a.get('observacoes', '')
+            })
+        
+        logger.info(f"Agendamentos hoje: {len(resultado)} encontrados")
+        
+        return jsonify({
+            'success': True,
+            'agendamentos': resultado,
+            'total': len(resultado),
+            'confirmados': confirmados,
+            'pendentes': pendentes,
+            'concluidos': concluidos,
+            'cancelados': cancelados
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro em agendamentos_hoje: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/agendamentos/semana', methods=['GET'])
+@login_required
+def agendamentos_semana():
+    """Buscar agendamentos da semana atual"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
+    
+    try:
+        hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        inicio_semana = hoje - timedelta(days=hoje.weekday())  # Segunda-feira
+        fim_semana = inicio_semana + timedelta(days=7)  # Próxima segunda
+        
+        agendamentos = list(db.agendamentos.find({
+            'data': {'$gte': inicio_semana, '$lt': fim_semana}
+        }).sort('data', ASCENDING))
+        
+        resultado = []
+        for a in agendamentos:
+            cliente = db.clientes.find_one({'_id': ObjectId(a['cliente_id'])}) if a.get('cliente_id') else None
+            servico = db.servicos.find_one({'_id': ObjectId(a['servico_id'])}) if a.get('servico_id') else None
+            prof = db.profissionais.find_one({'_id': ObjectId(a['profissional_id'])}) if a.get('profissional_id') else None
+            
+            resultado.append({
+                '_id': str(a['_id']),
+                'data': a.get('data').isoformat() if a.get('data') else '',
+                'horario': a.get('horario', ''),
+                'cliente_nome': cliente.get('nome') if cliente else 'Desconhecido',
+                'servico': servico.get('nome') if servico else 'Desconhecido',
+                'profissional': prof.get('nome') if prof else 'Desconhecido',
+                'status': a.get('status', 'Pendente')
+            })
+        
+        logger.info(f"Agendamentos semana: {len(resultado)} encontrados")
+        
+        return jsonify({
+            'success': True,
+            'agendamentos': resultado,
+            'periodo': 'semana',
+            'inicio': inicio_semana.isoformat(),
+            'fim': fim_semana.isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro em agendamentos_semana: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/agendamentos/mes', methods=['GET'])
+@login_required
+def agendamentos_mes():
+    """Buscar agendamentos do mês atual"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
+    
+    try:
+        hoje = datetime.now()
+        inicio_mes = hoje.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Calcular último dia do mês
+        if hoje.month == 12:
+            fim_mes = hoje.replace(year=hoje.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            fim_mes = hoje.replace(month=hoje.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        agendamentos = list(db.agendamentos.find({
+            'data': {'$gte': inicio_mes, '$lt': fim_mes}
+        }).sort('data', ASCENDING))
+        
+        resultado = []
+        for a in agendamentos:
+            cliente = db.clientes.find_one({'_id': ObjectId(a['cliente_id'])}) if a.get('cliente_id') else None
+            servico = db.servicos.find_one({'_id': ObjectId(a['servico_id'])}) if a.get('servico_id') else None
+            prof = db.profissionais.find_one({'_id': ObjectId(a['profissional_id'])}) if a.get('profissional_id') else None
+            
+            resultado.append({
+                '_id': str(a['_id']),
+                'data': a.get('data').isoformat() if a.get('data') else '',
+                'horario': a.get('horario', ''),
+                'cliente_nome': cliente.get('nome') if cliente else 'Desconhecido',
+                'servico': servico.get('nome') if servico else 'Desconhecido',
+                'profissional': prof.get('nome') if prof else 'Desconhecido',
+                'status': a.get('status', 'Pendente')
+            })
+        
+        logger.info(f"Agendamentos mês: {len(resultado)} encontrados")
+        
+        return jsonify({
+            'success': True,
+            'agendamentos': resultado,
+            'periodo': 'mes',
+            'mes': hoje.strftime('%B %Y'),
+            'inicio': inicio_mes.isoformat(),
+            'fim': fim_mes.isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro em agendamentos_mes: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/fila', methods=['GET', 'POST'])
 @login_required
 def fila():
