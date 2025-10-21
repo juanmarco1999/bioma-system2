@@ -2271,6 +2271,641 @@ def internal_error(e):
     logger.error(f"❌ 500 Internal Error: {e}")
     return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
+# ==================== NOVAS FUNCIONALIDADES v3.7 ====================
+
+# 1. Upload de Logo da Empresa
+@app.route('/api/upload/logo', methods=['POST'])
+@login_required
+def upload_logo():
+    """Upload de logo da empresa"""
+    try:
+        if 'logo' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+        
+        file = request.files['logo']
+        tipo = request.form.get('tipo', 'principal')  # principal ou login
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"logo_{tipo}_{timestamp}_{filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            # Salvar referência no banco
+            db.uploads.insert_one({
+                'tipo': f'logo_{tipo}',
+                'filename': filename,
+                'path': filepath,
+                'url': f'/uploads/{filename}',
+                'data_upload': datetime.now()
+            })
+            
+            return jsonify({
+                'success': True,
+                'message': 'Logo enviado com sucesso',
+                'url': f'/uploads/{filename}'
+            })
+        
+        return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido'}), 400
+    except Exception as e:
+        logger.error(f"Erro no upload de logo: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 2. Obter Logo Configurado
+@app.route('/api/config/logo', methods=['GET'])
+def get_logo():
+    """Obter URL do logo configurado"""
+    try:
+        tipo = request.args.get('tipo', 'principal')
+        logo = db.uploads.find_one({'tipo': f'logo_{tipo}'}, sort=[('data_upload', DESCENDING)])
+        
+        if logo:
+            return jsonify({'success': True, 'url': logo.get('url')})
+        return jsonify({'success': True, 'url': None})
+    except Exception as e:
+        logger.error(f"Erro ao obter logo: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 3. Servir Arquivos Uploaded
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Servir arquivo uploaded"""
+    try:
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        return send_file(filepath)
+    except Exception as e:
+        logger.error(f"Erro ao servir arquivo: {e}")
+        return jsonify({'success': False, 'message': 'Arquivo não encontrado'}), 404
+
+# 4. Upload de Foto de Profissional
+@app.route('/api/upload/foto-profissional', methods=['POST'])
+@login_required
+def upload_foto_profissional():
+    """Upload de foto de perfil de profissional"""
+    try:
+        if 'foto' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+        
+        file = request.files['foto']
+        profissional_id = request.form.get('profissional_id')
+        
+        if not profissional_id:
+            return jsonify({'success': False, 'message': 'ID do profissional não fornecido'}), 400
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"prof_{profissional_id}_{timestamp}_{filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            url = f'/uploads/{filename}'
+            
+            # Atualizar profissional com a foto
+            db.profissionais.update_one(
+                {'_id': ObjectId(profissional_id)},
+                {'$set': {'foto': url}}
+            )
+            
+            # Salvar referência no banco
+            db.uploads.insert_one({
+                'tipo': 'foto_profissional',
+                'profissional_id': ObjectId(profissional_id),
+                'filename': filename,
+                'path': filepath,
+                'url': url,
+                'data_upload': datetime.now()
+            })
+            
+            return jsonify({
+                'success': True,
+                'message': 'Foto enviada com sucesso',
+                'url': url
+            })
+        
+        return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido'}), 400
+    except Exception as e:
+        logger.error(f"Erro no upload de foto: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 5. Calcular Comissões Multiníveis
+@app.route('/api/comissoes/calcular-orcamento', methods=['POST'])
+@login_required
+def calcular_comissoes_orcamento():
+    """Calcula comissões em cascata: profissional + assistente"""
+    try:
+        data = request.get_json()
+        orcamento_id = data.get('orcamento_id')
+        
+        if not orcamento_id:
+            return jsonify({'success': False, 'message': 'ID do orçamento não fornecido'}), 400
+        
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(orcamento_id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+        
+        # Buscar dados do profissional
+        profissional = db.profissionais.find_one({'_id': ObjectId(orcamento.get('profissional_id'))})
+        if not profissional:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+        
+        # Calcular comissão do profissional
+        valor_total = orcamento.get('total', 0)
+        comissao_perc = profissional.get('comissao_perc', 10)
+        comissao_profissional = valor_total * (comissao_perc / 100)
+        
+        resultado = {
+            'orcamento_id': str(orcamento_id),
+            'valor_total': valor_total,
+            'profissional': {
+                'id': str(profissional['_id']),
+                'nome': profissional.get('nome'),
+                'foto': profissional.get('foto'),
+                'comissao_percentual': comissao_perc,
+                'comissao_valor': round(comissao_profissional, 2)
+            }
+        }
+        
+        # Calcular comissão do assistente (10% da comissão do profissional)
+        assistentes = profissional.get('assistentes', [])
+        if assistentes:
+            assistente_principal = assistentes[0]
+            assistente_id = assistente_principal.get('_id') if isinstance(assistente_principal, dict) else assistente_principal
+            
+            assistente_doc = db.assistentes.find_one({'_id': ObjectId(assistente_id)})
+            if assistente_doc:
+                comissao_assistente = comissao_profissional * 0.1  # 10% da comissão do profissional
+                resultado['assistente'] = {
+                    'id': str(assistente_doc['_id']),
+                    'nome': assistente_doc.get('nome'),
+                    'foto': assistente_doc.get('foto'),
+                    'comissao_percentual': 10,
+                    'comissao_valor': round(comissao_assistente, 2)
+                }
+                resultado['total_comissoes'] = round(comissao_profissional + comissao_assistente, 2)
+            else:
+                resultado['total_comissoes'] = round(comissao_profissional, 2)
+        else:
+            resultado['total_comissoes'] = round(comissao_profissional, 2)
+        
+        # Salvar no histórico
+        db.comissoes_historico.insert_one({
+            'orcamento_id': ObjectId(orcamento_id),
+            'profissional_id': ObjectId(profissional['_id']),
+            'profissional_comissao': resultado['profissional']['comissao_valor'],
+            'assistente_id': ObjectId(resultado['assistente']['id']) if 'assistente' in resultado else None,
+            'assistente_comissao': resultado.get('assistente', {}).get('comissao_valor', 0),
+            'total': resultado['total_comissoes'],
+            'data_calculo': datetime.now()
+        })
+        
+        return jsonify({'success': True, 'comissoes': resultado})
+    except Exception as e:
+        logger.error(f"Erro ao calcular comissões: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 6. Histórico de Comissões
+@app.route('/api/comissoes/historico', methods=['GET'])
+@login_required
+def historico_comissoes():
+    """Lista histórico de comissões calculadas"""
+    try:
+        historico = list(db.comissoes_historico.find().sort('data_calculo', DESCENDING).limit(50))
+        
+        for item in historico:
+            item['_id'] = str(item['_id'])
+            item['orcamento_id'] = str(item.get('orcamento_id'))
+            item['profissional_id'] = str(item.get('profissional_id'))
+            if item.get('assistente_id'):
+                item['assistente_id'] = str(item['assistente_id'])
+            
+            # Buscar nomes
+            prof = db.profissionais.find_one({'_id': ObjectId(item['profissional_id'])})
+            if prof:
+                item['profissional_nome'] = prof.get('nome')
+            
+            if item.get('assistente_id'):
+                asst = db.assistentes.find_one({'_id': ObjectId(item['assistente_id'])})
+                if asst:
+                    item['assistente_nome'] = asst.get('nome')
+        
+        return jsonify({'success': True, 'historico': historico})
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 7. Cadastrar Assistente Independente
+@app.route('/api/assistentes/cadastrar-independente', methods=['POST'])
+@login_required
+def cadastrar_assistente_independente():
+    """Cadastra assistente sem vínculo obrigatório com profissional"""
+    try:
+        data = request.get_json()
+        
+        assistente = {
+            'nome': data.get('nome'),
+            'cpf': data.get('cpf'),
+            'telefone': data.get('telefone'),
+            'email': data.get('email'),
+            'profissional_id': None,  # Independente
+            'ativo': True,
+            'created_at': datetime.now()
+        }
+        
+        result = db.assistentes.insert_one(assistente)
+        assistente['_id'] = str(result.inserted_id)
+        
+        return jsonify({'success': True, 'assistente': assistente})
+    except Exception as e:
+        logger.error(f"Erro ao cadastrar assistente: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 8. Registrar Entrada de Produto (com aprovação)
+@app.route('/api/estoque/produtos/entrada', methods=['POST'])
+@login_required
+def registrar_entrada_produto():
+    """Registra entrada de produto que precisa ser aprovada"""
+    try:
+        data = request.get_json()
+        
+        produto = db.produtos.find_one({'_id': ObjectId(data.get('produto_id'))})
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+        
+        entrada = {
+            'produto_id': ObjectId(data.get('produto_id')),
+            'produto_nome': produto.get('nome'),
+            'quantidade': data.get('quantidade'),
+            'fornecedor': data.get('fornecedor'),
+            'motivo': data.get('motivo'),
+            'usuario': session.get('user', {}).get('name', 'Desconhecido'),
+            'status': 'pendente',
+            'data_solicitacao': datetime.now(),
+            'data_processamento': None
+        }
+        
+        result = db.estoque_pendencias.insert_one(entrada)
+        entrada['_id'] = str(result.inserted_id)
+        
+        return jsonify({'success': True, 'entrada': entrada, 'message': 'Entrada registrada. Aguardando aprovação.'})
+    except Exception as e:
+        logger.error(f"Erro ao registrar entrada: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 9. Aprovar Entrada de Produto
+@app.route('/api/estoque/produtos/aprovar/<id>', methods=['POST'])
+@login_required
+def aprovar_entrada_produto(id):
+    """Aprova entrada de produto e atualiza estoque"""
+    try:
+        entrada = db.estoque_pendencias.find_one({'_id': ObjectId(id)})
+        if not entrada:
+            return jsonify({'success': False, 'message': 'Entrada não encontrada'}), 404
+        
+        # Atualizar status da entrada
+        db.estoque_pendencias.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': {'status': 'aprovado', 'data_processamento': datetime.now()}}
+        )
+        
+        # Atualizar estoque do produto
+        db.produtos.update_one(
+            {'_id': entrada['produto_id']},
+            {'$inc': {'estoque': entrada['quantidade']}}
+        )
+        
+        # Registrar movimentação
+        db.estoque_movimentacoes.insert_one({
+            'produto_id': entrada['produto_id'],
+            'produto_nome': entrada['produto_nome'],
+            'tipo': 'entrada',
+            'quantidade': entrada['quantidade'],
+            'motivo': f"Aprovação: {entrada.get('motivo', '')}",
+            'usuario': session.get('user', {}).get('name'),
+            'data': datetime.now()
+        })
+        
+        return jsonify({'success': True, 'message': 'Entrada aprovada e estoque atualizado'})
+    except Exception as e:
+        logger.error(f"Erro ao aprovar entrada: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 10. Rejeitar Entrada de Produto
+@app.route('/api/estoque/produtos/rejeitar/<id>', methods=['POST'])
+@login_required
+def rejeitar_entrada_produto(id):
+    """Rejeita entrada de produto"""
+    try:
+        db.estoque_pendencias.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': {'status': 'rejeitado', 'data_processamento': datetime.now()}}
+        )
+        
+        return jsonify({'success': True, 'message': 'Entrada rejeitada'})
+    except Exception as e:
+        logger.error(f"Erro ao rejeitar entrada: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 11. Listar Entradas Pendentes
+@app.route('/api/estoque/produtos/pendentes', methods=['GET'])
+@login_required
+def listar_entradas_pendentes():
+    """Lista entradas de produtos pendentes de aprovação"""
+    try:
+        pendentes = list(db.estoque_pendencias.find({'status': 'pendente'}).sort('data_solicitacao', DESCENDING))
+        
+        for item in pendentes:
+            item['_id'] = str(item['_id'])
+            item['produto_id'] = str(item.get('produto_id'))
+        
+        return jsonify({'success': True, 'entradas': pendentes})
+    except Exception as e:
+        logger.error(f"Erro ao listar pendentes: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 12. Mapa de Calor
+@app.route('/api/relatorios/mapa-calor', methods=['GET'])
+@login_required
+def mapa_calor():
+    """Retorna dados para mapa de calor de movimentação"""
+    try:
+        # Últimos 90 dias
+        data_inicio = datetime.now() - timedelta(days=90)
+        
+        # Agregar atendimentos por dia
+        pipeline = [
+            {'$match': {'created_at': {'$gte': data_inicio}}},
+            {'$group': {
+                '_id': {
+                    '$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}
+                },
+                'count': {'$sum': 1}
+            }},
+            {'$sort': {'_id': 1}}
+        ]
+        
+        # Buscar de múltiplas collections
+        agendamentos = list(db.agendamentos.aggregate(pipeline))
+        orcamentos = list(db.orcamentos.aggregate(pipeline))
+        
+        # Combinar resultados
+        dias_map = {}
+        for item in agendamentos + orcamentos:
+            data = item['_id']
+            if data in dias_map:
+                dias_map[data] += item['count']
+            else:
+                dias_map[data] = item['count']
+        
+        # Formatar para array
+        dados = [{'data': k, 'intensidade': v} for k, v in dias_map.items()]
+        
+        return jsonify({'success': True, 'dados': dados})
+    except Exception as e:
+        logger.error(f"Erro ao gerar mapa de calor: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 13. Editar Serviço
+@app.route('/api/servicos/<id>/editar', methods=['PUT'])
+@login_required
+def editar_servico(id):
+    """Edita informações de um serviço"""
+    try:
+        data = request.get_json()
+        
+        update_data = {}
+        if 'nome' in data:
+            update_data['nome'] = data['nome']
+        if 'preco' in data:
+            update_data['preco'] = float(data['preco'])
+        if 'duracao' in data:
+            update_data['duracao'] = int(data['duracao'])
+        if 'categoria' in data:
+            update_data['categoria'] = data['categoria']
+        if 'tamanho' in data:
+            update_data['tamanho'] = data['tamanho']
+        
+        if not update_data:
+            return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
+        
+        result = db.servicos.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': update_data}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'message': 'Serviço atualizado com sucesso'})
+        return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
+    except Exception as e:
+        logger.error(f"Erro ao editar serviço: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 14. Editar Produto
+@app.route('/api/produtos/<id>/editar', methods=['PUT'])
+@login_required
+def editar_produto(id):
+    """Edita informações de um produto"""
+    try:
+        data = request.get_json()
+        
+        update_data = {}
+        if 'nome' in data:
+            update_data['nome'] = data['nome']
+        if 'marca' in data:
+            update_data['marca'] = data['marca']
+        if 'preco' in data:
+            update_data['preco'] = float(data['preco'])
+        if 'estoque_minimo' in data:
+            update_data['estoque_minimo'] = int(data['estoque_minimo'])
+        if 'sku' in data:
+            update_data['sku'] = data['sku']
+        
+        if not update_data:
+            return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
+        
+        result = db.produtos.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': update_data}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'message': 'Produto atualizado com sucesso'})
+        return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
+    except Exception as e:
+        logger.error(f"Erro ao editar produto: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 15. Faturamento Total do Cliente
+@app.route('/api/clientes/<id>/faturamento', methods=['GET'])
+@login_required
+def faturamento_cliente(id):
+    """Retorna faturamento total de um cliente"""
+    try:
+        pipeline = [
+            {'$match': {'cliente_id': ObjectId(id), 'status': 'aprovado'}},
+            {'$group': {'_id': None, 'total': {'$sum': '$total'}}}
+        ]
+        
+        resultado = list(db.orcamentos.aggregate(pipeline))
+        total = resultado[0]['total'] if resultado else 0
+        
+        return jsonify({'success': True, 'faturamento_total': round(total, 2)})
+    except Exception as e:
+        logger.error(f"Erro ao calcular faturamento: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 16. Anamnese do Cliente (GET/PUT)
+@app.route('/api/clientes/<id>/anamnese', methods=['GET', 'PUT'])
+@login_required
+def anamnese_cliente(id):
+    """Gerencia anamnese do cliente"""
+    try:
+        if request.method == 'GET':
+            cliente = db.clientes.find_one({'_id': ObjectId(id)})
+            if not cliente:
+                return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+            
+            anamnese = cliente.get('anamnese', {})
+            return jsonify({'success': True, 'anamnese': anamnese})
+        
+        elif request.method == 'PUT':
+            data = request.get_json()
+            
+            db.clientes.update_one(
+                {'_id': ObjectId(id)},
+                {'$set': {'anamnese': data}}
+            )
+            
+            return jsonify({'success': True, 'message': 'Anamnese salva com sucesso'})
+    except Exception as e:
+        logger.error(f"Erro na anamnese: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 17. Prontuário do Cliente (GET/PUT)
+@app.route('/api/clientes/<id>/prontuario', methods=['GET', 'PUT'])
+@login_required
+def prontuario_cliente(id):
+    """Gerencia prontuário do cliente"""
+    try:
+        if request.method == 'GET':
+            cliente = db.clientes.find_one({'_id': ObjectId(id)})
+            if not cliente:
+                return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+            
+            prontuario = cliente.get('prontuario', [])
+            return jsonify({'success': True, 'prontuario': prontuario})
+        
+        elif request.method == 'PUT':
+            data = request.get_json()
+            
+            # Adicionar novo registro ao prontuário
+            db.clientes.update_one(
+                {'_id': ObjectId(id)},
+                {'$push': {'prontuario': {
+                    'data': datetime.now(),
+                    'procedimento': data.get('procedimento'),
+                    'observacoes': data.get('observacoes'),
+                    'profissional': data.get('profissional')
+                }}}
+            )
+            
+            return jsonify({'success': True, 'message': 'Registro adicionado ao prontuário'})
+    except Exception as e:
+        logger.error(f"Erro no prontuário: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 18. Gerar PDF Resumo do Cliente
+@app.route('/api/clientes/<id>/resumo-pdf', methods=['GET'])
+@login_required
+def resumo_pdf_cliente(id):
+    """Gera PDF completo com todos os dados do cliente"""
+    try:
+        cliente = db.clientes.find_one({'_id': ObjectId(id)})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+        
+        # Criar PDF em memória
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Título
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=HexColor('#7C3AED'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        elements.append(Paragraph('RESUMO DO CLIENTE', title_style))
+        elements.append(Spacer(1, 20))
+        
+        # Dados pessoais
+        elements.append(Paragraph('<b>DADOS PESSOAIS</b>', styles['Heading2']))
+        dados = [
+            ['Nome:', cliente.get('nome', '-')],
+            ['CPF:', cliente.get('cpf', '-')],
+            ['Telefone:', cliente.get('telefone', '-')],
+            ['Email:', cliente.get('email', '-')],
+        ]
+        t = Table(dados, colWidths=[4*cm, 12*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#F3F4F6')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 20))
+        
+        # Anamnese
+        anamnese = cliente.get('anamnese', {})
+        if anamnese:
+            elements.append(Paragraph('<b>ANAMNESE</b>', styles['Heading2']))
+            for key, value in anamnese.items():
+                elements.append(Paragraph(f'<b>{key}:</b> {value}', styles['Normal']))
+            elements.append(Spacer(1, 20))
+        
+        # Prontuário
+        prontuario = cliente.get('prontuario', [])
+        if prontuario:
+            elements.append(Paragraph('<b>PRONTUÁRIO</b>', styles['Heading2']))
+            for registro in prontuario:
+                elements.append(Paragraph(
+                    f"<b>Data:</b> {registro.get('data', '-')} | "
+                    f"<b>Procedimento:</b> {registro.get('procedimento', '-')}<br/>"
+                    f"<b>Observações:</b> {registro.get('observacoes', '-')}",
+                    styles['Normal']
+                ))
+                elements.append(Spacer(1, 10))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'cliente_{cliente.get("nome", "resumo")}.pdf'
+        )
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ==================== FIM DAS NOVAS FUNCIONALIDADES ====================
+
 if __name__ == '__main__':
     print("\n" + "=" * 80)
     print("🌳 BIOMA UBERABA v3.7 COMPLETO E DEFINITIVO")

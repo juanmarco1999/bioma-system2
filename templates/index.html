@@ -98,6 +98,9 @@
             <li><a href="#" onclick="goTo('consultar')" id="menu-consultar"><i class="bi bi-search"></i> Consultar</a></li>
             <li><a href="#" onclick="goTo('contratos')" id="menu-contratos"><i class="bi bi-file-earmark-check"></i> Contratos</a></li>
             <li><a href="#" onclick="goTo('relatorios')" id="menu-relatorios"><i class="bi bi-bar-chart-line"></i> Relatórios</a></li>
+            <li><a href="#" onclick="goTo('perfil')" id="menu-perfil"><i class="bi bi-person-circle"></i> Perfil</a></li>
+            <li><a href="#" onclick="goTo('comissoes')" id="menu-comissoes"><i class="bi bi-cash-stack"></i> Comissões</a></li>
+            <li><a href="#" onclick="goTo('estoque')" id="menu-estoque"><i class="bi bi-box-seam"></i> Estoque</a></li>
             <li><a href="#" onclick="goTo('agendamentos')" id="menu-agendamentos"><i class="bi bi-calendar-check"></i> Agendamentos</a></li>
             <li><a href="#" onclick="goTo('fila')" id="menu-fila"><i class="bi bi-people-fill"></i> Fila</a></li>
             <li><a href="#" onclick="goTo('clientes')" id="menu-clientes"><i class="bi bi-people"></i> Clientes</a></li>
@@ -199,6 +202,26 @@
                 <div class="col-md-3"><div class="stat-card"><div class="icon"><i class="bi bi-award"></i></div><h3 id="relCashbackTotal">R$ 0</h3><p>Cashback Gerado</p></div></div>
                 <div class="col-md-3"><div class="stat-card"><div class="icon"><i class="bi bi-graph-up"></i></div><h3 id="relTicketMedio">R$ 0</h3><p>Ticket Médio</p></div></div>
             </div>
+            
+            <!-- Mapa de Calor -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados
+                    <button class="btn btn-sm btn-outline" onclick="carregarMapaCalor()" style="float: right;">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Este mapa mostra os dias mais movimentados da unidade nos últimos 90 dias.
+                        Quanto mais escuro, mais atendimentos realizados.
+                    </div>
+                    <div id="mapaCalorContainer" class="mapa-calor-grid">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="row g-4">
                 <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-trophy"></i> Top 5 Serviços</div><div class="card-body"><canvas id="chartServicos" style="max-height:300px"></canvas></div></div></div>
                 <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-calendar3"></i> Faturamento Mensal</div><div class="card-body"><canvas id="chartFaturamento" style="max-height:300px"></canvas></div></div></div>
@@ -265,8 +288,144 @@
         </div>
 
         <div id="section-profissionais" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-person-workspace"></i> Profissionais</h1><button class="btn btn-primary" onclick="showModalProfissional()"><i class="bi bi-person-plus"></i> Novo</button></div>
-            <div class="card"><div class="card-header"><i class="bi bi-people-fill"></i> Equipe BIOMA</div><div class="card-body"><div class="mb-3"><input type="text" class="form-control" id="buscaProfissionais" placeholder="Buscar profissional..." oninput="filtrarProfissionais()"></div><div class="table-responsive"><table><thead><tr><th>Nome</th><th>CPF</th><th>Especialidade</th><th>Comissão</th><th>Assistentes</th><th>Status</th><th>Ações</th></tr></thead><tbody id="profissionaisBody"><tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
+            <div class="page-header">
+                <h1><i class="bi bi-person-workspace"></i> Profissionais</h1>
+                <button class="btn btn-primary" onclick="showModalProfissional()"><i class="bi bi-person-plus"></i> Novo</button>
+            </div>
+            
+            <!-- Sub-tabs para Profissionais -->
+            <div class="sub-tabs">
+                <button class="sub-tab-btn active" onclick="showSubTab('profissionais', 'lista')">
+                    <i class="bi bi-people-fill"></i> Lista de Profissionais
+                </button>
+                <button class="sub-tab-btn" onclick="showSubTab('profissionais', 'comissoes')">
+                    <i class="bi bi-cash-stack"></i> Comissões Multiníveis
+                </button>
+                <button class="sub-tab-btn" onclick="showSubTab('profissionais', 'assistentes')">
+                    <i class="bi bi-person-badge"></i> Assistentes
+                </button>
+                <button class="sub-tab-btn" onclick="showSubTab('profissionais', 'avaliacoes')">
+                    <i class="bi bi-star-fill"></i> Avaliações
+                </button>
+            </div>
+
+            <!-- Sub-tab: Lista de Profissionais -->
+            <div id="profissionais-lista" class="sub-tab-content active">
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-people-fill"></i> Equipe BIOMA</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="buscaProfissionais" placeholder="Buscar profissional..." oninput="filtrarProfissionais()">
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Foto</th>
+                                        <th>Nome</th>
+                                        <th>CPF</th>
+                                        <th>Especialidade</th>
+                                        <th>Comissão</th>
+                                        <th>Assistentes</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="profissionaisBody">
+                                    <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-tab: Comissões Multiníveis -->
+            <div id="profissionais-comissoes" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-cash-stack"></i> Sistema de Comissões Multiníveis
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Como funciona:</strong> O profissional recebe sua comissão (ex: 10%) sobre o serviço. 
+                            Seu assistente recebe 10% da comissão do profissional.
+                        </div>
+                        
+                        <button class="btn btn-primary mb-3" onclick="calcularComissoesOrcamento()">
+                            <i class="bi bi-calculator"></i> Calcular Comissões de Orçamento
+                        </button>
+                        
+                        <div id="resultadoComissoes"></div>
+                        
+                        <h5 class="mt-4"><i class="bi bi-clock-history"></i> Histórico de Comissões</h5>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Profissional</th>
+                                        <th>Orçamento</th>
+                                        <th>Comissão Profissional</th>
+                                        <th>Comissão Assistente</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historicoComissoesBody">
+                                    <tr><td colspan="6" class="text-center">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-tab: Assistentes -->
+            <div id="profissionais-assistentes" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-person-badge"></i> Gestão de Assistentes
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-success mb-3" onclick="cadastrarAssistenteIndependente()">
+                            <i class="bi bi-person-plus"></i> Cadastrar Assistente Independente
+                        </button>
+                        
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>CPF</th>
+                                        <th>Profissional Vinculado</th>
+                                        <th>% Comissão</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assistentesBody">
+                                    <tr><td colspan="6" class="text-center">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-tab: Avaliações -->
+            <div id="profissionais-avaliacoes" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-star-fill"></i> Avaliações e Performance
+                    </div>
+                    <div class="card-body">
+                        <div id="avaliacoesContainer">
+                            <p class="text-muted">Selecione um profissional para ver suas avaliações</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="section-servicos" class="content-section">
@@ -279,21 +438,328 @@
             <div class="card"><div class="card-header"><i class="bi bi-box-fill"></i> Estoque</div><div class="card-body"><div class="mb-3"><input type="text" class="form-control" id="buscaProdutos" placeholder="Buscar produto..." oninput="filtrarProdutosLista()"></div><div class="table-responsive"><table><thead><tr><th>Nome</th><th>Marca</th><th>Preço</th><th>Estoque</th><th>Ações</th></tr></thead><tbody id="produtosListBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
         </div>
 
-        <div id="section-estoque" class="content-section">
-            <div class="page-header">
-                <h1><i class="bi bi-box-seam-fill"></i> Estoque</h1>
-                <div class="estoque-actions">
-                    <button class="btn btn-success" type="button" onclick="abrirEntradaEstoque()"><i class="bi bi-box-arrow-in-down"></i> Nova Entrada</button>
-                    <button class="btn btn-danger" type="button" onclick="abrirSaidaEstoque()"><i class="bi bi-box-arrow-up"></i> Nova Saída</button>
-                    <button class="btn btn-outline" type="button" onclick="document.getElementById('estoqueImportInput').click()"><i class="bi bi-cloud-upload"></i> Importar Estoque</button>
-                    <button class="btn btn-outline" type="button" onclick="exportarEstoque()"><i class="bi bi-cloud-download"></i> Exportar Estoque</button>
-                    <input type="file" id="estoqueImportInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="importarPlanilhaEstoque(this)">
+<!-- Inicio novas seções -->
+<!-- Seção de Perfil -->
+<div id="section-perfil" class="content-section">
+    <div class="page-header">
+        <h1><i class="bi bi-person-circle"></i> Meu Perfil</h1>
+        <button class="btn btn-primary" onclick="salvarAlteracoesPerfil()">
+            <i class="bi bi-save"></i> Salvar Alterações
+        </button>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-camera"></i> Foto de Perfil
+                </div>
+                <div class="card-body text-center">
+                    <img src="/static/default-profile.png" alt="Foto de Perfil" class="profile-pic" style="width: 120px; height: 120px; margin-bottom: 20px;">
+                    <input type="file" id="profilePicInput" accept="image/*" style="display: none;">
+                    <button class="btn btn-outline" onclick="document.getElementById('profilePicInput').click()">
+                        <i class="bi bi-camera"></i> Alterar Foto
+                    </button>
                 </div>
             </div>
-            <div class="row g-4">
-                <div class="col-xl-4">
-                    <div class="stock-summary-card">
-                        <div class="d-flex align-items-center justify-content-between">
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="bi bi-building"></i> Logo da Empresa
+                </div>
+                <div class="card-body text-center">
+                    <div class="logo-preview">
+                        <img src="/static/company-logo.png" alt="Logo da Empresa" id="companyLogoPreview">
+                    </div>
+                    <input type="file" id="logoInput" accept="image/*" style="display: none;">
+                    <button class="btn btn-outline" onclick="document.getElementById('logoInput').click()">
+                        <i class="bi bi-upload"></i> Upload Logo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-person-vcard"></i> Dados do Perfil
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label>Nome Completo</label>
+                            <input type="text" id="perfilNome" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label>E-mail</label>
+                            <input type="email" id="perfilEmail" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Telefone</label>
+                            <input type="text" id="perfilTelefone" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Cargo</label>
+                            <input type="text" id="perfilCargo" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="bi bi-shield-lock"></i> Segurança
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label>Nova Senha</label>
+                            <input type="password" id="novaSenha" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label>Confirmar Nova Senha</label>
+                            <input type="password" id="confirmarSenha" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Comissões -->
+<div id="section-comissoes" class="content-section">
+    <div class="page-header">
+        <h1><i class="bi bi-cash-stack"></i> Sistema de Comissões</h1>
+        <button class="btn btn-primary" onclick="showModalComissao()">
+            <i class="bi bi-plus-circle"></i> Nova Regra
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list-check"></i> Regras de Comissão
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Profissional</th>
+                                    <th>Tipo</th>
+                                    <th>Serviço/Produto</th>
+                                    <th>Comissão</th>
+                                    <th>Meta</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comissoesBody">
+                                <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Desempenho
+                </div>
+                <div class="card-body">
+                    <canvas id="chartComissoes" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="bi bi-trophy"></i> Top Performers
+                </div>
+                <div class="card-body">
+                    <div id="topPerformersBody">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <i class="bi bi-calendar3"></i> Histórico de Comissões
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Profissional</th>
+                            <th>Serviço/Produto</th>
+                            <th>Valor Venda</th>
+                            <th>Comissão</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicoComissoesBody">
+                        <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Estoque Expandida -->
+<div id="section-estoque" class="content-section">
+    <div class="page-header">
+        <h1><i class="bi bi-box-seam"></i> Gestão de Estoque</h1>
+        <div class="estoque-actions">
+            <button class="btn btn-success" onclick="novaEntradaEstoque()">
+                <i class="bi bi-box-arrow-in-down"></i> Nova Entrada
+            </button>
+            <button class="btn btn-danger" onclick="novaSaidaEstoque()">
+                <i class="bi bi-box-arrow-up"></i> Nova Saída
+            </button>
+            <button class="btn btn-outline" onclick="abrirImportacaoEstoque()">
+                <i class="bi bi-cloud-upload"></i> Importar
+            </button>
+            <button class="btn btn-outline" onclick="exportarEstoque()">
+                <i class="bi bi-cloud-download"></i> Exportar
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stock-summary-card">
+                <div class="icon"><i class="bi bi-box-seam"></i></div>
+                <h3 id="totalProdutosEstoque">0</h3>
+                <p>Total de Produtos</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stock-summary-card">
+                <div class="icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <h3 id="alertasEstoque">0</h3>
+                <p>Alertas de Estoque</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stock-summary-card">
+                <div class="icon"><i class="bi bi-currency-dollar"></i></div>
+                <h3 id="valorTotalEstoque">R$ 0,00</h3>
+                <p>Valor em Estoque</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stock-summary-card">
+                <div class="icon"><i class="bi bi-graph-up"></i></div>
+                <h3 id="giroEstoque">0</h3>
+                <p>Giro de Estoque</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="sub-tabs">
+            <div class="sub-tab active" onclick="mudarTabEstoque('produtos')">Produtos</div>
+            <div class="sub-tab" onclick="mudarTabEstoque('movimentacoes')">Movimentações</div>
+            <div class="sub-tab" onclick="mudarTabEstoque('aprovacoes')">Aprovações</div>
+            <div class="sub-tab" onclick="mudarTabEstoque('analise')">Análise</div>
+        </div>
+        <div class="card-body">
+            <!-- Tab Produtos -->
+            <div id="tabEstoqueProdutos" class="tab-content active">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>SKU</th>
+                                <th>Categoria</th>
+                                <th>Estoque Atual</th>
+                                <th>Mínimo</th>
+                                <th>Máximo</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estoqueProdutosBody">
+                            <tr><td colspan="9" class="text-center"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Movimentações -->
+            <div id="tabEstoqueMovimentacoes" class="tab-content" style="display: none;">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Motivo</th>
+                                <th>Responsável</th>
+                                <th>Nota Fiscal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estoqueMovimentacoesBody">
+                            <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Aprovações -->
+            <div id="tabEstoqueAprovacoes" class="tab-content" style="display: none;">
+                <div class="stock-approval-list" id="estoqueAprovacoesBody">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Tab Análise -->
+            <div id="tabEstoqueAnalise" class="tab-content" style="display: none;">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-graph-up"></i> Consumo Mensal
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chartConsumoEstoque"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-pie-chart"></i> Distribuição por Categoria
+                            </div>
+                            <div class="card-body">
+                                <canvas id="chartCategoriaEstoque"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="heatmap-container mt-4">
+                    <h5 class="mb-3">Heatmap de Movimentação</h5>
+                    <div id="heatmapEstoque" class="heatmap-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Fim novas seções -->
                             <div>
                                 <p class="text-muted mb-1">Valor estimado de venda</p>
                                 <h3 id="estoqueResumoValorVenda">R$ 0,00</h3>
@@ -666,6 +1132,35 @@ function goTo(section){
 
 }
 
+// Função para alternar sub-tabs
+function showSubTab(section, tab) {
+    // Remove active de todos os botões de sub-tab da seção
+    document.querySelectorAll(`#section-${section} .sub-tab-btn`).forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Remove active de todos os conteúdos de sub-tab da seção
+    document.querySelectorAll(`#section-${section} .sub-tab-content`).forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Adiciona active no botão clicado
+    event.target.classList.add('active');
+    
+    // Adiciona active no conteúdo correspondente
+    const content = document.getElementById(`${section}-${tab}`);
+    if (content) {
+        content.classList.add('active');
+        
+        // Carrega dados específicos da sub-tab se necessário
+        if (section === 'profissionais' && tab === 'comissoes') {
+            carregarHistoricoComissoes();
+        } else if (section === 'profissionais' && tab === 'assistentes') {
+            loadAssistentes();
+        }
+    }
+}
+
 function filtrarTabelaPorTermo(tbodySelector, termo){
     const normalized = (termo || '').toLowerCase();
     document.querySelectorAll(`${tbodySelector} tr`).forEach(row => {
@@ -831,14 +1326,18 @@ async function loadEstoqueResumo(){
 
 async function loadEstoquePendentes(){
     const tbody = document.getElementById('estoquePendentesBody');
-    if(!tbody){
+    const container = document.getElementById('estoqueAprovacoesBody');
+    
+    if(!tbody && !container){
         return;
     }
+    
     try{
-        const res = await fetch('/api/estoque/entrada/pendentes',{credentials:'include'});
+        const res = await fetch('/api/estoque/produtos/pendentes',{credentials:'include'});
         const data = await res.json();
+        
         if(data.success && data.entradas && data.entradas.length){
-            tbody.innerHTML = data.entradas.map(item => `
+            const html = data.entradas.map(item => `
                 <tr data-id="${item._id}">
                     <td>${item.produto_nome || 'Produto'}</td>
                     <td>${item.quantidade}</td>
@@ -846,16 +1345,50 @@ async function loadEstoquePendentes(){
                     <td>${item.motivo || '-'}</td>
                     <td>${item.usuario || '-'}</td>
                     <td>
-                        <button class="btn btn-sm btn-success" onclick="aprovarEntradaEstoque('${item._id}')"><i class="bi bi-check2-circle"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="rejeitarEntradaEstoque('${item._id}')"><i class="bi bi-x-circle"></i></button>
+                        <button class="btn btn-sm btn-success" onclick="aprovarEntradaProduto('${item._id}')">
+                            <i class="bi bi-check2-circle"></i> Aprovar
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="rejeitarEntradaProduto('${item._id}')">
+                            <i class="bi bi-x-circle"></i> Rejeitar
+                        </button>
                     </td>
                 </tr>`).join('');
+            
+            if(tbody) tbody.innerHTML = html;
+            
+            // Para a tab de aprovações com cards
+            if(container) {
+                const cards = data.entradas.map(item => `
+                    <div class="pending-stock-card">
+                        <div class="product-info">
+                            <h5>${item.produto_nome || 'Produto'}</h5>
+                            <p>Quantidade: <strong>${item.quantidade}</strong></p>
+                            <p>Fornecedor: ${item.fornecedor || '-'}</p>
+                            <p>Motivo: ${item.motivo || '-'}</p>
+                            <p class="text-muted">Solicitado por: ${item.usuario || '-'}</p>
+                        </div>
+                        <div class="approval-actions">
+                            <button class="btn btn-success" onclick="aprovarEntradaProduto('${item._id}')">
+                                <i class="bi bi-check2-circle"></i> Aprovar
+                            </button>
+                            <button class="btn btn-danger" onclick="rejeitarEntradaProduto('${item._id}')">
+                                <i class="bi bi-x-circle"></i> Rejeitar
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                container.innerHTML = cards;
+            }
         }else{
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma entrada pendente</td></tr>';
+            const emptyMsg = '<tr><td colspan="6" class="text-center text-muted">Nenhuma entrada pendente</td></tr>';
+            if(tbody) tbody.innerHTML = emptyMsg;
+            if(container) container.innerHTML = '<p class="text-center text-muted">Nenhuma entrada pendente de aprovação</p>';
         }
     }catch(error){
         console.error('Erro ao carregar pendências de estoque', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Erro ao carregar dados</td></tr>';
+        const errorMsg = '<tr><td colspan="6" class="text-center text-muted">Erro ao carregar dados</td></tr>';
+        if(tbody) tbody.innerHTML = errorMsg;
+        if(container) container.innerHTML = '<p class="text-center text-danger">Erro ao carregar dados</p>';
     }
 }
 
@@ -1745,14 +2278,87 @@ async function loadProfissionais(){
         if(data.success&&data.profissionais&&data.profissionais.length>0){
             const html=data.profissionais.map(p=>{
                 const assistentes = (p.assistentes||[]).map(a=>a.nome||a).join(', ') || '-';
-                return `<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.cpf||'-'}</td><td>${p.especialidade||'-'}</td><td>${p.comissao_perc||0}%</td><td>${assistentes}</td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="btn btn-sm btn-info" onclick="visualizarProfissional('${p._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-primary" onclick="editarProfissional('${p._id}')" style="margin-right:5px"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="deleteProfissional('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`;
+                const fotoHtml = exibirFotoProfissional(p.foto);
+                return `<tr data-id="${p._id}">
+                    <td>${fotoHtml}</td>
+                    <td><strong>${p.nome}</strong></td>
+                    <td>${p.cpf||'-'}</td>
+                    <td>${p.especialidade||'-'}</td>
+                    <td>${p.comissao_perc||0}%</td>
+                    <td>${assistentes}</td>
+                    <td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="uploadFotoProfissional('${p._id}')" title="Upload Foto">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="visualizarProfissional('${p._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="editarProfissional('${p._id}')" style="margin-right:5px">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProfissional('${p._id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
             }).join('');
             tbody.innerHTML=html;
         }else{
-            tbody.innerHTML='<tr data-keep-visible="true"><td colspan="7" class="text-center text-muted">Nenhum</td></tr>';
+            tbody.innerHTML='<tr data-keep-visible="true"><td colspan="8" class="text-center text-muted">Nenhum</td></tr>';
         }
     }catch(e){
         console.error(e);
+    }
+}
+
+// Função para carregar lista de assistentes
+async function loadAssistentes() {
+    try {
+        const res = await fetch('/api/assistentes', {credentials: 'include'});
+        const data = await res.json();
+        const tbody = document.getElementById('assistentesBody');
+        
+        if (data.success && data.assistentes && data.assistentes.length > 0) {
+            const html = data.assistentes.map(a => {
+                const profissionalNome = a.profissional?.nome || 'Independente';
+                return `<tr>
+                    <td><strong>${a.nome}</strong></td>
+                    <td>${a.cpf || '-'}</td>
+                    <td>${profissionalNome}</td>
+                    <td>10%</td>
+                    <td><span class="badge ${a.ativo ? 'success' : 'danger'}">${a.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteAssistente('${a._id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum assistente cadastrado</td></tr>';
+        }
+    } catch(e) {
+        console.error('Erro ao carregar assistentes:', e);
+    }
+}
+
+async function deleteAssistente(id) {
+    const result = await Swal.fire({
+        title: 'Deletar assistente?',
+        icon: 'warning',
+        showCancelButton: true
+    });
+    
+    if (result.isConfirmed) {
+        try {
+            await fetch(`/api/assistentes/${id}`, {method: 'DELETE', credentials: 'include'});
+            Swal.fire('Deletado!', '', 'success');
+            loadAssistentes();
+        } catch(e) {
+            Swal.fire('Erro', '', 'error');
+        }
     }
 }
 
