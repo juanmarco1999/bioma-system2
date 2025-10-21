@@ -280,6 +280,53 @@ def convert_objectid(obj):
     else:
         return obj
 
+def get_assistente_details(assistente_id, assistente_tipo=None):
+    """Busca detalhes de um assistente (pode ser de profissionais ou assistentes)"""
+    if not assistente_id:
+        return None
+    
+    try:
+        # Se tipo especificado, buscar na coleção correspondente
+        if assistente_tipo == 'profissional':
+            assistente = db.profissionais.find_one({'_id': ObjectId(assistente_id)})
+            if assistente:
+                return {
+                    'id': str(assistente['_id']),
+                    'nome': assistente.get('nome', 'N/A'),
+                    'tipo_origem': 'profissional',
+                    'especialidade': assistente.get('especialidade', '')
+                }
+        elif assistente_tipo == 'assistente':
+            assistente = db.assistentes.find_one({'_id': ObjectId(assistente_id)})
+            if assistente:
+                return {
+                    'id': str(assistente['_id']),
+                    'nome': assistente.get('nome', 'N/A'),
+                    'tipo_origem': 'assistente'
+                }
+        else:
+            # Tentar buscar em ambas coleções
+            assistente = db.profissionais.find_one({'_id': ObjectId(assistente_id)})
+            if assistente:
+                return {
+                    'id': str(assistente['_id']),
+                    'nome': assistente.get('nome', 'N/A'),
+                    'tipo_origem': 'profissional',
+                    'especialidade': assistente.get('especialidade', '')
+                }
+            
+            assistente = db.assistentes.find_one({'_id': ObjectId(assistente_id)})
+            if assistente:
+                return {
+                    'id': str(assistente['_id']),
+                    'nome': assistente.get('nome', 'N/A'),
+                    'tipo_origem': 'assistente'
+                }
+    except Exception as e:
+        logger.error(f"Erro ao buscar assistente: {e}")
+    
+    return None
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -527,19 +574,55 @@ def clientes():
                 ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
                 cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
                 cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
+                cliente['total_faturado'] = cliente.get('total_gasto', 0)
             return jsonify({'success': True, 'clientes': convert_objectid(clientes_list)})
         except Exception as e:
             return jsonify({'success': False, 'message': str(e)}), 500
     
-    data = request.json
+    data = request.json or {}
     try:
+        if not data.get('cpf') or not data.get('nome'):
+            return jsonify({'success': False, 'message': 'Nome e CPF s�o obrigat�rios'}), 400
+
         existing = db.clientes.find_one({'cpf': data['cpf']})
-        cliente_data = {'nome': data['nome'], 'cpf': data['cpf'], 'email': data.get('email', ''), 'telefone': data.get('telefone', ''), 'updated_at': datetime.now()}
+
+        anamnese_respostas = data.get('anamnese')
+        if not isinstance(anamnese_respostas, dict):
+            anamnese_respostas = default_form_state(ANAMNESE_FORM)
+
+        prontuario_respostas = data.get('prontuario')
+        if not isinstance(prontuario_respostas, dict):
+            prontuario_respostas = default_form_state(PRONTUARIO_FORM)
+
+        cliente_data = {
+            'nome': data['nome'],
+            'cpf': data['cpf'],
+            'email': data.get('email', ''),
+            'telefone': data.get('telefone', ''),
+            'endereco': data.get('endereco', ''),
+            'data_nascimento': data.get('data_nascimento', ''),
+            'genero': data.get('genero', ''),
+            'estado_civil': data.get('estado_civil', ''),
+            'profissao': data.get('profissao', ''),
+            'instagram': data.get('instagram', ''),
+            'indicacao': data.get('indicacao', ''),
+            'preferencias': data.get('preferencias', ''),
+            'restricoes': data.get('restricoes', ''),
+            'tipo_cabelo': data.get('tipo_cabelo', ''),
+            'historico_tratamentos': data.get('historico_tratamentos', ''),
+            'observacoes': data.get('observacoes', ''),
+            'anamnese': anamnese_respostas,
+            'prontuario': prontuario_respostas,
+            'updated_at': datetime.now()
+        }
+
         if existing:
             db.clientes.update_one({'cpf': data['cpf']}, {'$set': cliente_data})
         else:
             cliente_data['created_at'] = datetime.now()
             db.clientes.insert_one(cliente_data)
+
+        clear_cache('clientes_')
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -551,6 +634,8 @@ def delete_cliente(id):
         return jsonify({'success': False}), 500
     try:
         result = db.clientes.delete_one({'_id': ObjectId(id)})
+        if result.deleted_count:
+            clear_cache('clientes_')
         return jsonify({'success': result.deleted_count > 0})
     except:
         return jsonify({'success': False}), 500
@@ -572,6 +657,11 @@ def get_cliente(id):
         ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
         cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
         cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
+        cliente['total_faturado'] = cliente.get('total_gasto', 0)
+        cliente['anamnese'] = cliente.get('anamnese', default_form_state(ANAMNESE_FORM))
+        cliente['prontuario'] = cliente.get('prontuario', default_form_state(PRONTUARIO_FORM))
+        historico_orcamentos = list(db.orcamentos.find({'cliente_cpf': cliente_cpf}).sort('created_at', DESCENDING).limit(50))
+        cliente['orcamentos'] = convert_objectid(historico_orcamentos)
         
         return jsonify({'success': True, 'cliente': convert_objectid(cliente)})
     except Exception as e:
@@ -585,14 +675,14 @@ def update_cliente(id):
     if db is None:
         return jsonify({'success': False}), 500
     
-    data = request.json
+    data = request.json or {}
     try:
         cliente_existente = db.clientes.find_one({'_id': ObjectId(id)})
         if not cliente_existente:
             return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
         
         # Verificar se o CPF já existe em outro cliente
-        if data.get('cpf') != cliente_existente.get('cpf'):
+        if data.get('cpf') and data.get('cpf') != cliente_existente.get('cpf'):
             cpf_duplicado = db.clientes.find_one({'cpf': data['cpf'], '_id': {'$ne': ObjectId(id)}})
             if cpf_duplicado:
                 return jsonify({'success': False, 'message': 'CPF já cadastrado em outro cliente'}), 400
@@ -601,7 +691,11 @@ def update_cliente(id):
         prontuario_respostas = data.get('prontuario')
         if anamnese_respostas is None:
             anamnese_respostas = cliente_existente.get('anamnese', default_form_state(ANAMNESE_FORM))
+        if not isinstance(anamnese_respostas, dict):
+            anamnese_respostas = cliente_existente.get('anamnese', default_form_state(ANAMNESE_FORM))
         if prontuario_respostas is None:
+            prontuario_respostas = cliente_existente.get('prontuario', default_form_state(PRONTUARIO_FORM))
+        if not isinstance(prontuario_respostas, dict):
             prontuario_respostas = cliente_existente.get('prontuario', default_form_state(PRONTUARIO_FORM))
 
         update_data = {
@@ -627,6 +721,7 @@ def update_cliente(id):
         }
         
         db.clientes.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+        clear_cache('clientes_')
         logger.info(f"✅ Cliente atualizado: {update_data['nome']}")
         
         return jsonify({'success': True, 'message': 'Cliente atualizado com sucesso'})
@@ -735,37 +830,123 @@ def get_profissional(id):
         if not profissional:
             return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
         
-        # Buscar orçamentos relacionados ao profissional
+        profissional_id_str = str(profissional['_id'])
+
+        # Buscar or?amentos relacionados ao profissional
         orcamentos_prof = list(db.orcamentos.find({
-            'servicos.profissional_id': str(profissional['_id'])
+            'servicos.profissional_id': profissional_id_str
         }))
-        
-        # Calcular estatísticas
-        total_comissao = 0
+
+        total_comissao = 0.0
+        total_comissao_assistente = 0.0
         servicos_realizados = 0
-        assistente = None
-        
-        # Buscar assistente se existir
-        if profissional.get('assistente_id'):
-            assistente = db.profissionais.find_one({'_id': ObjectId(profissional['assistente_id'])})
-        
+        orcamentos_aprovados = 0
+        desempenho_mensal = {}
+        multicomissao_detalhes = []
+
+        assistente_info = get_assistente_details(
+            profissional.get('assistente_id'),
+            profissional.get('assistente_tipo')
+        )
+
+        comissao_prof_perc = float(profissional.get('comissao_perc', 0))
+        comissao_assistente_perc = float(profissional.get('comissao_assistente_perc', 0))
+
         for orc in orcamentos_prof:
+            data_orc = orc.get('created_at', datetime.now())
+            mes_key = data_orc.strftime('%Y-%m') if isinstance(data_orc, datetime) else 'desconhecido'
+            if mes_key not in desempenho_mensal:
+                desempenho_mensal[mes_key] = {
+                    'mes': mes_key,
+                    'comissao_profissional': 0.0,
+                    'comissao_assistente': 0.0,
+                    'servicos': 0,
+                    'faturamento': 0.0
+                }
+
             if orc.get('status') == 'Aprovado':
-                for servico in orc.get('servicos', []):
-                    if servico.get('profissional_id') == str(profissional['_id']):
-                        servicos_realizados += 1
-                        comissao_valor = servico.get('total', 0) * (profissional.get('comissao_perc', 0) / 100)
-                        total_comissao += comissao_valor
-        
+                orcamentos_aprovados += 1
+                desempenho_mensal[mes_key]['faturamento'] += orc.get('total_final', 0)
+
+            for servico in orc.get('servicos', []):
+                if servico.get('profissional_id') != profissional_id_str:
+                    continue
+
+                quantidade = servico.get('qtd', 1) or 1
+                valor_servico = servico.get('total', 0) or 0
+                servicos_realizados += quantidade
+
+                comissao_valor = valor_servico * (comissao_prof_perc / 100)
+                total_comissao += comissao_valor
+                desempenho_mensal[mes_key]['comissao_profissional'] += comissao_valor
+                desempenho_mensal[mes_key]['servicos'] += quantidade
+
+                assistente_nome = servico.get('assistente_nome')
+                assistente_tipo = servico.get('assistente_tipo')
+
+                if not assistente_nome and assistente_info:
+                    assistente_nome = assistente_info.get('nome')
+                    assistente_tipo = assistente_info.get('tipo_origem')
+
+                comissao_assistente_valor = 0.0
+                if assistente_nome and comissao_assistente_perc:
+                    comissao_assistente_valor = comissao_valor * (comissao_assistente_perc / 100)
+                    total_comissao_assistente += comissao_assistente_valor
+                    desempenho_mensal[mes_key]['comissao_assistente'] += comissao_assistente_valor
+
+                multicomissao_detalhes.append({
+                    'orcamento_id': str(orc['_id']),
+                    'orcamento_numero': orc.get('numero'),
+                    'cliente': orc.get('cliente_nome'),
+                    'status': orc.get('status'),
+                    'data': data_orc.isoformat() if isinstance(data_orc, datetime) else data_orc,
+                    'servico': servico.get('nome'),
+                    'valor_servico': valor_servico,
+                    'comissao_profissional': comissao_valor,
+                    'comissao_assistente': comissao_assistente_valor,
+                    'assistente_nome': assistente_nome,
+                    'assistente_tipo': assistente_tipo,
+                    'descricao': f"Profissional {profissional.get('nome')} - {servico.get('nome')}" + (
+                        f" | Assistente {assistente_nome}" if assistente_nome else ''
+                    )
+                })
+
+        desempenho_ordenado = sorted(desempenho_mensal.items())
+        grafico_labels = [item[0] for item in desempenho_ordenado]
+        grafico_dados_prof = [round(item[1]['comissao_profissional'], 2) for item in desempenho_ordenado]
+        grafico_dados_assist = [round(item[1]['comissao_assistente'], 2) for item in desempenho_ordenado]
+        grafico_servicos = [item[1]['servicos'] for item in desempenho_ordenado]
+
+        avaliacoes = []
+        try:
+            avaliacoes = list(db.profissionais_avaliacoes.find(
+                {'profissional_id': profissional_id_str}
+            ).sort('created_at', DESCENDING).limit(20))
+        except Exception as avaliacao_error:
+            logger.debug(f"Falha ao carregar avaliacoes do profissional {id}: {avaliacao_error}")
+
+        if assistente_info:
+            profissional['assistente'] = assistente_info
+
         profissional['estatisticas'] = {
-            'total_comissao': total_comissao,
+            'total_comissao': round(total_comissao, 2),
+            'total_comissao_assistente': round(total_comissao_assistente, 2),
             'servicos_realizados': servicos_realizados,
-            'total_orcamentos': len(orcamentos_prof)
+            'total_orcamentos': len(orcamentos_prof),
+            'orcamentos_aprovados': orcamentos_aprovados,
+            'comissao_media': round(total_comissao / servicos_realizados, 2) if servicos_realizados else 0
         }
-        
-        if assistente:
-            profissional['assistente'] = convert_objectid(assistente)
-        
+
+        profissional['desempenho'] = {
+            'labels': grafico_labels,
+            'comissao_profissional': grafico_dados_prof,
+            'comissao_assistente': grafico_dados_assist,
+            'servicos': grafico_servicos
+        }
+
+        profissional['multicomissao'] = multicomissao_detalhes
+        profissional['avaliacoes'] = convert_objectid(avaliacoes)
+
         return jsonify({'success': True, 'profissional': convert_objectid(profissional)})
     except Exception as e:
         logger.error(f"Erro ao buscar profissional: {e}")
@@ -1480,6 +1661,17 @@ def update_orcamento(id):
         cashback_valor = total_com_desconto * (cashback_perc / 100)
         
         # Atualizar orçamento
+        assistente_id = data.get('assistente_id', orcamento_existente.get('assistente_id'))
+        if assistente_id:
+            assistente_id = str(assistente_id)
+        else:
+            assistente_id = None
+        assistente_tipo = data.get('assistente_tipo', orcamento_existente.get('assistente_tipo'))
+        if assistente_tipo not in {'profissional', 'assistente'}:
+            assistente_tipo = None
+        if not assistente_id:
+            assistente_tipo = None
+
         update_data = {
             'cliente_cpf': data.get('cliente_cpf', orcamento_existente.get('cliente_cpf')),
             'cliente_nome': data.get('cliente_nome', orcamento_existente.get('cliente_nome')),
