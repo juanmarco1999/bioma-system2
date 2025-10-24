@@ -8415,9 +8415,10 @@ async function carregarMovimentacoesEstoque() {
         
         const res = await fetch(url, {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar movimentações');
-        
-        const movimentacoes = await res.json();
-        
+
+        const data = await res.json();
+        const movimentacoes = data.movimentacoes || [];
+
         if (!movimentacoes || movimentacoes.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma movimentação encontrada</td></tr>';
             return;
