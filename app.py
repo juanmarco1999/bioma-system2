@@ -1568,7 +1568,7 @@ def format_date_pt_br(dt):
 
 @app.route('/api/orcamento/<id>/pdf')
 @login_required
-def gerar_pdf_orcamento(id):
+def gerar_pdf_orcamento_singular(id):
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     try:
@@ -3461,11 +3461,11 @@ def uploaded_file(filename):
         logger.error(f"Erro ao buscar upload: {e}")
         return jsonify({'success': False, 'message': 'Arquivo não encontrado'}), 404
 
-# 4. Upload de Foto de Profissional
+# 4. Upload de Foto de Profissional (via form data)
 @app.route('/api/upload/foto-profissional', methods=['POST'])
 @login_required
-def upload_foto_profissional():
-    """Upload de foto de perfil de profissional (armazenado como base64, SEM arquivos externos)"""
+def upload_foto_profissional_form():
+    """Upload de foto de perfil de profissional via form data (armazenado como base64, SEM arquivos externos)"""
     try:
         if 'foto' not in request.files:
             return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
