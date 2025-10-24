@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/correcoes_bioma.css">
+    <!-- SISTEMA AUTO-CONTIDO: Todo CSS está inline neste arquivo (sem arquivos externos) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -1697,7 +1697,8 @@
                     <i class="bi bi-camera"></i> Foto de Perfil
                 </div>
                 <div class="card-body text-center">
-                    <img src="/static/default-profile.png" alt="Foto de Perfil" class="profile-pic" style="width: 120px; height: 120px; margin-bottom: 20px;">
+                    <!-- Placeholder SVG inline (SEM arquivos externos) -->
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23E5E7EB'/%3E%3Ccircle cx='50' cy='40' r='15' fill='%239CA3AF'/%3E%3Cpath d='M 25 75 Q 25 55 50 55 Q 75 55 75 75 Z' fill='%239CA3AF'/%3E%3C/svg%3E" alt="Foto de Perfil" class="profile-pic" style="width: 120px; height: 120px; margin-bottom: 20px; border-radius: 50%;">
                     <input type="file" id="profilePicInput" accept="image/*" style="display: none;">
                     <button class="btn btn-outline" onclick="document.getElementById('profilePicInput').click()">
                         <i class="bi bi-camera"></i> Alterar Foto
@@ -1711,7 +1712,8 @@
                 </div>
                 <div class="card-body text-center">
                     <div class="logo-preview">
-                        <img src="/static/company-logo.png" alt="Logo da Empresa" id="companyLogoPreview">
+                        <!-- Placeholder SVG inline para logo da empresa (SEM arquivos externos) -->
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100' viewBox='0 0 200 100'%3E%3Crect width='200' height='100' fill='%23F3F4F6' rx='10'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' font-weight='bold' fill='%237C3AED'%3EBIOMA%3C/text%3E%3Ctext x='50%25' y='70%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='12' fill='%239CA3AF'%3EUberaba%3C/text%3E%3C/svg%3E" alt="Logo da Empresa" id="companyLogoPreview" style="max-width: 200px;">
                     </div>
                     <input type="file" id="logoInput" accept="image/*" style="display: none;">
                     <button class="btn btn-outline" onclick="document.getElementById('logoInput').click()">
@@ -2685,6 +2687,24 @@
 let currentUser=null,currentTheme='light',orcamento={servicos:[],produtos:[]},servicosDisponiveis=[],produtosDisponiveis=[],servicoSelecionado=null,produtoSelecionado=null;
 let produtosCache=[],buscaGlobalTimer=null,configuracoesAtuais=null,logosPersonalizados={principal:null,login:null};
 
+// FLAGS ANTI-LOOP: Prevenir carregamento infinito
+let loadingFlags = {};
+let appInitialized = false;
+let sseInstance = null;
+let sseReconnectAttempts = 0;
+const MAX_SSE_RECONNECT = 3;
+
+function setLoading(key, value) {
+    loadingFlags[key] = value;
+    if (value) {
+        setTimeout(() => { loadingFlags[key] = false; }, 10000); // Auto-reset após 10s
+    }
+}
+
+function isLoading(key) {
+    return loadingFlags[key] === true;
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
     console.log('%c🌳 BIOMA v3.7 DEFINITIVO','background:#7C3AED;color:#fff;font-size:24px;padding:15px;border-radius:8px;font-weight:900');
     console.log('%c✅ Sistema 100% Completo Carregado','color:#10B981;font-size:16px;font-weight:700');
@@ -2809,14 +2829,24 @@ async function toggleTheme(){
 }
 
 function goTo(section){
+    const key = `goto-${section}`;
+
+    // PROTEÇÃO ANTI-LOOP: Não navegar se já estiver navegando
+    if (isLoading(key)) {
+        console.warn(`⚠️ Navegação em andamento: ${section}`);
+        return;
+    }
+
     console.log('🔄 Navegando para:',section);
+    setLoading(key, true);
+
     try{
         // 1. ESCONDER TODAS as seções
         document.querySelectorAll('.content-section').forEach(s => {
             s.classList.remove('active');
             s.classList.add('d-none');
         });
-        
+
         // 2. MOSTRAR apenas a selecionada
         const sectionElement=document.getElementById('section-'+section);
         if(sectionElement){
@@ -2825,17 +2855,17 @@ function goTo(section){
         } else {
             console.error('❌ Seção não encontrada:', section);
         }
-        
+
         // 3. ATUALIZAR menu sidebar
         document.querySelectorAll('.sidebar-menu a').forEach(a=>a.classList.remove('active'));
         const menu=document.getElementById('menu-'+section);
         if(menu)menu.classList.add('active');
-        
+
         // 4. SCROLL para topo
         const mainContent=document.querySelector('.main-content');
         if(mainContent)mainContent.scrollTo({top:0,behavior:'smooth'});
-        
-        // 5. CARREGAR dados da seção
+
+        // 5. CARREGAR dados da seção (com proteção individual)
         if(section==='dashboard')loadDashboard();
         else if(section==='clientes')loadClientes();
         else if(section==='profissionais')loadProfissionais();
@@ -2850,6 +2880,9 @@ function goTo(section){
         else if(section==='agendamentos')loadAgendamentos();
     }catch(e){
         console.error('❌ Erro navegação:',e);
+    } finally {
+        // Resetar flag após 1 segundo
+        setTimeout(() => setLoading(key, false), 1000);
     }
 
 }
@@ -3020,12 +3053,26 @@ function destacarLinhaTabela(tbodySelector, atributo, valor){
 }
 
 async function loadEstoque(){
-    await Promise.all([
-        loadEstoqueResumo(),
-        loadEstoqueBaixo(),
-        loadEstoquePendentes(),
-        loadEstoqueMovimentos()
-    ]);
+    const key = 'loadEstoque';
+
+    // PROTEÇÃO ANTI-LOOP
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
+    setLoading(key, true);
+
+    try {
+        await Promise.all([
+            loadEstoqueResumo(),
+            loadEstoqueBaixo(),
+            loadEstoquePendentes(),
+            loadEstoqueMovimentos()
+        ]);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
+    }
 }
 
 async function loadEstoqueResumo(){
@@ -3677,6 +3724,16 @@ function abrirComunidadeDetalhe(tipo){
 }
 
 async function loadDashboard(){
+    const key = 'loadDashboard';
+
+    // PROTEÇÃO ANTI-LOOP
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/dashboard/stats',{credentials:'include'});
         const data=await res.json();
@@ -3715,6 +3772,8 @@ async function loadDashboard(){
         }
     }catch(e){
         console.error('❌ Dashboard error:',e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -3765,6 +3824,16 @@ async function carregarFormulariosCliente(){
 }
 
 async function loadClientes(){
+    const key = 'loadClientes';
+
+    // PROTEÇÃO ANTI-LOOP
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
+    setLoading(key, true);
+
     try{
         await carregarFormulariosCliente();
         const res = await fetch('/api/clientes',{credentials:'include'});
@@ -3794,6 +3863,8 @@ async function loadClientes(){
     }catch(e){
         console.error('Erro ao carregar clientes', e);
         document.getElementById('clientesBody').innerHTML='<tr><td colspan="6" class="text-center text-danger">Erro</td></tr>';
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -4132,6 +4203,16 @@ async function editarCliente(id){
 }
 
 async function loadProfissionais(){
+    const key = 'loadProfissionais';
+
+    // PROTEÇÃO ANTI-LOOP
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/profissionais',{credentials:'include'});
         const data=await res.json();
@@ -4170,6 +4251,8 @@ async function loadProfissionais(){
         }
     }catch(e){
         console.error(e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -4677,6 +4760,16 @@ async function loadEstoqueBaixo(){
 }
 
 async function loadAgendamentos(){
+    const key = 'loadAgendamentos';
+
+    // PROTEÇÃO ANTI-LOOP
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/agendamentos',{credentials:'include'});
         const data=await res.json();
@@ -4684,8 +4777,8 @@ async function loadAgendamentos(){
         if(data.success&&data.agendamentos&&data.agendamentos.length>0){
             const html=data.agendamentos.map(a=>{
                 const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
-                const statusBadge = a.status === 'Confirmado' ? 'success' : 
-                                   a.status === 'Pendente' ? 'warning' : 
+                const statusBadge = a.status === 'Confirmado' ? 'success' :
+                                   a.status === 'Pendente' ? 'warning' :
                                    a.status === 'Cancelado' ? 'danger' : 'secondary';
                 return `<tr>
                     <td><strong>${dataFormatada}</strong></td>
@@ -4708,6 +4801,8 @@ async function loadAgendamentos(){
     }catch(e){
         console.error('❌ Erro ao carregar agendamentos:',e);
         Swal.fire('Erro','Não foi possível carregar os agendamentos','error');
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -6060,8 +6155,7 @@ async function toggleTheme(){
   try{ await API.post('/api/update-theme', { theme: next }); }catch{ /* ignore */ }
 }
 
-// ===== Navigation =====
-function goTo(section){ $$('.sidebar-menu a').forEach(a=>a.classList.remove('active')); const id='section-'+section; const menuId='menu-'+section; $$('.content-section').forEach(s=>s.classList.remove('active')); const sec = $('#'+id); if(sec) sec.classList.add('active'); const m = $('#'+menuId); if(m) m.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+// ===== Navigation ===== [REMOVIDO - usando a função principal na linha 2829]
 
 // ===== Sub-Tabs Navigation =====
 function showSubTab(section, subTab){
@@ -6122,140 +6216,7 @@ async function abrirResultado(tipo,id){
   if(tipo==='orcamento'){ goTo('contratos'); }
 }
 
-// ===== Dashboard =====
-async function loadDashboard(){
-  return safeCall('loadDashboard', async () => {
-    try{
-      const r = await API.get('/api/dashboard/stats');
-      if(r.success){
-        $('#dashOrcamentos')?.appendChild(document.createTextNode(r.stats.total_orcamentos ?? 0));
-        $('#dashClientes')?.appendChild(document.createTextNode(r.stats.total_clientes ?? 0));
-        $('#dashAgendamentos')?.appendChild(document.createTextNode(r.stats.agendamentos_hoje ?? 0));
-        $('#dashFaturamento')?.appendChild(document.createTextNode((new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'})).format(r.stats.faturamento ?? 0)));
-      }
-    }catch(e){
-      console.error('Erro ao carregar dashboard:', e);
-    }
-    // Alertas de estoque
-    try{
-      const a = await API.get('/api/estoque/alertas');
-      const cont = $('#alertasEstoque');
-    if(cont){
-      if(a.success){
-        cont.innerHTML = (a.itens||[]).slice(0,8).map(p=>`<div class="stock-summary-metric"><strong>${p.nome}</strong><span>SKU ${p.sku} • ${p.categoria||''}</span><div class="badge danger" style="margin-top:8px"> ${p.estoque}/${p.estoque_minimo} </div></div>`).join('') || '<span class="text-muted">Sem alertas</span>';
-      }else{
-        cont.innerHTML = '<span class="text-muted">Sem dados</span>';
-      }
-    }
-  }catch{}
-  // Últimos orçamentos
-  try{
-    const body = $('#ultimosOrcamentosBody');
-    let list=null;
-    try{ const q = await API.get('/api/orcamentos?limit=10&sort=-created_at'); if(q.success) list=q.orcamentos; }catch{}
-    if(!list){ try{ const q = await API.get('/api/orcamentos/lista'); if(q.success) list=q.orcamentos; }catch{} }
-    if(Array.isArray(list) && body){
-      body.innerHTML = list.slice(0,8).map(o=>`<tr><td>${o.numero||'—'}</td><td>${fmtDate(o.created_at)}</td><td>${o.cliente_nome||o.cliente_cpf||'—'}</td><td>${money(o.total_final||o.total||0)}</td><td><span class="badge ${o.status==='Aprovado'?'success':(o.status==='Pendente'?'warning':'danger')}">${o.status||'—'}</span></td></tr>`).join('');
-    } else if(body){
-      body.innerHTML = '<tr><td colspan="5" class="text-muted">Nenhum orçamento encontrado</td></tr>';
-    }
-  }catch(e){
-    console.error('Erro ao carregar últimos orçamentos:', e);
-  }
-  }); // Fim do safeCall
-}
-
-// ===== Clientes =====
-async function loadClientes(){
-  return safeCall('loadClientes', async () => {
-    const table = document.querySelector('#table-clientes tbody') || document.querySelector('#tblClientesBody');
-    if(!table) return;
-    try{
-      const r = await API.get('/api/clientes');
-      const rows = (r.clientes||[]).map(c=>`<tr data-id="${c._id}"><td>${c.nome||''}<div class="text-muted">${c.email||''}</div></td><td>${c.cpf||''}</td><td>${c.telefone||''}</td><td>${c.genero||''}</td><td>${c.data_nascimento||''}</td><td>${c.total_visitas||0}</td><td>${money(c.total_gasto||0)}</td></tr>`).join('');
-      table.innerHTML = rows || '<tr><td colspan="7" class="text-muted">Sem clientes</td></tr>';
-    }catch(e){
-      console.error('Erro ao carregar clientes:', e);
-    }
-  });
-}
-function pdfClientes(q){ openFile('/api/clientes/lista/pdf?q='+encodeURIComponent(q||'')); }
-window.pdfClientes = pdfClientes;
-
-// ===== Profissionais =====
-async function loadProfissionais(){
-  return safeCall('loadProfissionais', async () => {
-    const table = document.querySelector('#table-profissionais tbody') || document.querySelector('#tblProfissionaisBody');
-    if(!table) return;
-    try{
-      const r = await API.get('/api/profissionais');
-      const rows = (r.profissionais||[]).map(p=>`<tr data-id="${p._id}"><td>${p.nome||''}</td><td>${p.cpf||''}</td><td>${p.especialidade||''}</td><td>${p.comissao_perc||0}%</td><td>${p.telefone||''}</td><td>${p.email||''}</td></tr>`).join('');
-      table.innerHTML = rows || '<tr><td colspan="6" class="text-muted">Sem profissionais</td></tr>';
-      const sel = $('#agProf'); if(sel) sel.innerHTML = (r.profissionais||[]).map(p=>`<option value="${p._id}">${p.nome}</option>`).join('');
-    }catch(e){
-      console.error('Erro ao carregar profissionais:', e);
-    }
-  });
-}
-function pdfComissoes(di, df){ openFile(`/api/profissionais/comissoes/pdf?data_inicio=${di||''}&data_fim=${df||''}`); }
-window.pdfComissoes = pdfComissoes;
-
-// ===== Produtos & Serviços (autocompletes simples) =====
-async function bindAutocompletes(){
-  const s = $('#buscaServico'); if(s){ s.addEventListener('input', () => {
-    const q = s.value.trim(); const box = $('#servicoResults'); if(!box) return;
-    if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
-    // Usar debounce para evitar requisições excessivas
-    debounce('busca_servico', async () => {
-      const r = await (async ()=>{ try{ return await API.get('/api/servicos/buscar?termo='+encodeURIComponent(q)); }catch{return {servicos:[]}; } })();
-      box.innerHTML = (r.servicos||[]).map(o => {
-        const nome = (o.nome||'').replace(/['"]/g, '\\$&');
-        return `<div class="autocomplete-item" onclick="document.querySelector('#buscaServico').value='${nome}'; document.querySelector('#servicoPreco').value='${o.preco||0}'; document.querySelector('#servicoResults').style.display='none';"><strong>${o.nome}</strong><small>${o.categoria||''}</small></div>`;
-      }).join('');
-      box.style.display = 'block';
-    }, 500); // Aguardar 500ms após parar de digitar
-  }); }
-  const p = $('#buscaProduto'); if(p){ p.addEventListener('input', () => {
-    const q = p.value.trim(); const box = $('#produtoResults'); if(!box) return;
-    if(q.length<2){ box.style.display='none'; box.innerHTML=''; return; }
-    // Usar debounce para evitar requisições excessivas
-    debounce('busca_produto', async () => {
-      const r = await (async ()=>{ try{ return await API.get('/api/produtos/buscar?termo='+encodeURIComponent(q)); }catch{return {produtos:[]}; } })();
-      box.innerHTML = (r.produtos||[]).map(o => {
-        const nome = (o.nome||'').replace(/['"]/g, '\\$&');
-        return `<div class="autocomplete-item" onclick="document.querySelector('#buscaProduto').value='${nome}'; document.querySelector('#produtoPreco').value='${o.preco||0}'; document.querySelector('#produtoResults').style.display='none';"><strong>${o.nome}</strong><small>${o.marca||o.categoria||''} • SKU ${o.sku||''}</small></div>`;
-      }).join('');
-      box.style.display = 'block';
-    }, 500); // Aguardar 500ms após parar de digitar
-  }); }
-}
-
-// ===== Estoque =====
-function exportEstoque(){ openFile('/api/estoque/exportar'); }
-function exportMov(){ openFile('/api/estoque/exportar?tipo=movimentacoes'); }
-function pdfMov(qs){ openFile('/api/estoque/movimentacoes/pdf'+(qs?('?'+qs):'')); }
-async function loadEstoque(){
-  return safeCall('loadEstoque', async () => {
-    const list = document.querySelector('#table-produtos tbody') || document.querySelector('#tblProdutosBody');
-    try{
-      const r = await API.get('/api/produtos/buscar?q=');
-      if(list) list.innerHTML = (r.produtos||[]).map(p => {
-        return `<tr data-id="${p._id}"><td>${p.nome}</td><td>${p.sku||''}</td><td>${p.categoria||''}</td><td>${money(p.preco||0)}</td><td>${money(p.custo||0)}</td><td>${p.estoque??0}</td><td>${p.estoque_minimo??0}</td></tr>`;
-      }).join('');
-    }catch(e){
-      console.error('Erro ao carregar produtos:', e);
-    }
-    const alertBox = document.querySelector('#alertasEstoque') || document.querySelector('#estoqueAlertas');
-    try{
-      const a = await API.get('/api/estoque/alertas');
-      if(alertBox) alertBox.innerHTML = (a.itens||[]).map(p => {
-        return `<div class="community-pill">⚠️ ${p.nome} • ${p.estoque}/${p.estoque_minimo}</div>`;
-      }).join('');
-    }catch(e){
-      console.error('Erro ao carregar alertas de estoque:', e);
-    }
-  });
-}
+// ===== [REMOVIDO] Funções duplicadas - usando as versões originais completas com anti-loop =====
 
 // ===== Agendamentos =====
 async function heatmapDias(dias=60){
@@ -6281,10 +6242,7 @@ async function disponibilidade(profId, dataISO){
   }catch{}
 }
 
-// ===== Comunidade (SSE) =====
-let sseInstance = null;
-let sseReconnectAttempts = 0;
-const MAX_SSE_RECONNECT = 3;
+// ===== Comunidade (SSE) ===== [Variáveis já declaradas nas linhas 2689-2692]
 
 function startSSE(){
   // Evitar múltiplas instâncias do SSE
@@ -7261,15 +7219,26 @@ function switchSubTab(section, subtab) {
 }
 
 function carregarDadosSubTab(section, subtab) {
-    // Orçamentos
-    if (section === 'orcamento') {
-        if (subtab === 'pendentes') carregarOrcamentosPendentes();
-        else if (subtab === 'aprovados') carregarOrcamentosAprovados();
-        else if (subtab === 'rejeitados') carregarOrcamentosRejeitados();
-        else if (subtab === 'historico') carregarHistoricoOrcamentos();
+    const key = `${section}-${subtab}`;
+
+    // PROTEÇÃO ANTI-LOOP: Não carregar se já estiver carregando
+    if (isLoading(key)) {
+        console.warn(`⚠️ Carregamento em andamento: ${key}`);
+        return;
     }
-    
-    // Agendamentos
+
+    setLoading(key, true);
+
+    try {
+        // Orçamentos
+        if (section === 'orcamento') {
+            if (subtab === 'pendentes') carregarOrcamentosPendentes();
+            else if (subtab === 'aprovados') carregarOrcamentosAprovados();
+            else if (subtab === 'rejeitados') carregarOrcamentosRejeitados();
+            else if (subtab === 'historico') carregarHistoricoOrcamentos();
+        }
+
+        // Agendamentos
     if (section === 'agendamentos') {
         if (subtab === 'hoje') carregarAgendamentosHoje();
         else if (subtab === 'semana') carregarAgendamentosSemana();
@@ -7299,9 +7268,14 @@ function carregarDadosSubTab(section, subtab) {
         else if (subtab === 'alertas') carregarAlertasEstoque();
         else if (subtab === 'relatorios') carregarRelatoriosEstoque();
     }
-    
+
     // Clientes (já existente - anamnese e prontuário)
     // Profissionais (já existente - comissões)
+
+    } finally {
+        // Resetar flag após 1 segundo
+        setTimeout(() => setLoading(key, false), 1000);
+    }
 }
 // ========== FIM SUB-TABS GLOBAL ==========
 

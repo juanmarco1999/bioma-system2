@@ -262,18 +262,10 @@ db = get_db()
 # Adicionar DB ao app.config para acesso do blueprint
 app.config['DB_CONNECTION'] = db
 
-# ==================== REGISTRAR BLUEPRINT BACKEND ====================
-from backend_routes import api as backend_api
-app.register_blueprint(backend_api)
-logger.info("Blueprint backend_routes registrado com sucesso!")
-
-# Registrar rotas completas adicionais
-try:
-    from backend_routes_complete import api_complete
-    app.register_blueprint(api_complete)
-    logger.info("Blueprint backend_routes_complete registrado com sucesso!")
-except Exception as e:
-    logger.warning(f"Não foi possível carregar backend_routes_complete: {str(e)}")
+# ==================== SISTEMA AUTO-CONTIDO ====================
+# TODAS as rotas estão definidas diretamente neste arquivo (app.py)
+# NÃO há dependências de arquivos externos backend_routes ou backend_routes_complete
+logger.info("✅ Sistema auto-contido - Todas as rotas definidas em app.py")
 
 def convert_objectid(obj):
     if isinstance(obj, list):
@@ -454,9 +446,10 @@ def login():
             session['user_id'] = str(user['_id'])
             session['username'] = user['username']
             session['role'] = user.get('role', 'admin')
-            
-            logger.info(f"✅ Login SUCCESS: {user['username']} (role: {session['role']})")
-            
+            session['tipo_acesso'] = user.get('tipo_acesso', 'Admin')  # Admin, Gestão, Profissional
+
+            logger.info(f"✅ Login SUCCESS: {user['username']} (role: {session['role']}, tipo: {session['tipo_acesso']})")
+
             return jsonify({
                 'success': True,
                 'user': {
@@ -465,6 +458,7 @@ def login():
                     'username': user['username'],
                     'email': user['email'],
                     'role': user.get('role', 'admin'),
+                    'tipo_acesso': user.get('tipo_acesso', 'Admin'),
                     'theme': user.get('theme', 'light')
                 }
             })
@@ -495,12 +489,13 @@ def register():
             'telefone': data.get('telefone', ''),
             'password': generate_password_hash(data['password']),
             'role': 'admin',
+            'tipo_acesso': data.get('tipo_acesso', 'Admin'),  # Admin, Gestão, Profissional (Diretriz #6)
             'theme': 'light',
             'created_at': datetime.now()
         }
-        
+
         db.users.insert_one(user_data)
-        logger.info(f"✅ User registered: {data['username']} with ADMIN role")
+        logger.info(f"✅ User registered: {data['username']} with ADMIN role and {user_data['tipo_acesso']} access")
         
         return jsonify({'success': True, 'message': 'Conta criada com sucesso! Faça login.'})
         
@@ -529,6 +524,7 @@ def current_user():
                         'username': user['username'],
                         'email': user['email'],
                         'role': user.get('role', 'admin'),
+                        'tipo_acesso': user.get('tipo_acesso', 'Admin'),
                         'theme': user.get('theme', 'light')
                     }
                 })
@@ -546,6 +542,87 @@ def update_theme():
         return jsonify({'success': True})
     except:
         return jsonify({'success': False}), 500
+
+
+# ==================== GESTÃO DE USUÁRIOS E TIPOS DE ACESSO (Diretriz #6) ====================
+
+@app.route('/api/users', methods=['GET'])
+@login_required
+def list_users():
+    """Listar todos os usuários do sistema"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        # Verificar se usuário tem permissão (apenas Admin)
+        current_user_tipo = session.get('tipo_acesso', 'Admin')
+        if current_user_tipo != 'Admin':
+            return jsonify({'success': False, 'message': 'Acesso negado. Apenas Admins podem listar usuários.'}), 403
+
+        users = list(db.users.find({}, {'password': 0}).sort('name', ASCENDING))
+        return jsonify({'success': True, 'users': convert_objectid(users)})
+
+    except Exception as e:
+        logger.error(f"Erro ao listar usuários: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/users/<id>/tipo-acesso', methods=['PUT'])
+@login_required
+def update_user_tipo_acesso(id):
+    """Atualizar tipo de acesso de um usuário (Admin, Gestão, Profissional)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        # Verificar se usuário tem permissão (apenas Admin)
+        current_user_tipo = session.get('tipo_acesso', 'Admin')
+        if current_user_tipo != 'Admin':
+            return jsonify({'success': False, 'message': 'Acesso negado. Apenas Admins podem alterar tipos de acesso.'}), 403
+
+        data = request.json
+        novo_tipo = data.get('tipo_acesso')
+
+        # Validar tipo de acesso
+        tipos_validos = ['Admin', 'Gestão', 'Profissional']
+        if novo_tipo not in tipos_validos:
+            return jsonify({'success': False, 'message': f'Tipo de acesso inválido. Use: {", ".join(tipos_validos)}'}), 400
+
+        # Atualizar usuário
+        result = db.users.update_one(
+            {'_id': ObjectId(id)},
+            {'$set': {'tipo_acesso': novo_tipo, 'updated_at': datetime.now()}}
+        )
+
+        if result.modified_count > 0:
+            logger.info(f"✅ Tipo de acesso atualizado para usuário {id}: {novo_tipo}")
+            return jsonify({'success': True, 'message': f'Tipo de acesso alterado para {novo_tipo}'})
+        else:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado ou tipo já definido'}), 404
+
+    except Exception as e:
+        logger.error(f"Erro ao atualizar tipo de acesso: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/users/<id>', methods=['GET'])
+@login_required
+def get_user(id):
+    """Obter detalhes de um usuário específico"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        user = db.users.find_one({'_id': ObjectId(id)}, {'password': 0})
+        if not user:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+
+        return jsonify({'success': True, 'user': convert_objectid(user)})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar usuário: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/api/system/status')
 @login_required
@@ -728,7 +805,9 @@ def clientes():
             clientes_list = list(db.clientes.find({}).sort('nome', ASCENDING))
             for cliente in clientes_list:
                 cliente_cpf = cliente.get('cpf')
-                cliente['total_gasto'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
+                # ALTERADO: total_gasto -> total_faturado (Diretriz #11)
+                cliente['total_faturado'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
+                cliente['total_gasto'] = cliente['total_faturado']  # Mantém compatibilidade
                 ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
                 cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
                 cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
@@ -773,7 +852,9 @@ def get_cliente(id):
         
         # Adicionar estatísticas
         cliente_cpf = cliente.get('cpf')
-        cliente['total_gasto'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
+        # ALTERADO: total_gasto -> total_faturado (Diretriz #11)
+        cliente['total_faturado'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
+        cliente['total_gasto'] = cliente['total_faturado']  # Mantém compatibilidade
         ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
         cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
         cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
@@ -1326,6 +1407,75 @@ def profissional_avaliacoes(id):
     except Exception as e:
         logger.error(f"Erro ao registrar avaliacao: {e}")
         return jsonify({'success': False, 'message': 'Erro ao registrar avaliacao'}), 500
+
+
+@app.route('/api/profissionais/<id>/upload-foto', methods=['POST'])
+@login_required
+def upload_foto_profissional(id):
+    """Upload de foto de perfil para profissionais (Diretriz #12)"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    try:
+        # Verificar se o profissional existe
+        profissional = db.profissionais.find_one({'_id': ObjectId(id)})
+        if not profissional:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+
+        # Verificar se há arquivo na requisição
+        if 'foto' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+
+        file = request.files['foto']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Arquivo sem nome'}), 400
+
+        if file and allowed_file(file.filename):
+            # Ler arquivo DIRETO EM MEMÓRIA (SEM salvar em /tmp)
+            import base64
+            file_content = file.read()
+            foto_base64 = base64.b64encode(file_content).decode('utf-8')
+
+            # Determinar tipo MIME
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'png'
+            mime_types = {
+                'png': 'image/png',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'gif': 'image/gif',
+                'webp': 'image/webp'
+            }
+            mime_type = mime_types.get(ext, 'image/jpeg')
+
+            # Montar data URI
+            foto_data_uri = f"data:{mime_type};base64,{foto_base64}"
+
+            # Atualizar profissional com a foto
+            db.profissionais.update_one(
+                {'_id': ObjectId(id)},
+                {'$set': {
+                    'foto': foto_data_uri,
+                    'foto_url': foto_data_uri,
+                    'foto_atualizada_em': datetime.now()
+                }}
+            )
+
+            # Limpar cache
+            clear_cache('profissionais_list')
+
+            logger.info(f"✅ Foto de perfil atualizada para profissional {id}")
+            return jsonify({
+                'success': True,
+                'message': 'Foto atualizada com sucesso',
+                'foto_url': foto_data_uri[:100] + '...'  # Retorna preview truncado
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido'}), 400
+
+    except Exception as e:
+        logger.error(f"Erro ao fazer upload de foto: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route('/api/assistentes', methods=['GET', 'POST'])
@@ -1928,6 +2078,181 @@ def delete_fila(id):
         return jsonify({'success': result.deleted_count > 0})
     except:
         return jsonify({'success': False}), 500
+
+
+# ==================== NOTIFICAÇÕES INTELIGENTES PARA FILA (Diretriz #10) ====================
+
+@app.route('/api/fila/<id>/notificar', methods=['POST'])
+@login_required
+def notificar_cliente_fila(id):
+    """Enviar notificação SMS/Email para cliente na fila"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        # Buscar cliente na fila
+        cliente_fila = db.fila_atendimento.find_one({'_id': ObjectId(id)})
+        if not cliente_fila:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado na fila'}), 404
+
+        data = request.json
+        tipo_notificacao = data.get('tipo', 'whatsapp')  # whatsapp, sms, email
+        mensagem_custom = data.get('mensagem', '')
+
+        # Gerar mensagem padrão se não fornecida
+        if not mensagem_custom:
+            posicao = cliente_fila.get('posicao', 0)
+            cliente_nome = cliente_fila.get('cliente_nome', 'Cliente')
+            servico = cliente_fila.get('servico', 'atendimento')
+
+            if tipo_notificacao == 'whatsapp':
+                mensagem = f"""🌿 *BIOMA - Sua vez está próxima!*
+
+Olá, {cliente_nome}! 👋
+
+📍 *Posição na fila:* {posicao}
+✨ *Serviço:* {servico}
+
+Aguarde mais alguns instantes. Em breve você será atendido!
+
+Obrigado pela preferência! 🌿"""
+            elif tipo_notificacao == 'email':
+                mensagem = f"""Olá {cliente_nome},
+
+Você está na posição {posicao} da fila de atendimento.
+Serviço: {servico}
+
+Aguarde mais alguns instantes, você será atendido em breve!
+
+Atenciosamente,
+Equipe BIOMA"""
+            else:  # sms
+                mensagem = f"BIOMA: Ola {cliente_nome}! Voce esta na posicao {posicao} da fila para {servico}. Aguarde!"
+        else:
+            mensagem = mensagem_custom
+
+        telefone = cliente_fila.get('cliente_telefone', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+
+        # Registrar notificação no banco
+        notificacao = {
+            'fila_id': ObjectId(id),
+            'cliente_nome': cliente_fila.get('cliente_nome'),
+            'cliente_telefone': telefone,
+            'tipo': tipo_notificacao,
+            'mensagem': mensagem,
+            'status': 'preparada',  # Em produção: 'enviada', 'erro'
+            'created_at': datetime.now(),
+            'sent_by': session.get('username', 'sistema')
+        }
+
+        # Em produção, aqui você integraria com:
+        # - Twilio para SMS
+        # - SendGrid para Email
+        # - WhatsApp Business API
+
+        # Por enquanto, apenas salvamos a notificação preparada
+        result = db.notificacoes.insert_one(notificacao)
+
+        # Se for WhatsApp, gerar URL
+        whatsapp_url = None
+        if tipo_notificacao == 'whatsapp':
+            mensagem_encoded = urllib.parse.quote(mensagem)
+            whatsapp_url = f"https://wa.me/55{telefone}?text={mensagem_encoded}"
+
+        logger.info(f"✅ Notificação {tipo_notificacao} preparada para {cliente_fila.get('cliente_nome')}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Notificação {tipo_notificacao} preparada com sucesso',
+            'notificacao_id': str(result.inserted_id),
+            'whatsapp_url': whatsapp_url,
+            'preview': mensagem[:100] + '...' if len(mensagem) > 100 else mensagem
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao preparar notificação: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/fila/notificar-todos', methods=['POST'])
+@login_required
+def notificar_todos_fila():
+    """Notificar todos os clientes na fila sobre sua posição"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        data = request.json
+        tipo_notificacao = data.get('tipo', 'whatsapp')
+
+        # Buscar todos na fila aguardando
+        clientes_fila = list(db.fila_atendimento.find({'status': 'aguardando'}).sort('posicao', ASCENDING))
+
+        notificacoes_criadas = []
+        for cliente in clientes_fila:
+            posicao = cliente.get('posicao', 0)
+            cliente_nome = cliente.get('cliente_nome', 'Cliente')
+            servico = cliente.get('servico', 'atendimento')
+            telefone = cliente.get('cliente_telefone', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+
+            # Mensagem personalizada pela posição
+            if posicao == 1:
+                mensagem = f"🌿 BIOMA: {cliente_nome}, é sua vez! Dirija-se ao atendimento para {servico}. Obrigado!"
+            elif posicao <= 3:
+                mensagem = f"🌿 BIOMA: {cliente_nome}, você está próximo! Posição {posicao} na fila. Prepare-se!"
+            else:
+                mensagem = f"🌿 BIOMA: {cliente_nome}, você está na posição {posicao}. Aguarde, em breve será sua vez!"
+
+            notificacao = {
+                'fila_id': cliente['_id'],
+                'cliente_nome': cliente_nome,
+                'cliente_telefone': telefone,
+                'tipo': tipo_notificacao,
+                'mensagem': mensagem,
+                'posicao': posicao,
+                'status': 'preparada',
+                'created_at': datetime.now(),
+                'sent_by': session.get('username', 'sistema')
+            }
+
+            result = db.notificacoes.insert_one(notificacao)
+            notificacoes_criadas.append(str(result.inserted_id))
+
+        logger.info(f"✅ {len(notificacoes_criadas)} notificações preparadas para a fila")
+
+        return jsonify({
+            'success': True,
+            'message': f'{len(notificacoes_criadas)} notificações preparadas',
+            'total': len(notificacoes_criadas)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao notificar fila: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/notificacoes', methods=['GET'])
+@login_required
+def listar_notificacoes():
+    """Listar histórico de notificações"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        limite = int(request.args.get('limit', 50))
+        tipo = request.args.get('tipo')
+
+        query = {}
+        if tipo:
+            query['tipo'] = tipo
+
+        notificacoes = list(db.notificacoes.find(query).sort('created_at', DESCENDING).limit(limite))
+        return jsonify({'success': True, 'notificacoes': convert_objectid(notificacoes)})
+
+    except Exception as e:
+        logger.error(f"Erro ao listar notificações: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/api/estoque/entrada', methods=['POST'])
 @login_required
@@ -3034,39 +3359,55 @@ def internal_error(e):
 @app.route('/api/upload/logo', methods=['POST'])
 @login_required
 def upload_logo():
-    """Upload de logo da empresa"""
+    """Upload de logo da empresa (armazenado como base64, SEM arquivos externos)"""
     try:
         if 'logo' not in request.files:
             return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
-        
+
         file = request.files['logo']
         tipo = request.form.get('tipo', 'principal')  # principal ou login
-        
+
         if file.filename == '':
             return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
-        
+
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"logo_{tipo}_{timestamp}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            # Salvar referência no banco
+            import base64
+
+            # Ler arquivo em memória (SEM salvar em /tmp)
+            file_content = file.read()
+            foto_base64 = base64.b64encode(file_content).decode('utf-8')
+
+            # Determinar tipo MIME
+            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+            mime_types = {
+                'png': 'image/png',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'gif': 'image/gif',
+                'webp': 'image/webp'
+            }
+            mime_type = mime_types.get(ext, 'image/jpeg')
+
+            # Montar data URI (armazenado diretamente no MongoDB)
+            data_uri = f"data:{mime_type};base64,{foto_base64}"
+
+            # Salvar referência no banco COM data URI
             db.uploads.insert_one({
                 'tipo': f'logo_{tipo}',
-                'filename': filename,
-                'path': filepath,
-                'url': f'/uploads/{filename}',
+                'filename': secure_filename(file.filename),
+                'data_uri': data_uri,  # Armazena base64 diretamente
+                'mime_type': mime_type,
                 'data_upload': datetime.now()
             })
-            
+
+            logger.info(f"✅ Logo {tipo} salvo como base64 no MongoDB (SEM arquivos externos)")
+
             return jsonify({
                 'success': True,
                 'message': 'Logo enviado com sucesso',
-                'url': f'/uploads/{filename}'
+                'url': data_uri  # Retorna Data URI diretamente
             })
-        
+
         return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido'}), 400
     except Exception as e:
         logger.error(f"Erro no upload de logo: {e}")
@@ -3082,78 +3423,111 @@ def upload_imagem():
 # 2. Obter Logo Configurado
 @app.route('/api/config/logo', methods=['GET'])
 def get_logo():
-    """Obter URL do logo configurado"""
+    """Obter Data URI do logo configurado (sem arquivos externos)"""
     try:
         tipo = request.args.get('tipo', 'principal')
         logo = db.uploads.find_one({'tipo': f'logo_{tipo}'}, sort=[('data_upload', DESCENDING)])
-        
+
         if logo:
-            return jsonify({'success': True, 'url': logo.get('url')})
+            # Retorna data_uri em vez de url de arquivo
+            return jsonify({'success': True, 'url': logo.get('data_uri')})
         return jsonify({'success': True, 'url': None})
     except Exception as e:
         logger.error(f"Erro ao obter logo: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# 3. Servir Arquivos Uploaded
+# 3. Servir Arquivos Uploaded (DEPRECATED - Sistema usa Data URI agora)
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    """Servir arquivo uploaded"""
+    """
+    DEPRECATED: Sistema agora usa Data URI (base64) armazenado diretamente no MongoDB.
+    Arquivos não são mais salvos no filesystem.
+    Esta rota existe apenas para compatibilidade retroativa.
+    """
     try:
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        return send_file(filepath)
+        # Tentar buscar do MongoDB caso seja um registro antigo
+        upload = db.uploads.find_one({'filename': filename})
+        if upload and 'data_uri' in upload:
+            # Retorna o data_uri como JSON (frontend deve usar esse valor direto)
+            return jsonify({'success': True, 'data_uri': upload['data_uri']})
+
+        # Se não encontrou no MongoDB, retorna 404
+        logger.warning(f"⚠️ Tentativa de acessar arquivo que não existe: {filename}")
+        return jsonify({
+            'success': False,
+            'message': 'Sistema não usa mais arquivos externos. Todos os uploads são armazenados como Data URI no MongoDB.'
+        }), 404
     except Exception as e:
-        logger.error(f"Erro ao servir arquivo: {e}")
+        logger.error(f"Erro ao buscar upload: {e}")
         return jsonify({'success': False, 'message': 'Arquivo não encontrado'}), 404
 
 # 4. Upload de Foto de Profissional
 @app.route('/api/upload/foto-profissional', methods=['POST'])
 @login_required
 def upload_foto_profissional():
-    """Upload de foto de perfil de profissional"""
+    """Upload de foto de perfil de profissional (armazenado como base64, SEM arquivos externos)"""
     try:
         if 'foto' not in request.files:
             return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
-        
+
         file = request.files['foto']
         profissional_id = request.form.get('profissional_id')
-        
+
         if not profissional_id:
             return jsonify({'success': False, 'message': 'ID do profissional não fornecido'}), 400
-        
+
         if file.filename == '':
             return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
-        
+
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"prof_{profissional_id}_{timestamp}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            url = f'/uploads/{filename}'
-            
-            # Atualizar profissional com a foto
+            import base64
+
+            # Ler arquivo em memória (SEM salvar em /tmp)
+            file_content = file.read()
+            foto_base64 = base64.b64encode(file_content).decode('utf-8')
+
+            # Determinar tipo MIME
+            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+            mime_types = {
+                'png': 'image/png',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'gif': 'image/gif',
+                'webp': 'image/webp'
+            }
+            mime_type = mime_types.get(ext, 'image/jpeg')
+
+            # Montar data URI (armazenado diretamente no MongoDB)
+            data_uri = f"data:{mime_type};base64,{foto_base64}"
+
+            # Atualizar profissional com a foto (Data URI em vez de URL de arquivo)
             db.profissionais.update_one(
                 {'_id': ObjectId(profissional_id)},
-                {'$set': {'foto': url}}
+                {'$set': {
+                    'foto': data_uri,
+                    'foto_url': data_uri,
+                    'foto_atualizada_em': datetime.now()
+                }}
             )
-            
-            # Salvar referência no banco
+
+            # Salvar referência no banco COM data URI
             db.uploads.insert_one({
                 'tipo': 'foto_profissional',
                 'profissional_id': ObjectId(profissional_id),
-                'filename': filename,
-                'path': filepath,
-                'url': url,
+                'filename': secure_filename(file.filename),
+                'data_uri': data_uri,  # Armazena base64 diretamente
+                'mime_type': mime_type,
                 'data_upload': datetime.now()
             })
-            
+
+            logger.info(f"✅ Foto de profissional {profissional_id} salva como base64 no MongoDB (SEM arquivos externos)")
+
             return jsonify({
                 'success': True,
                 'message': 'Foto enviada com sucesso',
-                'url': url
+                'url': data_uri  # Retorna Data URI diretamente
             })
-        
+
         return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido'}), 400
     except Exception as e:
         logger.error(f"Erro no upload de foto: {e}")
@@ -3398,14 +3772,23 @@ def listar_entradas_pendentes():
 @app.route('/api/relatorios/mapa-calor', methods=['GET'])
 @login_required
 def mapa_calor():
-    """Retorna dados para mapa de calor de movimentação"""
+    """Retorna dados melhorados para mapa de calor de movimentação (Diretriz #5)"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
     try:
-        # Últimos 90 dias
-        data_inicio = datetime.now() - timedelta(days=90)
-        
-        # Agregar atendimentos por dia
-        pipeline = [
-            {'$match': {'created_at': {'$gte': data_inicio}}},
+        # Parâmetros configuráveis
+        dias = int(request.args.get('dias', 90))
+        incluir_faturamento = request.args.get('faturamento', 'true').lower() == 'true'
+        incluir_clientes = request.args.get('clientes', 'true').lower() == 'true'
+
+        # Período
+        data_inicio = datetime.now() - timedelta(days=dias)
+        data_fim = datetime.now()
+
+        # Pipeline de agregação otimizado
+        pipeline_base = [
+            {'$match': {'created_at': {'$gte': data_inicio, '$lte': data_fim}}},
             {'$group': {
                 '_id': {
                     '$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}
@@ -3414,24 +3797,121 @@ def mapa_calor():
             }},
             {'$sort': {'_id': 1}}
         ]
-        
-        # Buscar de múltiplas collections
-        agendamentos = list(db.agendamentos.aggregate(pipeline))
-        orcamentos = list(db.orcamentos.aggregate(pipeline))
-        
-        # Combinar resultados
+
+        # Buscar dados de diferentes collections
+        agendamentos_data = list(db.agendamentos.aggregate(pipeline_base))
+        orcamentos_data = list(db.orcamentos.aggregate(pipeline_base))
+
+        # Pipeline com faturamento para orçamentos aprovados
+        pipeline_faturamento = [
+            {'$match': {
+                'created_at': {'$gte': data_inicio, '$lte': data_fim},
+                'status': 'Aprovado'
+            }},
+            {'$group': {
+                '_id': {
+                    '$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}
+                },
+                'faturamento': {'$sum': '$total_final'},
+                'count': {'$sum': 1}
+            }},
+            {'$sort': {'_id': 1}}
+        ]
+
+        faturamento_data = list(db.orcamentos.aggregate(pipeline_faturamento)) if incluir_faturamento else []
+
+        # Pipeline para novos clientes
+        pipeline_clientes = [
+            {'$match': {'created_at': {'$gte': data_inicio, '$lte': data_fim}}},
+            {'$group': {
+                '_id': {
+                    '$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}
+                },
+                'count': {'$sum': 1}
+            }},
+            {'$sort': {'_id': 1}}
+        ]
+
+        clientes_data = list(db.clientes.aggregate(pipeline_clientes)) if incluir_clientes else []
+
+        # Combinar todos os dados em um mapa por dia
         dias_map = {}
-        for item in agendamentos + orcamentos:
-            data = item['_id']
-            if data in dias_map:
-                dias_map[data] += item['count']
-            else:
-                dias_map[data] = item['count']
-        
-        # Formatar para array
-        dados = [{'data': k, 'intensidade': v} for k, v in dias_map.items()]
-        
-        return jsonify({'success': True, 'dados': dados})
+
+        # Inicializar todos os dias do período
+        current_date = data_inicio
+        while current_date <= data_fim:
+            dia_str = current_date.strftime('%Y-%m-%d')
+            dias_map[dia_str] = {
+                'data': dia_str,
+                'agendamentos': 0,
+                'orcamentos': 0,
+                'faturamento': 0,
+                'novos_clientes': 0,
+                'intensidade_total': 0
+            }
+            current_date += timedelta(days=1)
+
+        # Preencher agendamentos
+        for item in agendamentos_data:
+            dia = item['_id']
+            if dia in dias_map:
+                dias_map[dia]['agendamentos'] = item['count']
+                dias_map[dia]['intensidade_total'] += item['count']
+
+        # Preencher orçamentos
+        for item in orcamentos_data:
+            dia = item['_id']
+            if dia in dias_map:
+                dias_map[dia]['orcamentos'] = item['count']
+                dias_map[dia]['intensidade_total'] += item['count']
+
+        # Preencher faturamento
+        for item in faturamento_data:
+            dia = item['_id']
+            if dia in dias_map:
+                dias_map[dia]['faturamento'] = round(item['faturamento'], 2)
+                # Adicionar peso ao faturamento para intensidade
+                dias_map[dia]['intensidade_total'] += item['count'] * 2  # Peso maior para vendas
+
+        # Preencher novos clientes
+        for item in clientes_data:
+            dia = item['_id']
+            if dia in dias_map:
+                dias_map[dia]['novos_clientes'] = item['count']
+                dias_map[dia]['intensidade_total'] += item['count']
+
+        # Converter para lista ordenada
+        dados = sorted(dias_map.values(), key=lambda x: x['data'])
+
+        # Calcular estatísticas gerais
+        total_agendamentos = sum(d['agendamentos'] for d in dados)
+        total_orcamentos = sum(d['orcamentos'] for d in dados)
+        total_faturamento = sum(d['faturamento'] for d in dados)
+        total_clientes = sum(d['novos_clientes'] for d in dados)
+
+        # Dia mais movimentado
+        dia_mais_movimentado = max(dados, key=lambda x: x['intensidade_total']) if dados else None
+        dia_maior_faturamento = max(dados, key=lambda x: x['faturamento']) if dados and incluir_faturamento else None
+
+        return jsonify({
+            'success': True,
+            'dados': dados,
+            'periodo': {
+                'inicio': data_inicio.strftime('%Y-%m-%d'),
+                'fim': data_fim.strftime('%Y-%m-%d'),
+                'total_dias': dias
+            },
+            'estatisticas': {
+                'total_agendamentos': total_agendamentos,
+                'total_orcamentos': total_orcamentos,
+                'total_faturamento': total_faturamento,
+                'total_novos_clientes': total_clientes,
+                'media_diaria_agendamentos': round(total_agendamentos / dias, 2) if dias > 0 else 0,
+                'dia_mais_movimentado': dia_mais_movimentado,
+                'dia_maior_faturamento': dia_maior_faturamento
+            }
+        })
+
     except Exception as e:
         logger.error(f"Erro ao gerar mapa de calor: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -3898,6 +4378,290 @@ def handle_prontuario_by_id(cpf, id):
         logger.error(f"❌ Erro em handle_prontuario_by_id: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+# ==================== HISTÓRICO COMPLETO ANAMNESE/PRONTUÁRIO (Diretriz #21) ====================
+
+@app.route('/api/clientes/<cpf>/historico-completo', methods=['GET'])
+@login_required
+def historico_completo_cliente(cpf):
+    """Obter histórico completo de anamnese e prontuários de um cliente"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        # Buscar cliente
+        cliente = db.clientes.find_one({'cpf': cpf})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Buscar todas as anamneses
+        anamneses = list(db.anamneses.find({'cliente_cpf': cpf}).sort('data_cadastro', DESCENDING))
+
+        # Buscar todos os prontuários
+        prontuarios = list(db.prontuarios.find({'cliente_cpf': cpf}).sort('data_atendimento', DESCENDING))
+
+        # Buscar orçamentos/contratos
+        orcamentos = list(db.orcamentos.find({'cliente_cpf': cpf}).sort('created_at', DESCENDING))
+
+        # Calcular estatísticas
+        total_atendimentos = len(prontuarios)
+        total_gasto = sum(o.get('total_final', 0) for o in orcamentos if o.get('status') == 'Aprovado')
+        ultimo_atendimento = prontuarios[0].get('data_atendimento') if prontuarios else None
+
+        historico = {
+            'cliente': {
+                'nome': cliente.get('nome'),
+                'cpf': cliente.get('cpf'),
+                'telefone': cliente.get('telefone'),
+                'email': cliente.get('email'),
+                'data_nascimento': cliente.get('data_nascimento')
+            },
+            'estatisticas': {
+                'total_atendimentos': total_atendimentos,
+                'total_faturado': total_gasto,
+                'total_orcamentos': len(orcamentos),
+                'ultimo_atendimento': ultimo_atendimento.isoformat() if isinstance(ultimo_atendimento, datetime) else ultimo_atendimento
+            },
+            'anamneses': convert_objectid(anamneses),
+            'prontuarios': convert_objectid(prontuarios),
+            'orcamentos': convert_objectid(orcamentos)
+        }
+
+        return jsonify({'success': True, 'historico': historico})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico completo: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/clientes/<cpf>/prontuario/<id>/pdf', methods=['GET'])
+@login_required
+def gerar_pdf_prontuario(cpf, id):
+    """Gerar PDF de prontuário para impressão (Diretriz #21)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        prontuario = db.prontuarios.find_one({'_id': ObjectId(id), 'cliente_cpf': cpf})
+        if not prontuario:
+            return jsonify({'success': False, 'message': 'Prontuário não encontrado'}), 404
+
+        cliente = db.clientes.find_one({'cpf': cpf})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Criar buffer para o PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Título
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=TA_CENTER)
+        elements.append(Paragraph("PRONTUÁRIO DE ATENDIMENTO", title_style))
+        elements.append(Spacer(1, 0.3*cm))
+
+        # Dados do cliente
+        elements.append(Paragraph('<b>DADOS DO CLIENTE</b>', styles['Heading2']))
+        cliente_data = [
+            ['Nome:', cliente.get('nome', 'N/A')],
+            ['CPF:', cliente.get('cpf', 'N/A')],
+            ['Telefone:', cliente.get('telefone', 'N/A')],
+            ['Email:', cliente.get('email', 'N/A')],
+            ['Data Nasc.:', cliente.get('data_nascimento', 'N/A')]
+        ]
+        cliente_table = Table(cliente_data, colWidths=[4*cm, 12*cm])
+        cliente_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#f0f0f0')),
+            ('GRID', (0, 0), (-1, -1), 0.5, black),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(cliente_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Dados do atendimento
+        elements.append(Paragraph('<b>DADOS DO ATENDIMENTO</b>', styles['Heading2']))
+        data_atendimento = prontuario.get('data_atendimento')
+        if isinstance(data_atendimento, datetime):
+            data_atendimento = data_atendimento.strftime('%d/%m/%Y %H:%M')
+
+        atendimento_data = [
+            ['Data:', str(data_atendimento) if data_atendimento else 'N/A'],
+            ['Profissional:', prontuario.get('profissional', 'N/A')],
+            ['Procedimento:', prontuario.get('procedimento', 'N/A')],
+            ['Próxima Sessão:', prontuario.get('proxima_sessao', 'N/A')]
+        ]
+        atendimento_table = Table(atendimento_data, colWidths=[4*cm, 12*cm])
+        atendimento_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#e3f2fd')),
+            ('GRID', (0, 0), (-1, -1), 0.5, black),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(atendimento_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Produtos utilizados
+        if prontuario.get('produtos_utilizados'):
+            elements.append(Paragraph('<b>PRODUTOS UTILIZADOS</b>', styles['Heading3']))
+            produtos_list = prontuario['produtos_utilizados']
+            if isinstance(produtos_list, list):
+                for produto in produtos_list:
+                    elements.append(Paragraph(f"• {produto}", styles['Normal']))
+            elements.append(Spacer(1, 0.3*cm))
+
+        # Observações
+        if prontuario.get('observacoes'):
+            elements.append(Paragraph('<b>OBSERVAÇÕES</b>', styles['Heading3']))
+            elements.append(Paragraph(prontuario['observacoes'], styles['Normal']))
+            elements.append(Spacer(1, 0.3*cm))
+
+        # Rodapé
+        elements.append(Spacer(1, 1*cm))
+        footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER)
+        elements.append(Paragraph('Este documento é confidencial e destinado exclusivamente ao cliente.', footer_style))
+        elements.append(Paragraph(f'Gerado em: {datetime.now().strftime("%d/%m/%Y às %H:%M")}', footer_style))
+
+        # Gerar PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"prontuario_{cliente.get('nome', 'cliente')}_{id}.pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF de prontuário: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/clientes/<cpf>/historico-completo/pdf', methods=['GET'])
+@login_required
+def gerar_pdf_historico_completo(cpf):
+    """Gerar PDF do histórico completo do cliente (Diretriz #21)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        cliente = db.clientes.find_one({'cpf': cpf})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        prontuarios = list(db.prontuarios.find({'cliente_cpf': cpf}).sort('data_atendimento', DESCENDING))
+        orcamentos = list(db.orcamentos.find({'cliente_cpf': cpf, 'status': 'Aprovado'}).sort('created_at', DESCENDING))
+
+        # Criar buffer para o PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Título
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=TA_CENTER)
+        elements.append(Paragraph(f"HISTÓRICO COMPLETO - {cliente.get('nome', 'Cliente')}", title_style))
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Estatísticas
+        total_atendimentos = len(prontuarios)
+        total_faturado = sum(o.get('total_final', 0) for o in orcamentos)
+
+        estatisticas_data = [
+            ['Total de Atendimentos:', str(total_atendimentos)],
+            ['Total Faturado:', f"R$ {total_faturado:.2f}"],
+            ['Última Visita:', prontuarios[0].get('data_atendimento').strftime('%d/%m/%Y') if prontuarios and isinstance(prontuarios[0].get('data_atendimento'), datetime) else 'N/A']
+        ]
+        estatisticas_table = Table(estatisticas_data, colWidths=[8*cm, 8*cm])
+        estatisticas_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), HexColor('#e8f5e9')),
+            ('GRID', (0, 0), (-1, -1), 0.5, black),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(estatisticas_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Histórico de prontuários
+        if prontuarios:
+            elements.append(Paragraph('<b>HISTÓRICO DE ATENDIMENTOS</b>', styles['Heading2']))
+            for prontuario in prontuarios[:10]:  # Limitar aos 10 mais recentes
+                data_atend = prontuario.get('data_atendimento')
+                if isinstance(data_atend, datetime):
+                    data_atend = data_atend.strftime('%d/%m/%Y')
+
+                elements.append(Paragraph(f"<b>{data_atend}</b> - {prontuario.get('procedimento', 'Procedimento não especificado')}", styles['Normal']))
+                if prontuario.get('profissional'):
+                    elements.append(Paragraph(f"Profissional: {prontuario.get('profissional')}", styles['Normal']))
+                if prontuario.get('observacoes'):
+                    elements.append(Paragraph(f"Obs: {prontuario.get('observacoes')[:150]}...", styles['Normal']))
+                elements.append(Spacer(1, 0.2*cm))
+
+        # Gerar PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"historico_completo_{cliente.get('nome', 'cliente')}.pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF de histórico completo: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/clientes/<cpf>/historico-completo/whatsapp', methods=['GET'])
+@login_required
+def enviar_whatsapp_historico(cpf):
+    """Gerar link WhatsApp com resumo do histórico (Diretriz #21)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        cliente = db.clientes.find_one({'cpf': cpf})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        prontuarios = list(db.prontuarios.find({'cliente_cpf': cpf}).sort('data_atendimento', DESCENDING).limit(5))
+        orcamentos = list(db.orcamentos.find({'cliente_cpf': cpf, 'status': 'Aprovado'}).sort('created_at', DESCENDING))
+
+        telefone = cliente.get('telefone', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+
+        # Montar mensagem
+        mensagem = f"""🌿 *BIOMA - Histórico de Atendimentos*
+
+👤 *Cliente:* {cliente.get('nome', 'N/A')}
+📊 *Total de Atendimentos:* {len(prontuarios)}
+💰 *Total Investido:* R$ {sum(o.get('total_final', 0) for o in orcamentos):.2f}
+
+📋 *ÚLTIMOS ATENDIMENTOS:*
+"""
+
+        for i, prontuario in enumerate(prontuarios, 1):
+            data = prontuario.get('data_atendimento')
+            if isinstance(data, datetime):
+                data = data.strftime('%d/%m/%Y')
+            procedimento = prontuario.get('procedimento', 'Procedimento')
+            mensagem += f"{i}. {data} - {procedimento}\n"
+
+        mensagem += "\nObrigado por confiar na BIOMA! 🌿"
+
+        # URL encode
+        mensagem_encoded = urllib.parse.quote(mensagem)
+        whatsapp_url = f"https://wa.me/55{telefone}?text={mensagem_encoded}"
+
+        return jsonify({
+            'success': True,
+            'whatsapp_url': whatsapp_url,
+            'telefone': telefone
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar link WhatsApp: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 # ==================== SISTEMA DE MULTICOMISSÕES ====================
 
 @app.route('/api/orcamentos', methods=['GET', 'POST'])
@@ -4072,6 +4836,635 @@ def handle_orcamento_by_id(id):
     except Exception as e:
         logger.error(f"❌ Erro em handle_orcamento_by_id: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/orcamentos/<id>/pdf', methods=['GET'])
+@login_required
+def gerar_pdf_orcamento(id):
+    """Gerar PDF de orçamento para impressão (Diretriz #3)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+
+        # Criar buffer para o PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Título
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=TA_CENTER)
+        elements.append(Paragraph(f"ORÇAMENTO #{orcamento.get('numero', str(orcamento['_id'])[-6:])}", title_style))
+        elements.append(Spacer(1, 0.3*cm))
+
+        # Informações do cliente
+        elements.append(Paragraph('<b>DADOS DO CLIENTE</b>', styles['Heading2']))
+        cliente_data = [
+            ['Nome:', orcamento.get('cliente_nome', 'N/A')],
+            ['CPF:', orcamento.get('cliente_cpf', 'N/A')],
+            ['Telefone:', orcamento.get('cliente_telefone', 'N/A')],
+            ['Email:', orcamento.get('cliente_email', 'N/A')],
+            ['Data:', orcamento.get('created_at', datetime.now()).strftime('%d/%m/%Y') if isinstance(orcamento.get('created_at'), datetime) else 'N/A']
+        ]
+        cliente_table = Table(cliente_data, colWidths=[4*cm, 12*cm])
+        cliente_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#f0f0f0')),
+            ('GRID', (0, 0), (-1, -1), 0.5, black),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(cliente_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Serviços
+        if orcamento.get('servicos'):
+            elements.append(Paragraph('<b>SERVIÇOS</b>', styles['Heading2']))
+            servicos_data = [['Descrição', 'Quantidade', 'Valor Unit.', 'Total']]
+            for srv in orcamento['servicos']:
+                servicos_data.append([
+                    srv.get('nome', 'N/A'),
+                    str(srv.get('quantidade', 1)),
+                    f"R$ {srv.get('preco', 0):.2f}",
+                    f"R$ {srv.get('total', 0):.2f}"
+                ])
+            servicos_table = Table(servicos_data, colWidths=[8*cm, 2*cm, 3*cm, 3*cm])
+            servicos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#4CAF50')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ]))
+            elements.append(servicos_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+        # Produtos
+        if orcamento.get('produtos'):
+            elements.append(Paragraph('<b>PRODUTOS</b>', styles['Heading2']))
+            produtos_data = [['Descrição', 'Quantidade', 'Valor Unit.', 'Total']]
+            for prd in orcamento['produtos']:
+                produtos_data.append([
+                    prd.get('nome', 'N/A'),
+                    str(prd.get('quantidade', 1)),
+                    f"R$ {prd.get('preco', 0):.2f}",
+                    f"R$ {prd.get('total', 0):.2f}"
+                ])
+            produtos_table = Table(produtos_data, colWidths=[8*cm, 2*cm, 3*cm, 3*cm])
+            produtos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#2196F3')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ]))
+            elements.append(produtos_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+        # Totais
+        totais_data = [
+            ['Subtotal Serviços:', f"R$ {orcamento.get('total_servicos', 0):.2f}"],
+            ['Subtotal Produtos:', f"R$ {orcamento.get('total_produtos', 0):.2f}"],
+            ['Desconto:', f"R$ {orcamento.get('desconto_valor', 0):.2f}"],
+            ['<b>TOTAL FINAL:</b>', f"<b>R$ {orcamento.get('total_final', 0):.2f}</b>"]
+        ]
+        totais_table = Table(totais_data, colWidths=[12*cm, 4*cm])
+        totais_table.setStyle(TableStyle([
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 14),
+            ('BACKGROUND', (0, -1), (-1, -1), HexColor('#FFD700')),
+        ]))
+        elements.append(totais_table)
+
+        # Observações
+        if orcamento.get('observacoes'):
+            elements.append(Spacer(1, 0.5*cm))
+            elements.append(Paragraph('<b>OBSERVAÇÕES:</b>', styles['Heading3']))
+            elements.append(Paragraph(orcamento['observacoes'], styles['Normal']))
+
+        # Gerar PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"orcamento_{orcamento.get('numero', id)}.pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF de orçamento: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/orcamentos/<id>/whatsapp', methods=['GET'])
+@login_required
+def enviar_whatsapp_orcamento(id):
+    """Gerar link do WhatsApp com orçamento (Diretriz #3)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+
+        # Montar mensagem do WhatsApp
+        telefone = orcamento.get('cliente_telefone', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+
+        mensagem = f"""🌿 *BIOMA - Orçamento #{orcamento.get('numero', str(orcamento['_id'])[-6:])}*
+
+👤 *Cliente:* {orcamento.get('cliente_nome', 'N/A')}
+📅 *Data:* {orcamento.get('created_at', datetime.now()).strftime('%d/%m/%Y') if isinstance(orcamento.get('created_at'), datetime) else 'N/A'}
+
+"""
+
+        # Serviços
+        if orcamento.get('servicos'):
+            mensagem += "✨ *SERVIÇOS:*\n"
+            for srv in orcamento['servicos']:
+                mensagem += f"• {srv.get('nome', 'N/A')} - R$ {srv.get('total', 0):.2f}\n"
+            mensagem += "\n"
+
+        # Produtos
+        if orcamento.get('produtos'):
+            mensagem += "🛍️ *PRODUTOS:*\n"
+            for prd in orcamento['produtos']:
+                mensagem += f"• {prd.get('nome', 'N/A')} - R$ {prd.get('total', 0):.2f}\n"
+            mensagem += "\n"
+
+        # Totais
+        mensagem += f"""💰 *VALORES:*
+Serviços: R$ {orcamento.get('total_servicos', 0):.2f}
+Produtos: R$ {orcamento.get('total_produtos', 0):.2f}
+Desconto: R$ {orcamento.get('desconto_valor', 0):.2f}
+
+✅ *TOTAL: R$ {orcamento.get('total_final', 0):.2f}*
+"""
+
+        if orcamento.get('observacoes'):
+            mensagem += f"\n📝 *Observações:* {orcamento['observacoes']}"
+
+        # URL encode da mensagem
+        mensagem_encoded = urllib.parse.quote(mensagem)
+        whatsapp_url = f"https://wa.me/55{telefone}?text={mensagem_encoded}"
+
+        return jsonify({
+            'success': True,
+            'whatsapp_url': whatsapp_url,
+            'telefone': telefone
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar link WhatsApp: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/contratos/<id>/pdf', methods=['GET'])
+@login_required
+def gerar_pdf_contrato(id):
+    """Gerar PDF de contrato para impressão (Diretriz #4)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        contrato = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not contrato:
+            return jsonify({'success': False, 'message': 'Contrato não encontrado'}), 404
+
+        # Criar buffer para o PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Título
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=TA_CENTER)
+        elements.append(Paragraph(f"CONTRATO #{contrato.get('numero', str(contrato['_id'])[-6:])}", title_style))
+        elements.append(Spacer(1, 0.3*cm))
+
+        # Status
+        status_style = ParagraphStyle('Status', parent=styles['Normal'], alignment=TA_CENTER, fontSize=10)
+        status_color = HexColor('#4CAF50') if contrato.get('status') == 'Aprovado' else HexColor('#FF9800')
+        elements.append(Paragraph(f'<font color="{status_color}"><b>STATUS: {contrato.get("status", "N/A")}</b></font>', status_style))
+        elements.append(Spacer(1, 0.3*cm))
+
+        # Informações do cliente
+        elements.append(Paragraph('<b>DADOS DO CLIENTE</b>', styles['Heading2']))
+        cliente_data = [
+            ['Nome:', contrato.get('cliente_nome', 'N/A')],
+            ['CPF:', contrato.get('cliente_cpf', 'N/A')],
+            ['Telefone:', contrato.get('cliente_telefone', 'N/A')],
+            ['Email:', contrato.get('cliente_email', 'N/A')],
+            ['Data Contrato:', contrato.get('created_at', datetime.now()).strftime('%d/%m/%Y') if isinstance(contrato.get('created_at'), datetime) else 'N/A'],
+            ['Forma Pagamento:', contrato.get('forma_pagamento', 'N/A')]
+        ]
+        cliente_table = Table(cliente_data, colWidths=[4*cm, 12*cm])
+        cliente_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#f0f0f0')),
+            ('GRID', (0, 0), (-1, -1), 0.5, black),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
+        elements.append(cliente_table)
+        elements.append(Spacer(1, 0.5*cm))
+
+        # Serviços contratados
+        if contrato.get('servicos'):
+            elements.append(Paragraph('<b>SERVIÇOS CONTRATADOS</b>', styles['Heading2']))
+            servicos_data = [['Descrição', 'Profissional', 'Qtd', 'Valor Unit.', 'Total']]
+            for srv in contrato['servicos']:
+                servicos_data.append([
+                    srv.get('nome', 'N/A'),
+                    srv.get('profissional_nome', '-'),
+                    str(srv.get('quantidade', 1)),
+                    f"R$ {srv.get('preco', 0):.2f}",
+                    f"R$ {srv.get('total', 0):.2f}"
+                ])
+            servicos_table = Table(servicos_data, colWidths=[6*cm, 4*cm, 1.5*cm, 2.5*cm, 2*cm])
+            servicos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#4CAF50')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ]))
+            elements.append(servicos_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+        # Produtos
+        if contrato.get('produtos'):
+            elements.append(Paragraph('<b>PRODUTOS</b>', styles['Heading2']))
+            produtos_data = [['Descrição', 'Quantidade', 'Valor Unit.', 'Total']]
+            for prd in contrato['produtos']:
+                produtos_data.append([
+                    prd.get('nome', 'N/A'),
+                    str(prd.get('quantidade', 1)),
+                    f"R$ {prd.get('preco', 0):.2f}",
+                    f"R$ {prd.get('total', 0):.2f}"
+                ])
+            produtos_table = Table(produtos_data, colWidths=[8*cm, 2*cm, 3*cm, 3*cm])
+            produtos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#2196F3')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, black),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ]))
+            elements.append(produtos_table)
+            elements.append(Spacer(1, 0.3*cm))
+
+        # Totais
+        totais_data = [
+            ['Subtotal Serviços:', f"R$ {contrato.get('total_servicos', 0):.2f}"],
+            ['Subtotal Produtos:', f"R$ {contrato.get('total_produtos', 0):.2f}"],
+            ['Desconto:', f"R$ {contrato.get('desconto_valor', 0):.2f}"],
+            ['<b>TOTAL DO CONTRATO:</b>', f"<b>R$ {contrato.get('total_final', 0):.2f}</b>"]
+        ]
+        totais_table = Table(totais_data, colWidths=[12*cm, 4*cm])
+        totais_table.setStyle(TableStyle([
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 14),
+            ('BACKGROUND', (0, -1), (-1, -1), HexColor('#FFD700')),
+        ]))
+        elements.append(totais_table)
+
+        # Observações
+        if contrato.get('observacoes'):
+            elements.append(Spacer(1, 0.5*cm))
+            elements.append(Paragraph('<b>OBSERVAÇÕES:</b>', styles['Heading3']))
+            elements.append(Paragraph(contrato['observacoes'], styles['Normal']))
+
+        # Termos e condições
+        elements.append(Spacer(1, 1*cm))
+        elements.append(Paragraph('<b>TERMOS E CONDIÇÕES</b>', styles['Heading3']))
+        termos = """Este contrato estabelece os serviços e produtos acordados entre as partes.
+        O cliente declara estar ciente dos valores e condições apresentados.
+        A BIOMA se compromete a prestar os serviços com excelência e profissionalismo."""
+        elements.append(Paragraph(termos, styles['Normal']))
+
+        # Gerar PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"contrato_{contrato.get('numero', id)}.pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF de contrato: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/contratos/<id>/whatsapp', methods=['GET'])
+@login_required
+def enviar_whatsapp_contrato(id):
+    """Gerar link do WhatsApp com contrato (Diretriz #4)"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        contrato = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not contrato:
+            return jsonify({'success': False, 'message': 'Contrato não encontrado'}), 404
+
+        # Montar mensagem do WhatsApp
+        telefone = contrato.get('cliente_telefone', '').replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+
+        mensagem = f"""🌿 *BIOMA - Contrato #{contrato.get('numero', str(contrato['_id'])[-6:])}*
+
+✅ *Status:* {contrato.get('status', 'N/A')}
+👤 *Cliente:* {contrato.get('cliente_nome', 'N/A')}
+📅 *Data:* {contrato.get('created_at', datetime.now()).strftime('%d/%m/%Y') if isinstance(contrato.get('created_at'), datetime) else 'N/A'}
+💳 *Pagamento:* {contrato.get('forma_pagamento', 'N/A')}
+
+"""
+
+        # Serviços
+        if contrato.get('servicos'):
+            mensagem += "✨ *SERVIÇOS CONTRATADOS:*\n"
+            for srv in contrato['servicos']:
+                prof_nome = srv.get('profissional_nome', '')
+                if prof_nome:
+                    mensagem += f"• {srv.get('nome', 'N/A')} ({prof_nome}) - R$ {srv.get('total', 0):.2f}\n"
+                else:
+                    mensagem += f"• {srv.get('nome', 'N/A')} - R$ {srv.get('total', 0):.2f}\n"
+            mensagem += "\n"
+
+        # Produtos
+        if contrato.get('produtos'):
+            mensagem += "🛍️ *PRODUTOS:*\n"
+            for prd in contrato['produtos']:
+                mensagem += f"• {prd.get('nome', 'N/A')} - R$ {prd.get('total', 0):.2f}\n"
+            mensagem += "\n"
+
+        # Totais
+        mensagem += f"""💰 *VALORES:*
+Serviços: R$ {contrato.get('total_servicos', 0):.2f}
+Produtos: R$ {contrato.get('total_produtos', 0):.2f}
+Desconto: R$ {contrato.get('desconto_valor', 0):.2f}
+
+✅ *TOTAL DO CONTRATO: R$ {contrato.get('total_final', 0):.2f}*
+
+Obrigado por escolher a BIOMA! 🌿
+"""
+
+        if contrato.get('observacoes'):
+            mensagem += f"\n📝 *Observações:* {contrato['observacoes']}"
+
+        # URL encode da mensagem
+        mensagem_encoded = urllib.parse.quote(mensagem)
+        whatsapp_url = f"https://wa.me/55{telefone}?text={mensagem_encoded}"
+
+        return jsonify({
+            'success': True,
+            'whatsapp_url': whatsapp_url,
+            'telefone': telefone
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar link WhatsApp para contrato: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ==================== MÓDULO FINANCEIRO (Diretriz #7) ====================
+
+@app.route('/api/financeiro/dashboard', methods=['GET'])
+@login_required
+def financeiro_dashboard():
+    """Dashboard financeiro com comissões, despesas e lucro"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        # Filtros opcionais
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+
+        # Query base
+        query = {}
+        if data_inicio and data_fim:
+            query['created_at'] = {
+                '$gte': datetime.fromisoformat(data_inicio),
+                '$lte': datetime.fromisoformat(data_fim)
+            }
+
+        # Total de receitas (orçamentos aprovados)
+        orcamentos_aprovados = list(db.orcamentos.find({**query, 'status': 'Aprovado'}))
+        receita_total = sum(o.get('total_final', 0) for o in orcamentos_aprovados)
+
+        # Total de comissões
+        comissoes_total = sum(o.get('total_comissoes', 0) for o in orcamentos_aprovados)
+
+        # Total de despesas
+        despesas = list(db.despesas.find(query))
+        despesas_total = sum(d.get('valor', 0) for d in despesas)
+
+        # Lucro líquido
+        lucro_liquido = receita_total - comissoes_total - despesas_total
+
+        # Comissões por profissional
+        comissoes_por_profissional = {}
+        for orcamento in orcamentos_aprovados:
+            for prof in orcamento.get('profissionais_vinculados', []):
+                prof_id = str(prof.get('profissional_id', ''))
+                prof_nome = prof.get('nome', 'N/A')
+                comissao_valor = prof.get('comissao_valor', 0)
+
+                if prof_id not in comissoes_por_profissional:
+                    comissoes_por_profissional[prof_id] = {
+                        'nome': prof_nome,
+                        'total': 0,
+                        'quantidade': 0
+                    }
+
+                comissoes_por_profissional[prof_id]['total'] += comissao_valor
+                comissoes_por_profissional[prof_id]['quantidade'] += 1
+
+        # Despesas por categoria
+        despesas_por_categoria = {}
+        for despesa in despesas:
+            categoria = despesa.get('categoria', 'Outros')
+            if categoria not in despesas_por_categoria:
+                despesas_por_categoria[categoria] = 0
+            despesas_por_categoria[categoria] += despesa.get('valor', 0)
+
+        return jsonify({
+            'success': True,
+            'financeiro': {
+                'receita_total': receita_total,
+                'comissoes_total': comissoes_total,
+                'despesas_total': despesas_total,
+                'lucro_liquido': lucro_liquido,
+                'margem_lucro_perc': (lucro_liquido / receita_total * 100) if receita_total > 0 else 0,
+                'comissoes_por_profissional': list(comissoes_por_profissional.values()),
+                'despesas_por_categoria': despesas_por_categoria,
+                'total_orcamentos': len(orcamentos_aprovados),
+                'ticket_medio': receita_total / len(orcamentos_aprovados) if orcamentos_aprovados else 0
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Erro no dashboard financeiro: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/financeiro/despesas', methods=['GET', 'POST'])
+@login_required
+def financeiro_despesas():
+    """Gerenciar despesas"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    if request.method == 'GET':
+        try:
+            # Filtros opcionais
+            categoria = request.args.get('categoria')
+            data_inicio = request.args.get('data_inicio')
+            data_fim = request.args.get('data_fim')
+
+            query = {}
+            if categoria:
+                query['categoria'] = categoria
+            if data_inicio and data_fim:
+                query['data'] = {
+                    '$gte': datetime.fromisoformat(data_inicio),
+                    '$lte': datetime.fromisoformat(data_fim)
+                }
+
+            despesas = list(db.despesas.find(query).sort('data', DESCENDING))
+            return jsonify({'success': True, 'despesas': convert_objectid(despesas)})
+
+        except Exception as e:
+            logger.error(f"Erro ao listar despesas: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    # POST - criar despesa
+    data = request.json
+    try:
+        despesa = {
+            'descricao': data['descricao'],
+            'categoria': data.get('categoria', 'Outros'),
+            'valor': float(data['valor']),
+            'data': datetime.fromisoformat(data.get('data', datetime.now().isoformat())),
+            'forma_pagamento': data.get('forma_pagamento', 'Dinheiro'),
+            'observacoes': data.get('observacoes', ''),
+            'created_by': session.get('username', 'sistema'),
+            'created_at': datetime.now()
+        }
+        result = db.despesas.insert_one(despesa)
+
+        logger.info(f"✅ Despesa registrada: {despesa['descricao']} - R$ {despesa['valor']}")
+        return jsonify({'success': True, 'id': str(result.inserted_id), 'message': 'Despesa registrada com sucesso'})
+
+    except Exception as e:
+        logger.error(f"Erro ao registrar despesa: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/financeiro/despesas/<id>', methods=['PUT', 'DELETE'])
+@login_required
+def handle_despesa(id):
+    """Atualizar ou deletar despesa"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        if request.method == 'PUT':
+            data = request.json
+            update_data = {
+                'descricao': data.get('descricao'),
+                'categoria': data.get('categoria'),
+                'valor': float(data.get('valor', 0)),
+                'data': datetime.fromisoformat(data.get('data')) if data.get('data') else None,
+                'forma_pagamento': data.get('forma_pagamento'),
+                'observacoes': data.get('observacoes', ''),
+                'updated_at': datetime.now(),
+                'updated_by': session.get('username', 'sistema')
+            }
+
+            # Remover campos None
+            update_data = {k: v for k, v in update_data.items() if v is not None}
+
+            db.despesas.update_one({'_id': ObjectId(id)}, {'$set': update_data})
+            logger.info(f"✅ Despesa {id} atualizada")
+            return jsonify({'success': True, 'message': 'Despesa atualizada com sucesso'})
+
+        elif request.method == 'DELETE':
+            db.despesas.delete_one({'_id': ObjectId(id)})
+            logger.info(f"🗑️ Despesa {id} deletada")
+            return jsonify({'success': True, 'message': 'Despesa deletada com sucesso'})
+
+    except Exception as e:
+        logger.error(f"Erro ao manipular despesa: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/financeiro/relatorio', methods=['GET'])
+@login_required
+def financeiro_relatorio():
+    """Gerar relatório financeiro detalhado"""
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        periodo = request.args.get('periodo', 'mes')  # mes, trimestre, ano
+        data_referencia = request.args.get('data', datetime.now().isoformat())
+        data_ref = datetime.fromisoformat(data_referencia)
+
+        # Calcular período
+        if periodo == 'mes':
+            data_inicio = data_ref.replace(day=1)
+            if data_ref.month == 12:
+                data_fim = data_ref.replace(year=data_ref.year + 1, month=1, day=1) - timedelta(days=1)
+            else:
+                data_fim = data_ref.replace(month=data_ref.month + 1, day=1) - timedelta(days=1)
+        elif periodo == 'trimestre':
+            mes_inicio = ((data_ref.month - 1) // 3) * 3 + 1
+            data_inicio = data_ref.replace(month=mes_inicio, day=1)
+            data_fim = (data_inicio + timedelta(days=90)).replace(day=1) - timedelta(days=1)
+        else:  # ano
+            data_inicio = data_ref.replace(month=1, day=1)
+            data_fim = data_ref.replace(month=12, day=31)
+
+        query_tempo = {'created_at': {'$gte': data_inicio, '$lte': data_fim}}
+
+        # Coletar dados
+        orcamentos = list(db.orcamentos.find({**query_tempo, 'status': 'Aprovado'}))
+        despesas = list(db.despesas.find({'data': {'$gte': data_inicio, '$lte': data_fim}}))
+
+        receita = sum(o.get('total_final', 0) for o in orcamentos)
+        comissoes = sum(o.get('total_comissoes', 0) for o in orcamentos)
+        despesas_total = sum(d.get('valor', 0) for d in despesas)
+        lucro = receita - comissoes - despesas_total
+
+        return jsonify({
+            'success': True,
+            'relatorio': {
+                'periodo': periodo,
+                'data_inicio': data_inicio.isoformat(),
+                'data_fim': data_fim.isoformat(),
+                'receita_bruta': receita,
+                'comissoes': comissoes,
+                'despesas': despesas_total,
+                'lucro_liquido': lucro,
+                'margem_lucro': (lucro / receita * 100) if receita > 0 else 0,
+                'total_orcamentos': len(orcamentos),
+                'ticket_medio': receita / len(orcamentos) if orcamentos else 0
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório financeiro: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @app.route('/api/profissionais/<id>/comissoes', methods=['GET'])
 @login_required
@@ -4704,6 +6097,109 @@ def gerar_relatorio_estoque():
 
 
 # ==================== FIM ENDPOINTS SUB-TABS ====================
+
+
+# ==================== ROTAS ADMINISTRATIVAS ====================
+
+@app.route('/api/admin/reset-database', methods=['POST'])
+@login_required
+def admin_reset_database():
+    """
+    LIMPAR TODO O BANCO DE DADOS (apenas Admin)
+    ATENÇÃO: Esta operação é IRREVERSÍVEL!
+    """
+    try:
+        # Verificar se o usuário é Admin
+        user_id = session.get('user_id')
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+
+        if not user or user.get('tipo_acesso') != 'Admin':
+            return jsonify({'success': False, 'message': 'Apenas administradores podem resetar o banco'}), 403
+
+        # Confirmar com senha
+        data = request.get_json()
+        senha_confirmacao = data.get('senha')
+
+        if not senha_confirmacao:
+            return jsonify({'success': False, 'message': 'Senha de confirmação necessária'}), 400
+
+        if not check_password_hash(user.get('password', ''), senha_confirmacao):
+            return jsonify({'success': False, 'message': 'Senha incorreta'}), 401
+
+        # RESETAR BANCO DE DADOS
+        collections_to_reset = [
+            'clientes', 'profissionais', 'servicos', 'produtos',
+            'agendamentos', 'fila', 'orcamentos', 'contratos',
+            'anamneses', 'prontuarios', 'financeiro_despesas',
+            'financeiro_comissoes', 'estoque_movimentos',
+            'notificacoes', 'uploads', 'auditoria'
+        ]
+
+        reset_count = {}
+        for collection_name in collections_to_reset:
+            count = db[collection_name].count_documents({})
+            result = db[collection_name].delete_many({})
+            reset_count[collection_name] = count
+
+        logger.warning(f"🗑️ BANCO DE DADOS RESETADO por {user.get('username')}")
+        logger.info(f"Coleções resetadas: {reset_count}")
+
+        # Registrar auditoria
+        registrar_auditoria(
+            acao='reset_database',
+            entidade='sistema',
+            entidade_id='global',
+            dados_antes={'collections': reset_count},
+            dados_depois={'status': 'limpo'}
+        )
+
+        return jsonify({
+            'success': True,
+            'message': 'Banco de dados resetado com sucesso',
+            'collections_reset': reset_count,
+            'total_documentos_removidos': sum(reset_count.values())
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao resetar banco: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/admin/database-stats', methods=['GET'])
+@login_required
+def admin_database_stats():
+    """Estatísticas do banco de dados (apenas Admin)"""
+    try:
+        # Verificar se o usuário é Admin
+        user_id = session.get('user_id')
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+
+        if not user or user.get('tipo_acesso') != 'Admin':
+            return jsonify({'success': False, 'message': 'Apenas administradores'}), 403
+
+        stats = {
+            'clientes': db.clientes.count_documents({}),
+            'profissionais': db.profissionais.count_documents({}),
+            'servicos': db.servicos.count_documents({}),
+            'produtos': db.produtos.count_documents({}),
+            'agendamentos': db.agendamentos.count_documents({}),
+            'fila': db.fila.count_documents({}),
+            'orcamentos': db.orcamentos.count_documents({}),
+            'contratos': db.contratos.count_documents({}),
+            'anamneses': db.anamneses.count_documents({}),
+            'prontuarios': db.prontuarios.count_documents({}),
+            'usuarios': db.users.count_documents({}),
+            'auditoria': db.auditoria.count_documents({}),
+        }
+
+        return jsonify({'success': True, 'stats': stats, 'total': sum(stats.values())})
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao obter stats: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ==================== FIM ROTAS ADMINISTRATIVAS ====================
 
 if __name__ == '__main__':
     print("\n" + "=" * 80)
