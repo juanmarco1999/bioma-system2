@@ -65,9 +65,34 @@
             z-index: 10 !important;
         }
 
+        /* FORÇAR REMOÇÃO TOTAL DE ESTOQUE FORA DA ABA ESTOQUE */
+        .content-section:not(#section-estoque) [id*="estoque"],
+        .content-section:not(#section-estoque) [id*="Estoque"],
+        .content-section:not(#section-estoque) [class*="estoque"],
+        .content-section:not(#section-estoque) [class*="Estoque"],
+        .content-section:not(#section-produtos) [id*="estoque-baixo"],
+        .content-section:not(#section-produtos) [id*="baixo-estoque"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            position: absolute !important;
+            left: -9999px !important;
+        }
+
         /* Forçar remoção de qualquer elemento de estoque nessas seções */
         #section-clube table, #section-importar table, #section-sistema table {
             display: none !important;
+        }
+
+        /* Garantir que elementos de estoque SÓ apareçam na aba de estoque */
+        #section-estoque [id*="estoque"],
+        #section-estoque [class*="estoque"] {
+            display: block !important;
+            visibility: visible !important;
+            height: auto !important;
+            position: relative !important;
+            left: 0 !important;
         }
 
         /* === SUB-TABS SYSTEM === */
@@ -141,12 +166,20 @@
 
         /* ========== LOGO PERSONALIZADO: Ajustar tamanho do logo na sidebar ========== */
         .sidebar-logo {
-            min-height: 280px !important;
-            padding: 40px 15px !important;
+            min-height: 320px !important;
+            padding: 20px 10px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
+            background-size: cover !important;
+        }
+
+        #sidebarLogoImage {
+            width: 100% !important;
+            height: 100% !important;
+            max-height: 280px !important;
+            object-fit: contain !important;
         }
 
         /* ========== CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE ========== */
@@ -1889,9 +1922,14 @@
 <div id="section-financeiro" class="content-section">
     <div class="page-header">
         <h1><i class="bi bi-wallet2"></i> Gestão Financeira</h1>
-        <button class="btn btn-success" onclick="novaDespesa()">
-            <i class="bi bi-plus-circle"></i> Nova Despesa
-        </button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="carregarDadosFinanceiro()">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar
+            </button>
+            <button class="btn btn-success" onclick="novaDespesa()">
+                <i class="bi bi-plus-circle"></i> Nova Despesa
+            </button>
+        </div>
     </div>
 
     <!-- Cards de Resumo -->
@@ -6493,6 +6531,39 @@ async function carregarMapaCalor() {
   await heatmapDias(60);
 }
 
+async function carregarDadosFinanceiro() {
+  console.log('💰 Atualizando dados financeiros...');
+  try {
+    // Carrega dados de receitas
+    await fetch('/api/financeiro/receitas', {credentials: 'include'})
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('financeiroReceitas').textContent =
+            `R$ ${parseFloat(data.total || 0).toFixed(2)}`;
+        }
+      });
+
+    // Carrega dados de despesas
+    await fetch('/api/financeiro/despesas', {credentials: 'include'})
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('financeiroDespesas').textContent =
+            `R$ ${parseFloat(data.total || 0).toFixed(2)}`;
+        }
+      });
+
+    // Carrega comissões
+    carregarHistoricoComissoes();
+
+    Swal.fire('Sucesso', 'Dados financeiros atualizados!', 'success');
+  } catch (error) {
+    console.error('Erro ao carregar dados financeiros:', error);
+    Swal.fire('Erro', 'Erro ao atualizar dados financeiros', 'error');
+  }
+}
+
 async function disponibilidade(profId, dataISO){
   try{
     const r = await API.get(`/api/agendamentos/disponibilidade?profissional_id=${profId}&data=${dataISO}`);
@@ -7516,13 +7587,16 @@ async function carregarOrcamentosPendentes() {
         }
 
         tbody.innerHTML = orcamentos.map(orc => {
-            const data = new Date(orc.data).toLocaleDateString('pt-BR');
+            const dataStr = orc.data || orc.created_at || new Date().toISOString();
+            const data = new Date(dataStr).toLocaleDateString('pt-BR');
             const profs = orc.profissionais_vinculados?.map(p => p.nome).join(', ') || 'N/A';
+            const nome = orc.cliente_nome || orc.nome || 'Sem nome';
+            const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
             return `
                 <tr>
                     <td>${data}</td>
-                    <td>${orc.nome}</td>
-                    <td>${orc.cpf}</td>
+                    <td>${nome}</td>
+                    <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${profs}</td>
                     <td>
@@ -7563,12 +7637,15 @@ async function carregarOrcamentosAprovados() {
         }
 
         tbody.innerHTML = orcamentos.map(orc => {
-            const data = new Date(orc.data).toLocaleDateString('pt-BR');
+            const dataStr = orc.data || orc.created_at || new Date().toISOString();
+            const data = new Date(dataStr).toLocaleDateString('pt-BR');
+            const nome = orc.cliente_nome || orc.nome || 'Sem nome';
+            const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
             return `
                 <tr>
                     <td>${data}</td>
-                    <td>${orc.nome}</td>
-                    <td>${orc.cpf}</td>
+                    <td>${nome}</td>
+                    <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${orc.pagamento || 'N/A'}</td>
                     <td>
@@ -7606,12 +7683,15 @@ async function carregarOrcamentosRejeitados() {
         }
 
         tbody.innerHTML = orcamentos.map(orc => {
-            const data = new Date(orc.data).toLocaleDateString('pt-BR');
+            const dataStr = orc.data || orc.created_at || new Date().toISOString();
+            const data = new Date(dataStr).toLocaleDateString('pt-BR');
+            const nome = orc.cliente_nome || orc.nome || 'Sem nome';
+            const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
             return `
                 <tr>
                     <td>${data}</td>
-                    <td>${orc.nome}</td>
-                    <td>${orc.cpf}</td>
+                    <td>${nome}</td>
+                    <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${orc.motivo_rejeicao || 'N/A'}</td>
                     <td>
@@ -7657,13 +7737,16 @@ async function carregarHistoricoOrcamentos() {
         }
 
         tbody.innerHTML = orcamentos.map(orc => {
-            const data = new Date(orc.data).toLocaleDateString('pt-BR');
+            const dataStr = orc.data || orc.created_at || new Date().toISOString();
+            const data = new Date(dataStr).toLocaleDateString('pt-BR');
+            const nome = orc.cliente_nome || orc.nome || 'Sem nome';
+            const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
             const statusClass = orc.status === 'Aprovado' ? 'success' : orc.status === 'Rejeitado' ? 'danger' : 'warning';
             return `
                 <tr>
                     <td>${data}</td>
-                    <td>${orc.nome}</td>
-                    <td>${orc.cpf}</td>
+                    <td>${nome}</td>
+                    <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td><span class="badge ${statusClass}">${orc.status}</span></td>
                     <td>
