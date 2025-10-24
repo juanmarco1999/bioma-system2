@@ -6236,7 +6236,13 @@ function startSSE(){
       if(data.channel==='hello') return;
       const feed = document.querySelector('#feedCards') || document.querySelector('#feed');
       if(feed){ const card = document.createElement('div'); card.className='community-card'; card.innerHTML = `<h5>${data.channel||'evento'}</h5><pre style="white-space:pre-wrap">${JSON.stringify(data.payload,null,2)}</pre><small class="text-muted">${new Date().toLocaleString()}</small>`; feed.prepend(card); while(feed.children.length>50){ feed.removeChild(feed.lastChild);} }
-      if(data.channel==='estoque'){ loadEstoque(); }
+      // SOMENTE carregar estoque se a seção estiver visível
+      if(data.channel==='estoque'){
+        const estoqueSection = document.getElementById('section-estoque');
+        if(estoqueSection && estoqueSection.style.display !== 'none'){
+          loadEstoque();
+        }
+      }
       if(data.channel==='profissionais'){ loadProfissionais(); }
     };
   }catch(e){
@@ -6301,7 +6307,7 @@ async function initApp(user=null){
     loadDashboard(),
     loadClientes(),
     loadProfissionais(),
-    loadEstoque(),
+    // loadEstoque(), // REMOVIDO: Estoque só deve carregar quando a seção for acessada
     loadSystem()
   ]).then(() => {
     console.log('✅ Carregamento inicial completo');
