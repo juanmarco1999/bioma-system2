@@ -91,10 +91,7 @@ if os.getenv('CROSS_SITE_DEV','0') == '1':
     except Exception as _e:
         pass
 
-# ==================== REGISTRAR BLUEPRINT BACKEND ====================
-from backend_routes import api as backend_api
-app.register_blueprint(backend_api)
-logger.info("Blueprint backend_routes registrado com sucesso!")
+# Blueprints serão registrados após a inicialização do banco de dados
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -264,6 +261,19 @@ def get_db():
 db = get_db()
 # Adicionar DB ao app.config para acesso do blueprint
 app.config['DB_CONNECTION'] = db
+
+# ==================== REGISTRAR BLUEPRINT BACKEND ====================
+from backend_routes import api as backend_api
+app.register_blueprint(backend_api)
+logger.info("Blueprint backend_routes registrado com sucesso!")
+
+# Registrar rotas completas adicionais
+try:
+    from backend_routes_complete import api_complete
+    app.register_blueprint(api_complete)
+    logger.info("Blueprint backend_routes_complete registrado com sucesso!")
+except Exception as e:
+    logger.warning(f"Não foi possível carregar backend_routes_complete: {str(e)}")
 
 def convert_objectid(obj):
     if isinstance(obj, list):
