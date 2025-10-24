@@ -8367,7 +8367,15 @@ async function exportarRelatorioPDF() {
 })();
 </script>
 
+<!-- BIOMA CORE SYSTEM - Carrega PRIMEIRO (ordem importante!) -->
+<script src="/static/js/state_manager.js"></script>
+<script src="/static/js/render_controller.js"></script>
+<script src="/static/js/navigation_system.js"></script>
+<script src="/static/js/bioma_core.js"></script>
+
 <!-- FRONTEND FIXES - Correções e Melhorias -->
+<script src="/static/js/correcoes_bioma.js"></script>
+<script src="/static/js/init_correcoes.js"></script>
 <script src="/static/js/bioma_fixes_complete.js"></script>
 <script src="/static/js/bioma_advanced_features.js"></script>
 <script src="/static/js/frontend_fixes.js"></script>
