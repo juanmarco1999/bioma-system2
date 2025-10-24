@@ -2932,6 +2932,13 @@ function destacarLinhaTabela(tbodySelector, atributo, valor){
 }
 
 async function loadEstoque(){
+    // VERIFICAR SE ESTAMOS NA SEÇÃO DE ESTOQUE
+    const estoqueSection = document.getElementById('section-estoque');
+    if (!estoqueSection || estoqueSection.style.display === 'none') {
+        console.warn('⚠️ loadEstoque() bloqueado: Seção de estoque não está visível');
+        return; // NÃO CARREGAR se não estiver na seção de estoque
+    }
+
     await Promise.all([
         loadEstoqueResumo(),
         loadEstoqueBaixo(),
@@ -6147,8 +6154,15 @@ function exportEstoque(){ openFile('/api/estoque/exportar'); }
 function exportMov(){ openFile('/api/estoque/exportar?tipo=movimentacoes'); }
 function pdfMov(qs){ openFile('/api/estoque/movimentacoes/pdf'+(qs?('?'+qs):'')); }
 async function loadEstoque(){
+  // VERIFICAR SE ESTAMOS NA SEÇÃO DE ESTOQUE
+  const estoqueSection = document.getElementById('section-estoque');
+  if (!estoqueSection || estoqueSection.style.display === 'none') {
+    console.warn('⚠️ loadEstoque() bloqueado: Seção de estoque não está visível');
+    return; // NÃO CARREGAR se não estiver na seção de estoque
+  }
+
   return safeCall('loadEstoque', async () => {
-    const list = document.querySelector('#table-produtos tbody') || document.querySelector('#tblProdutosBody');
+    const list = document.querySelector('#section-estoque #table-produtos tbody') || document.querySelector('#section-estoque #tblProdutosBody');
     try{
       const r = await API.get('/api/produtos/buscar?q=');
       if(list) list.innerHTML = (r.produtos||[]).map(p => {
@@ -6157,17 +6171,9 @@ async function loadEstoque(){
     }catch(e){
       console.error('Erro ao carregar produtos:', e);
     }
-    const alertBox = document.querySelector('#alertasEstoque') || document.querySelector('#estoqueAlertas');
-    try{
-      const a = await API.get('/api/estoque/alertas');
-      if(alertBox) alertBox.innerHTML = (a.itens||[]).map(p => {
-        return `<div class="community-pill">⚠️ ${p.nome} • ${p.estoque}/${p.estoque_minimo}</div>`;
-      }).join('');
-    }catch(e){
-      console.error('Erro ao carregar alertas de estoque:', e);
-    }
+    // REMOVIDO: Não carregar alertBox pois não existe mais no Dashboard
+    // const alertBox = document.querySelector('#alertasEstoque') || document.querySelector('#estoqueAlertas');
   });
-}
 }
 
 // ===== Agendamentos =====
@@ -8389,6 +8395,9 @@ async function exportarRelatorioPDF() {
 <!-- FRONTEND FIXES - Correções e Melhorias -->
 <script src="/static/js/correcoes_bioma.js"></script>
 <script src="/static/js/init_correcoes.js"></script>
+
+<!-- ANTI-ESTOQUE - Remoção agressiva de estoque do Dashboard -->
+<script src="/static/js/remove_estoque_dashboard.js"></script>
 
 <!-- MODALS E SEÇÕES ADICIONAIS -->
 
