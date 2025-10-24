@@ -124,7 +124,8 @@
 
         /* ========== LOGO PERSONALIZADO: Ajustar tamanho do logo na sidebar ========== */
         .sidebar-logo {
-            min-height: 200px !important;
+            min-height: 280px !important;
+            padding: 40px 15px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
@@ -3683,10 +3684,11 @@ function aplicarLogosNaInterface(){
             img = document.createElement('img');
             img.id = 'sidebarLogoImage';
             img.style.width = '100%';
-            img.style.maxHeight = '180px';
+            img.style.height = '100%';
+            img.style.maxHeight = '240px';
             img.style.objectFit = 'contain';
             img.style.margin = '0';
-            img.style.padding = '10px';
+            img.style.padding = '0';
             sidebarLogo.prepend(img);
         }
         img.src = logosPersonalizados.principal;
