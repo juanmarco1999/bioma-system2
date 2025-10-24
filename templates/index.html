@@ -177,10 +177,9 @@
 
         #sidebarLogoImage {
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
             max-height: 360px !important;
-            min-height: 360px !important;
-            object-fit: cover !important;
+            object-fit: contain !important;
             object-position: center !important;
         }
 
@@ -218,10 +217,6 @@
         #section-financeiro [id*="Estoque"],
         #section-financeiro [class*="estoque"],
         #section-financeiro [class*="Estoque"],
-        #section-avaliacoes [id*="estoque"],
-        #section-avaliacoes [id*="Estoque"],
-        #section-avaliacoes [class*="estoque"],
-        #section-avaliacoes [class*="Estoque"],
         #section-agendamentos [id*="estoque"],
         #section-agendamentos [id*="Estoque"],
         #section-agendamentos [class*="estoque"],
@@ -323,7 +318,6 @@
             <li><a href="#" onclick="goTo('perfil')" id="menu-perfil"><i class="bi bi-person-circle"></i> Perfil</a></li>
             <li><a href="#" onclick="goTo('comissoes')" id="menu-comissoes"><i class="bi bi-cash-stack"></i> Comissões</a></li>
             <li><a href="#" onclick="goTo('financeiro')" id="menu-financeiro"><i class="bi bi-currency-dollar"></i> Financeiro</a></li>
-            <li><a href="#" onclick="goTo('avaliacoes')" id="menu-avaliacoes"><i class="bi bi-star-fill"></i> Avaliações</a></li>
             <li><a href="#" onclick="goTo('estoque')" id="menu-estoque"><i class="bi bi-box-seam"></i> Estoque</a></li>
             <li><a href="#" onclick="goTo('agendamentos')" id="menu-agendamentos"><i class="bi bi-calendar-check"></i> Agendamentos</a></li>
             <li><a href="#" onclick="goTo('fila')" id="menu-fila"><i class="bi bi-people-fill"></i> Fila</a></li>
@@ -1433,19 +1427,6 @@
                 </div>
             </div>
 
-            <!-- Sub-tab: Avaliações -->
-            <div id="profissionais-avaliacoes" class="sub-tab-content">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-star-fill"></i> Avaliações e Performance
-                    </div>
-                    <div class="card-body">
-                        <div id="avaliacoesContainer">
-                            <p class="text-muted">Selecione um profissional para ver suas avaliações</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div id="section-servicos" class="content-section">
@@ -2756,7 +2737,7 @@ function showApp(){
     document.getElementById('authScreen').style.display='none';
     document.getElementById('app').style.display='block';
     loadConfiguracoes();
-    setTimeout(()=>{loadDashboard();},100);
+    // setTimeout(()=>{loadDashboard();},100); // Removido: duplicado com initApp()
 }
 
 function switchTab(tab){
@@ -2897,6 +2878,7 @@ function goTo(section){
         else if(section==='configuracoes')loadConfiguracoes();
         else if(section==='agendamentos')loadAgendamentos();
         else if(section==='auditoria')loadAuditoria();
+        else if(section==='clube')loadClube();
     }catch(e){
         console.error('❌ Erro navegação:',e);
     } finally {
@@ -3845,6 +3827,13 @@ async function loadDashboard(){
 }
 
 async function verificarStatus(){
+    const key = 'verificarStatus';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/system/status',{credentials:'include'});
         const data=await res.json();
@@ -3873,6 +3862,8 @@ async function verificarStatus(){
         }
     }catch(e){
         console.error('❌ Status error:',e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -5931,6 +5922,23 @@ async function loadAuditoria() {
     } catch (error) {
         console.error('Erro ao carregar auditoria:', error);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar registros de auditoria</td></tr>';
+    }
+}
+
+async function loadClube(){
+    const key = 'loadClube';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
+    try{
+        // A seção de clube é estática (HTML puro), não precisa carregar dados do backend
+        // Esta função existe apenas para manter consistência
+        console.log('📢 Seção Comunidade carregada');
+    } finally {
+        setTimeout(() => setLoading(key, false), 100);
     }
 }
 
@@ -8649,161 +8657,6 @@ async function exportarRelatorioPDF() {
     </div>
 </div>
 
-<!-- Modal: Criar Avaliação -->
-<div id="modalCriarAvaliacao" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-card); border-radius:20px; padding:40px; max-width:700px; width:90%; max-height:90vh; overflow-y:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-            <h2><i class="bi bi-star"></i> Nova Avaliação</h2>
-            <button class="btn btn-sm btn-danger" onclick="fecharModalCriarAvaliacao()" style="border-radius:50%; width:40px; height:40px;">×</button>
-        </div>
-
-        <div class="mb-3">
-            <label style="display:block; font-weight:700; margin-bottom:10px;">Cliente *</label>
-            <select id="avaliacaoClienteId" class="form-select">
-                <option value="">Selecione o cliente</option>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label style="display:block; font-weight:700; margin-bottom:10px;">Profissional *</label>
-            <select id="avaliacaoProfissionalId" class="form-select">
-                <option value="">Selecione o profissional</option>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label style="display:block; font-weight:700; margin-bottom:10px;">Serviço *</label>
-            <select id="avaliacaoServicoId" class="form-select">
-                <option value="">Selecione o serviço</option>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label style="display:block; font-weight:700; margin-bottom:10px;">Nota Geral * (1-5)</label>
-            <select id="avaliacaoNotaGeral" class="form-select">
-                <option value="5">5 - Excelente</option>
-                <option value="4">4 - Muito Bom</option>
-                <option value="3">3 - Bom</option>
-                <option value="2">2 - Regular</option>
-                <option value="1">1 - Ruim</option>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <h4>Avalie os Aspectos (1-5)</h4>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label>Atendimento</label>
-                    <select id="avaliacaoAtendimento" class="form-select">
-                        <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label>Qualidade</label>
-                    <select id="avaliacaoQualidade" class="form-select">
-                        <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label>Pontualidade</label>
-                    <select id="avaliacaoPontualidade" class="form-select">
-                        <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label>Limpeza</label>
-                    <select id="avaliacaoLimpeza" class="form-select">
-                        <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label>Preço/Custo-Benefício</label>
-                    <select id="avaliacaoPreco" class="form-select">
-                        <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="mb-3">
-            <label style="display:block; font-weight:700; margin-bottom:10px;">Comentário (opcional)</label>
-            <textarea id="avaliacaoComentario" class="form-control" rows="4" placeholder="Compartilhe sua experiência..."></textarea>
-        </div>
-
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Sua avaliação será revisada pelo administrador antes de ser publicada.
-        </div>
-
-        <button class="btn btn-primary w-100" onclick="criarAvaliacao()">
-            <i class="bi bi-send"></i> Enviar Avaliação
-        </button>
-    </div>
-</div>
-
-<!-- Seção: Gerenciar Avaliações (Admin) -->
-<div id="section-avaliacoes" class="content-section">
-    <div class="page-header">
-        <h1><i class="bi bi-star-fill"></i> Gerenciar Avaliações</h1>
-        <button class="btn btn-success" onclick="abrirModalCriarAvaliacao()">
-            <i class="bi bi-plus-circle"></i> Nova Avaliação
-        </button>
-    </div>
-
-    <!-- Sub-tabs -->
-    <div class="sub-tabs">
-        <button class="sub-tab-btn active" onclick="switchSubTab('avaliacoes', 'pendentes')">
-            <i class="bi bi-hourglass-split"></i> Pendentes
-        </button>
-        <button class="sub-tab-btn" onclick="switchSubTab('avaliacoes', 'aprovadas')">
-            <i class="bi bi-check-circle"></i> Aprovadas
-        </button>
-    </div>
-
-    <!-- Sub-tab: Pendentes -->
-    <div id="avaliacoes-subtab-pendentes" class="sub-tab-content active">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-hourglass-split"></i> Avaliações Aguardando Aprovação
-            </div>
-            <div class="card-body">
-                <div id="avaliacoesPendentes">
-                    <div class="text-center">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sub-tab: Aprovadas -->
-    <div id="avaliacoes-subtab-aprovadas" class="sub-tab-content" style="display:none;">
-        <div class="card">
-            <div class="card-header">
-                <i class="bi bi-check-circle"></i> Avaliações Publicadas
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Cliente</th>
-                                <th>Profissional</th>
-                                <th>Nota</th>
-                                <th>Comentário</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="avaliacoesAprovadasTableBody">
-                            <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <style>
 /* Estilos para fotos de serviços */
 .foto-servico-item {
@@ -8842,124 +8695,6 @@ async function exportarRelatorioPDF() {
     display: flex;
     gap: 10px;
     flex-direction: column;
-}
-
-/* Estilos para avaliações */
-.avaliacao-item {
-    background: var(--bg-card);
-    border: 2px solid var(--border-color);
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-    transition: all 0.3s;
-}
-
-.avaliacao-item:hover {
-    border-color: var(--primary);
-    transform: translateX(5px);
-}
-
-.avaliacao-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.avaliacao-nota {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: var(--warning);
-}
-
-.avaliacao-comentario {
-    margin: 15px 0;
-    padding: 15px;
-    background: var(--bg-main);
-    border-left: 4px solid var(--primary);
-    border-radius: 10px;
-}
-
-.avaliacao-aspectos {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border-color);
-}
-
-.avaliacao-resposta {
-    margin-top: 15px;
-    padding: 15px;
-    background: var(--bg-main);
-    border-left: 4px solid var(--success);
-    border-radius: 10px;
-}
-
-.avaliacao-pendente-item {
-    background: var(--bg-card);
-    border: 2px solid var(--warning);
-    border-radius: 15px;
-    padding: 25px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-}
-
-.avaliacao-info {
-    flex: 1;
-}
-
-.avaliacao-info p {
-    margin: 8px 0;
-}
-
-.avaliacao-acoes {
-    display: flex;
-    gap: 10px;
-    flex-direction: column;
-}
-
-.avaliacoes-resumo {
-    background: var(--bg-main);
-    border-radius: 15px;
-    padding: 25px;
-    margin-bottom: 30px;
-}
-
-.avaliacoes-resumo .stats {
-    display: flex;
-    gap: 30px;
-    margin: 20px 0;
-}
-
-.distribuicao-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin: 10px 0;
-}
-
-.distribuicao-item .progress {
-    flex: 1;
-    height: 25px;
-    background: var(--bg-card);
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.distribuicao-item .progress-bar {
-    height: 100%;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    transition: width 0.3s;
-}
-
-.aspectos-medios {
-    margin-top: 20px;
-}
-
-.aspectos-medios p {
-    margin: 8px 0;
 }
 </style>
 
@@ -9046,55 +8781,6 @@ function renderFotosServicoModal(fotos, principalIndex) {
     `).join('');
 }
 
-function abrirModalCriarAvaliacao() {
-    document.getElementById('modalCriarAvaliacao').style.display = 'flex';
-    carregarOpcoesAvaliacao();
-}
-
-function fecharModalCriarAvaliacao() {
-    document.getElementById('modalCriarAvaliacao').style.display = 'none';
-}
-
-async function carregarOpcoesAvaliacao() {
-    // Carregar clientes
-    try {
-        const resClientes = await fetch('/api/clientes');
-        const dataClientes = await resClientes.json();
-        if (dataClientes.success) {
-            const selectClientes = document.getElementById('avaliacaoClienteId');
-            selectClientes.innerHTML = '<option value="">Selecione o cliente</option>' +
-                dataClientes.clientes.map(c => `<option value="${c._id}">${c.nome}</option>`).join('');
-        }
-    } catch (e) {
-        console.error('Erro ao carregar clientes:', e);
-    }
-
-    // Carregar profissionais
-    try {
-        const resProfissionais = await fetch('/api/profissionais');
-        const dataProfissionais = await resProfissionais.json();
-        if (dataProfissionais.success) {
-            const selectProfissionais = document.getElementById('avaliacaoProfissionalId');
-            selectProfissionais.innerHTML = '<option value="">Selecione o profissional</option>' +
-                dataProfissionais.profissionais.map(p => `<option value="${p._id}">${p.nome}</option>`).join('');
-        }
-    } catch (e) {
-        console.error('Erro ao carregar profissionais:', e);
-    }
-
-    // Carregar serviços
-    try {
-        const resServicos = await fetch('/api/servicos');
-        const dataServicos = await resServicos.json();
-        if (dataServicos.success) {
-            const selectServicos = document.getElementById('avaliacaoServicoId');
-            selectServicos.innerHTML = '<option value="">Selecione o serviço</option>' +
-                dataServicos.servicos.map(s => `<option value="${s._id}">${s.nome}</option>`).join('');
-        }
-    } catch (e) {
-        console.error('Erro ao carregar serviços:', e);
-    }
-}
 
 // Carregar gráficos quando a seção financeira for ativada
 const originalCarregarDadosSecao = window.carregarDadosSecao;
@@ -9108,13 +8794,6 @@ window.carregarDadosSecao = function(section) {
                 carregarTodosGraficos();
             }
         }, 500);
-    }
-    if (section === 'avaliacoes') {
-        setTimeout(() => {
-            if (typeof carregarAvaliacoesPendentes === 'function') {
-                carregarAvaliacoesPendentes();
-            }
-        }, 300);
     }
 };
 </script>
