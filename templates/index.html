@@ -209,8 +209,7 @@
                 <div class="col-lg-3 col-md-6"><div class="stat-card"><div class="icon"><i class="bi bi-currency-dollar"></i></div><h3 id="dashFaturamento">R$ 0</h3><p>Faturamento</p></div></div>
             </div>
             <div class="row g-4">
-                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-exclamation-triangle"></i> Alertas de Estoque</div><div class="card-body" id="alertasEstoque"><div class="spinner"></div></div></div></div>
-                <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-calendar-event"></i> Próximos Agendamentos</div><div class="card-body" id="proximosAgendamentos"><div class="spinner"></div></div></div></div>
+                <div class="col-md-12"><div class="card"><div class="card-header"><i class="bi bi-calendar-event"></i> Próximos Agendamentos</div><div class="card-body" id="proximosAgendamentos"><div class="spinner"></div></div></div></div>
             </div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-clock-history"></i> Últimos Orçamentos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Valor</th><th>Status</th></tr></thead><tbody id="ultimosOrcamentosBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
         </div>
@@ -2298,7 +2297,7 @@
                         <div class="table-responsive">
                             <table>
                                 <thead><tr><th>Produto</th><th>SKU</th><th>Estoque</th><th>Mínimo</th><th>Status</th></tr></thead>
-                                <tbody id="estoqueBaixoBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody>
+                                <tbody id="estoqueBaixoBodyResumo"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -4555,14 +4554,16 @@ function showModalFila(){
 
 async function loadEstoqueBaixo(){
     const tbody = document.getElementById('estoqueBaixoBody');
-    if(!tbody){
+    const tbodyResumo = document.getElementById('estoqueBaixoBodyResumo');
+
+    if(!tbody && !tbodyResumo){
         return;
     }
     try{
         const res = await fetch('/api/estoque/alertas',{credentials:'include'});
         const data = await res.json();
         if(data.success && data.alertas && data.alertas.length){
-            tbody.innerHTML = data.alertas.map(item => {
+            const htmlContent = data.alertas.map(item => {
                 const statusClass = item.status === 'CRÍTICO' ? 'danger' : 'warning';
                 return `<tr data-id="${item.produto_id}">
                             <td>${item.nome || '-'}</td>
@@ -4572,12 +4573,18 @@ async function loadEstoqueBaixo(){
                             <td><span class="badge ${statusClass}">${item.status}</span></td>
                         </tr>`;
             }).join('');
+            if(tbody) tbody.innerHTML = htmlContent;
+            if(tbodyResumo) tbodyResumo.innerHTML = htmlContent;
         }else{
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success">Estoque saudável</td></tr>';
+            const emptyMsg = '<tr><td colspan="5" class="text-center text-success">Estoque saudável</td></tr>';
+            if(tbody) tbody.innerHTML = emptyMsg;
+            if(tbodyResumo) tbodyResumo.innerHTML = emptyMsg;
         }
     }catch(error){
         console.error('Erro ao carregar alertas de estoque', error);
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Erro ao carregar dados</td></tr>';
+        const errorMsg = '<tr><td colspan="5" class="text-center text-muted">Erro ao carregar dados</td></tr>';
+        if(tbody) tbody.innerHTML = errorMsg;
+        if(tbodyResumo) tbodyResumo.innerHTML = errorMsg;
     }
 }
 
