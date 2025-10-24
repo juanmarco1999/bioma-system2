@@ -123,8 +123,19 @@
         }
 
         /* ========== CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE ========== */
+        /* IMPORTANTE: Elementos com data-keep-visible="true" NUNCA são escondidos */
+        [data-keep-visible="true"] {
+            display: table-row !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+            left: auto !important;
+            pointer-events: auto !important;
+        }
+
         /* Esconder TUDO que contenha "estoque" no ID ou classe fora da seção de estoque */
-        #section-dashboard [id*="estoque"],
+        /* EXCETO se tiver data-keep-visible="true" */
+        #section-dashboard [id*="estoque"]:not([data-keep-visible="true"]),
         #section-dashboard [id*="Estoque"],
         #section-dashboard [class*="estoque"],
         #section-dashboard [class*="Estoque"],
@@ -2705,6 +2716,49 @@ function isLoading(key) {
     return loadingFlags[key] === true;
 }
 
+// ========== FUNÇÃO GLOBAL: SWITCH SUB-TAB ==========
+function switchSubTab(section, subtab) {
+    console.log(`🔄 Mudando sub-tab: ${section} → ${subtab}`);
+
+    // 1. ESCONDER TODOS os conteúdos desta seção
+    document.querySelectorAll(`[id^="${section}-subtab-"]`).forEach(content => {
+        content.classList.remove('active');
+        content.classList.add('d-none');
+    });
+
+    // 2. DESATIVAR todos os botões
+    const sectionElement = document.getElementById(`section-${section}`);
+    if (sectionElement) {
+        sectionElement.querySelectorAll('.sub-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    }
+
+    // 3. MOSTRAR apenas o selecionado
+    const targetId = `${section}-subtab-${subtab}`;
+    const targetContent = document.getElementById(targetId);
+
+    if (!targetContent) {
+        console.error(`❌ Sub-tab não encontrada: ${targetId}`);
+        return;
+    }
+
+    targetContent.classList.add('active');
+    targetContent.classList.remove('d-none');
+
+    // 4. ATIVAR botão clicado
+    if (event?.target) {
+        event.target.classList.add('active');
+    }
+
+    // 5. Carregar dados (carregarDadosSubTab será definida mais tarde)
+    if (typeof carregarDadosSubTab === 'function') {
+        carregarDadosSubTab(section, subtab);
+    }
+
+    console.log(`✅ Sub-tab ativa: ${targetId}`);
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
     console.log('%c🌳 BIOMA v3.7 DEFINITIVO','background:#7C3AED;color:#fff;font-size:24px;padding:15px;border-radius:8px;font-weight:900');
     console.log('%c✅ Sistema 100% Completo Carregado','color:#10B981;font-size:16px;font-weight:700');
@@ -4342,16 +4396,43 @@ async function loadServicosLista(){
     try{
         const res=await fetch('/api/servicos',{credentials:'include'});
         const data=await res.json();
-        const tbody=document.getElementById('servicosListBody');
+
+        // Atualizar TODOS os tbody de serviços
+        const tbodies = [
+            document.getElementById('servicosTodosBody'),
+            document.getElementById('servicosAtivosBody'),
+            document.getElementById('servicosInativosBody')
+        ];
+
         if(data.success&&data.servicos&&data.servicos.length>0){
             servicosDisponiveis = data.servicos;
-            const html=data.servicos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td>${s.categoria}</td><td><button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
-            tbody.innerHTML=html;
+
+            // Todos os serviços
+            if(tbodies[0]){
+                const htmlTodos=data.servicos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><span class="badge ${s.ativo?'success':'danger'}">${s.ativo?'Ativo':'Inativo'}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                tbodies[0].innerHTML=htmlTodos;
+            }
+
+            // Serviços ativos
+            if(tbodies[1]){
+                const ativos = data.servicos.filter(s => s.ativo);
+                const htmlAtivos = ativos.length > 0 ? ativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço ativo</td></tr>';
+                tbodies[1].innerHTML=htmlAtivos;
+            }
+
+            // Serviços inativos
+            if(tbodies[2]){
+                const inativos = data.servicos.filter(s => !s.ativo);
+                const htmlInativos = inativos.length > 0 ? inativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-success" onclick="ativarServico('${s._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço inativo</td></tr>';
+                tbodies[2].innerHTML=htmlInativos;
+            }
         }else{
-            tbody.innerHTML='<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+            tbodies.forEach(tb => {
+                if(tb) tb.innerHTML='<tr data-keep-visible="true"><td colspan="6" class="text-center text-muted">Nenhum serviço cadastrado</td></tr>';
+            });
         }
     }catch(e){
-        console.error(e);
+        console.error('❌ Erro ao carregar serviços:', e);
     }
 }
 
@@ -4434,17 +4515,52 @@ async function loadProdutosLista(){
     try{
         const res=await fetch('/api/produtos',{credentials:'include'});
         const data=await res.json();
-        const tbody=document.getElementById('produtosListBody');
+
+        // Atualizar TODOS os tbody de produtos
+        const tbodies = [
+            document.getElementById('produtosTodosBody'),
+            document.getElementById('produtosAtivosBody'),
+            document.getElementById('produtosInativosBody'),
+            document.getElementById('produtosBaixoEstoqueBody')
+        ];
+
         if(data.success&&data.produtos&&data.produtos.length>0){
             produtosDisponiveis = data.produtos;
             produtosCache = data.produtos;
-            const html=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
-            tbody.innerHTML=html;
+
+            // Todos os produtos
+            if(tbodies[0]){
+                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                tbodies[0].innerHTML=htmlTodos;
+            }
+
+            // Produtos ativos
+            if(tbodies[1]){
+                const ativos = data.produtos.filter(p => p.ativo);
+                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
+                tbodies[1].innerHTML=htmlAtivos;
+            }
+
+            // Produtos inativos
+            if(tbodies[2]){
+                const inativos = data.produtos.filter(p => !p.ativo);
+                const htmlInativos = inativos.length > 0 ? inativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge danger">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-success" onclick="ativarProduto('${p._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
+                tbodies[2].innerHTML=htmlInativos;
+            }
+
+            // Produtos com baixo estoque
+            if(tbodies[3]){
+                const baixoEstoque = data.produtos.filter(p => p.estoque <= (p.estoque_minimo || 5));
+                const htmlBaixo = baixoEstoque.length > 0 ? baixoEstoque.map(p=>`<tr data-id="${p._id}" data-keep-visible="true"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><span class="badge danger">${p.estoque||0}</span></td><td>${p.estoque_minimo||5}</td><td><button class="btn btn-sm btn-primary" onclick="ajustarEstoque('${p._id}')"><i class="bi bi-plus-circle"></i> Ajustar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-success">✅ Todos os produtos estão com estoque adequado</td></tr>';
+                tbodies[3].innerHTML=htmlBaixo;
+            }
         }else{
-            tbody.innerHTML='<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+            tbodies.forEach(tb => {
+                if(tb) tb.innerHTML='<tr data-keep-visible="true"><td colspan="6" class="text-center text-muted">Nenhum produto cadastrado</td></tr>';
+            });
         }
     }catch(e){
-        console.error(e);
+        console.error('❌ Erro ao carregar produtos:', e);
     }
 }
 
@@ -4773,9 +4889,47 @@ async function loadAgendamentos(){
     try{
         const res=await fetch('/api/agendamentos',{credentials:'include'});
         const data=await res.json();
-        const tbody=document.getElementById('agendamentosBody');
+
+        // Atualizar TODOS os tbody de agendamentos
+        const tbodies = [
+            document.getElementById('agendamentosHojeBody'),
+            document.getElementById('agendamentosSemanaBody'),
+            document.getElementById('agendamentosMesBody'),
+            document.getElementById('agendamentosTodosBody')
+        ];
+
         if(data.success&&data.agendamentos&&data.agendamentos.length>0){
-            const html=data.agendamentos.map(a=>{
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+
+            const amanha = new Date(hoje);
+            amanha.setDate(amanha.getDate() + 1);
+
+            const proximaSemana = new Date(hoje);
+            proximaSemana.setDate(proximaSemana.getDate() + 7);
+
+            const proximoMes = new Date(hoje);
+            proximoMes.setMonth(proximoMes.getMonth() + 1);
+
+            // Filtrar agendamentos
+            const agendamentosHoje = data.agendamentos.filter(a => {
+                const dataAgend = new Date(a.data);
+                dataAgend.setHours(0, 0, 0, 0);
+                return dataAgend.getTime() === hoje.getTime();
+            });
+
+            const agendamentosSemana = data.agendamentos.filter(a => {
+                const dataAgend = new Date(a.data);
+                return dataAgend >= hoje && dataAgend < proximaSemana;
+            });
+
+            const agendamentosMes = data.agendamentos.filter(a => {
+                const dataAgend = new Date(a.data);
+                return dataAgend >= hoje && dataAgend < proximoMes;
+            });
+
+            // Função auxiliar para renderizar HTML
+            const renderAgendamento = (a) => {
                 const dataFormatada = new Date(a.data).toLocaleDateString('pt-BR');
                 const statusBadge = a.status === 'Confirmado' ? 'success' :
                                    a.status === 'Pendente' ? 'warning' :
@@ -4793,14 +4947,38 @@ async function loadAgendamentos(){
                         </button>
                     </td>
                 </tr>`;
-            }).join('');
-            tbody.innerHTML=html;
+            };
+
+            // Hoje
+            if(tbodies[0]){
+                const html = agendamentosHoje.length > 0 ? agendamentosHoje.map(renderAgendamento).join('') : '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento para hoje</td></tr>';
+                tbodies[0].innerHTML = html;
+            }
+
+            // Próxima semana
+            if(tbodies[1]){
+                const html = agendamentosSemana.length > 0 ? agendamentosSemana.map(renderAgendamento).join('') : '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento nos próximos 7 dias</td></tr>';
+                tbodies[1].innerHTML = html;
+            }
+
+            // Próximo mês
+            if(tbodies[2]){
+                const html = agendamentosMes.length > 0 ? agendamentosMes.map(renderAgendamento).join('') : '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento nos próximos 30 dias</td></tr>';
+                tbodies[2].innerHTML = html;
+            }
+
+            // Todos
+            if(tbodies[3]){
+                const html = data.agendamentos.map(renderAgendamento).join('');
+                tbodies[3].innerHTML = html;
+            }
         }else{
-            tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted"><i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.3;"></i><br>Nenhum agendamento cadastrado</td></tr>';
+            tbodies.forEach(tb => {
+                if(tb) tb.innerHTML='<tr><td colspan="7" class="text-center text-muted"><i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.3;"></i><br>Nenhum agendamento cadastrado</td></tr>';
+            });
         }
     }catch(e){
         console.error('❌ Erro ao carregar agendamentos:',e);
-        Swal.fire('Erro','Não foi possível carregar os agendamentos','error');
     } finally {
         setTimeout(() => setLoading(key, false), 1000);
     }
@@ -6324,8 +6502,6 @@ async function uploadLogo(inputSel='#logoArquivo'){
 window.uploadLogo = uploadLogo;
 
 // ===== Init =====
-let appInitialized = false;
-
 async function initApp(user=null){
   // Evitar múltiplas inicializações
   if (appInitialized) {
@@ -7177,46 +7353,8 @@ async function deletarProntuario(id) {
 }
 // ========== FIM ANAMNESE E PRONTUÁRIO ==========
 
-// ========== SISTEMA DE SUB-TABS GLOBAL (CORRIGIDO) ====================
-function switchSubTab(section, subtab) {
-    console.log(`🔄 Mudando sub-tab: ${section} → ${subtab}`);
-    
-    // 1. ESCONDER TODOS os conteúdos desta seção
-    document.querySelectorAll(`[id^="${section}-subtab-"]`).forEach(content => {
-        content.classList.remove('active');
-        content.classList.add('d-none');
-    });
-    
-    // 2. DESATIVAR todos os botões
-    const sectionElement = document.getElementById(`section-${section}`);
-    if (sectionElement) {
-        sectionElement.querySelectorAll('.sub-tab-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-    }
-    
-    // 3. MOSTRAR apenas o selecionado
-    const targetId = `${section}-subtab-${subtab}`;
-    const targetContent = document.getElementById(targetId);
-    
-    if (!targetContent) {
-        console.error(`❌ Sub-tab não encontrada: ${targetId}`);
-        return;
-    }
-    
-    targetContent.classList.add('active');
-    targetContent.classList.remove('d-none');
-    
-    // 4. ATIVAR botão clicado
-    if (event?.target) {
-        event.target.classList.add('active');
-    }
-    
-    // 5. Carregar dados
-    carregarDadosSubTab(section, subtab);
-    
-    console.log(`✅ Sub-tab ativa: ${targetId}`);
-}
+// ========== SISTEMA DE SUB-TABS GLOBAL ====================
+// switchSubTab já foi definida no início do script (linha ~2709)
 
 function carregarDadosSubTab(section, subtab) {
     const key = `${section}-${subtab}`;
