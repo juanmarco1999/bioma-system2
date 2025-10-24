@@ -60,7 +60,7 @@ def get_dashboard():
     """Retorna dados do dashboard"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         hoje = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -119,7 +119,7 @@ def get_agendamentos():
     """Listar agendamentos"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -149,7 +149,7 @@ def create_agendamento():
     """Criar novo agendamento"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         data = request.json
@@ -175,7 +175,7 @@ def get_clientes():
     """Listar clientes"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -207,7 +207,7 @@ def get_servicos():
     """Listar serviços"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -239,7 +239,7 @@ def get_produtos():
     """Listar produtos"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -271,7 +271,7 @@ def get_financeiro_resumo():
     """Retorna resumo financeiro"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         inicio_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -330,7 +330,7 @@ def get_estoque():
     """Listar produtos em estoque"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))

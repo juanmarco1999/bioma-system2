@@ -60,7 +60,7 @@ def get_profissionais():
     """Listar profissionais"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -92,7 +92,7 @@ def get_orcamentos():
     """Listar orçamentos"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -122,7 +122,7 @@ def create_orcamento():
     """Criar novo orçamento"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         data = request.json
@@ -149,7 +149,7 @@ def get_contratos():
     """Listar contratos"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -181,7 +181,7 @@ def get_anamnese(id):
     """Buscar anamnese do cliente"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         anamneses = list(db.anamneses.find({'cliente_id': id}).sort('data', -1))
@@ -200,7 +200,7 @@ def create_anamnese(id):
     """Criar nova anamnese"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         data = request.json
@@ -227,7 +227,7 @@ def get_prontuario(id):
     """Buscar prontuário do cliente"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         prontuarios = list(db.prontuarios.find({'cliente_id': id}).sort('data', -1))
@@ -246,7 +246,7 @@ def create_prontuario(id):
     """Criar novo prontuário"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         data = request.json
@@ -273,7 +273,7 @@ def get_auditoria():
     """Listar registros de auditoria"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         page = int(request.args.get('page', 1))
@@ -305,7 +305,7 @@ def get_notificacoes():
     """Listar notificações do usuário"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         user_id = session.get('user_id')
@@ -330,7 +330,7 @@ def get_configuracoes():
     """Buscar configurações do sistema"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         config = db.configuracoes.find_one({'tipo': 'sistema'})
@@ -353,7 +353,7 @@ def update_configuracoes():
     """Atualizar configurações do sistema"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         data = request.json
@@ -381,7 +381,7 @@ def relatorio_faturamento():
     """Relatório de faturamento"""
     try:
         db = get_db()
-        if not db:
+        if db is None:
             return jsonify({'error': 'Banco de dados não conectado'}), 500
 
         # Parâmetros
