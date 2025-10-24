@@ -2970,6 +2970,43 @@ function showSubTab(section, tab) {
     }
 }
 
+// ========== FUNÇÃO: CARREGAR HISTÓRICO DE COMISSÕES ==========
+async function carregarHistoricoComissoes() {
+    try {
+        const res = await fetch('/api/financeiro/comissoes', {credentials: 'include'});
+        const data = await res.json();
+
+        const tbody = document.getElementById('profissionais-comissoes');
+        if (!tbody) {
+            console.warn('⚠️ Elemento profissionais-comissoes não encontrado');
+            return;
+        }
+
+        if (data.success && data.comissoes && data.comissoes.length > 0) {
+            const html = data.comissoes.map(c => `
+                <tr>
+                    <td><strong>${new Date(c.data).toLocaleDateString('pt-BR')}</strong></td>
+                    <td>${c.profissional_nome || 'N/A'}</td>
+                    <td>${c.servico_nome || 'N/A'}</td>
+                    <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
+                    <td><span class="badge ${c.status === 'Pago' ? 'success' : 'warning'}">${c.status || 'Pendente'}</span></td>
+                </tr>
+            `).join('');
+            tbody.innerHTML = html;
+        } else {
+            tbody.innerHTML = '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhuma comissão registrada</td></tr>';
+        }
+    } catch (e) {
+        console.error('❌ Erro ao carregar comissões:', e);
+    }
+}
+
+// ========== FUNÇÃO: CARREGAR ASSISTENTES ==========
+async function loadAssistentes() {
+    console.log('📋 Carregando assistentes...');
+    // Implementação futura se necessário
+}
+
 function filtrarTabelaPorTermo(tbodySelector, termo){
     const normalized = (termo || '').toLowerCase();
     document.querySelectorAll(`${tbodySelector} tr`).forEach(row => {
