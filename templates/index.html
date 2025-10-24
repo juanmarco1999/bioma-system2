@@ -53,6 +53,23 @@
         .community-card h5{font-weight:700;margin-bottom:10px}
         .community-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,0.12);color:var(--primary);padding:6px 12px;border-radius:999px;font-size:0.8rem;margin-right:8px;margin-bottom:8px}
 
+        /* === CORREÇÃO RENDERIZAÇÃO DAS ABAS PROBLEMÁTICAS === */
+        #section-clube, #section-importar, #section-sistema, #section-auditoria, #section-configuracoes {
+            overflow: visible !important;
+            max-width: 100% !important;
+        }
+
+        /* Garantir que conteúdo dessas seções fique no topo */
+        #section-clube > *, #section-importar > *, #section-sistema > *, #section-auditoria > *, #section-configuracoes > * {
+            position: relative !important;
+            z-index: 10 !important;
+        }
+
+        /* Forçar remoção de qualquer elemento de estoque nessas seções */
+        #section-clube table, #section-importar table, #section-sistema table {
+            display: none !important;
+        }
+
         /* === SUB-TABS SYSTEM === */
         .sub-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;padding:12px;background:var(--bg-card);border-radius:16px;box-shadow:var(--shadow);border:2px solid var(--border-color)}
         .sub-tab,.sub-tab-btn{padding:12px 24px;border-radius:12px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:all .3s ease;border:2px solid transparent;background:var(--bg-main);color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
