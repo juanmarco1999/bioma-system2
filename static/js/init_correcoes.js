@@ -68,35 +68,99 @@
         console.log('✅ Correções de estoque aplicadas');
     }
 
-    // Limpar estoque de uma seção
+    // Limpar estoque de uma seção - VERSÃO AGRESSIVA
     function limparEstoqueDaSecao(secao) {
-        // Seletores para identificar elementos de estoque
+        if (!secao) return;
+
+        console.log(`🧹 Limpando estoque de: ${secao.id}`);
+
+        // PASSO 1: Remover por seletores CSS
         const seletoresEstoque = [
-            '[id*="estoque"]:not(#estoque)',
-            '[class*="estoque"]:not(.estoque-relacionado)',
+            '[id*="estoque" i]',
+            '[class*="estoque" i]',
             '[id*="Estoque"]',
             '[class*="Estoque"]',
             '.estoque-card',
             '.estoque-item',
+            '.estoque-alert',
+            '.estoque-warning',
             '#estoqueVisaoGeral',
             '#estoque-resumo',
-            '#estoque-lista'
+            '#estoque-lista',
+            '[data-estoque]',
+            '[data-type="estoque"]'
         ];
+
+        let removidos = 0;
 
         seletoresEstoque.forEach(seletor => {
             try {
                 const elementos = secao.querySelectorAll(seletor);
                 elementos.forEach(el => {
-                    // Verificar se não está dentro da seção de estoque
+                    // NUNCA remover se estiver dentro de #estoque ou #produtos
                     if (!el.closest('#estoque') && !el.closest('#produtos')) {
-                        console.log(`Removendo elemento de estoque: ${el.id || el.className}`);
+                        console.log(`  ❌ Removendo por seletor "${seletor}": ${el.id || el.className || el.tagName}`);
                         el.remove();
+                        removidos++;
                     }
                 });
             } catch (e) {
-                console.warn(`Erro ao processar seletor ${seletor}:`, e);
+                // Seletor inválido, ignorar
             }
         });
+
+        // PASSO 2: Buscar por TEXTO contendo "estoque" (case insensitive)
+        const todosElementos = secao.querySelectorAll('*');
+        todosElementos.forEach(el => {
+            // Pular se for a própria seção de estoque
+            if (el.closest('#estoque') || el.closest('#produtos')) return;
+
+            // Verificar texto do elemento
+            const texto = el.textContent || '';
+            const textoLower = texto.toLowerCase();
+
+            // Se contém "estoque" no texto E não tem muitos filhos (não é um container grande)
+            if (textoLower.includes('estoque') && el.children.length < 5) {
+                // Verificar se é um elemento de interface relacionado a estoque
+                const palavrasChave = [
+                    'estoque baixo',
+                    'estoque mínimo',
+                    'estoque crítico',
+                    'produtos em estoque',
+                    'baixo estoque',
+                    'sem estoque'
+                ];
+
+                const temPalavraChave = palavrasChave.some(palavra =>
+                    textoLower.includes(palavra)
+                );
+
+                if (temPalavraChave) {
+                    console.log(`  ❌ Removendo por texto: "${texto.substring(0, 50)}..."`);
+                    el.remove();
+                    removidos++;
+                }
+            }
+        });
+
+        // PASSO 3: Remover elementos com atributo style contendo "estoque"
+        const elementosComStyle = secao.querySelectorAll('[style]');
+        elementosComStyle.forEach(el => {
+            if (el.closest('#estoque') || el.closest('#produtos')) return;
+
+            const style = el.getAttribute('style') || '';
+            if (style.toLowerCase().includes('estoque')) {
+                console.log(`  ❌ Removendo por style: ${el.tagName}`);
+                el.remove();
+                removidos++;
+            }
+        });
+
+        if (removidos > 0) {
+            console.log(`  ✅ Total removido: ${removidos} elementos de estoque`);
+        } else {
+            console.log(`  ✅ Nenhum elemento de estoque encontrado`);
+        }
     }
 
     // Configurar observadores de mutação
@@ -177,6 +241,16 @@
         });
 
         console.log('✅ Navegação corrigida');
+
+        // LIMPEZA PERIÓDICA AGRESSIVA - A cada 2 segundos
+        setInterval(() => {
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard && dashboard.style.display !== 'none') {
+                limparEstoqueDaSecao(dashboard);
+            }
+        }, 2000);
+
+        console.log('✅ Limpeza periódica do Dashboard ativada (2s)');
     }
 
     // Verificar funções essenciais

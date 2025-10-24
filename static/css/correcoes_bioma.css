@@ -187,49 +187,87 @@
 
 /* ========== REMOVER ELEMENTOS DE ESTOQUE INDEVIDOS ========== */
 
-/* Esconder estoque em seções que não devem ter */
+/* ESCONDER COMPLETAMENTE ESTOQUE NO DASHBOARD E OUTRAS SEÇÕES */
+
+/* Dashboard - NADA de estoque aqui! */
 #dashboard .estoque-card,
-#dashboard [id*="estoque"],
-#dashboard [class*="estoque"],
-#agendamentos .estoque-card,
-#agendamentos [id*="estoque"],
-#agendamentos [class*="estoque"],
-#clientes .estoque-card,
-#clientes [id*="estoque"],
-#clientes [class*="estoque"],
-#profissionais .estoque-card,
-#profissionais [id*="estoque"],
-#profissionais [class*="estoque"],
-#servicos .estoque-card,
-#servicos [id*="estoque"],
-#servicos [class*="estoque"],
-#financeiro .estoque-card,
-#financeiro [id*="estoque"],
-#financeiro [class*="estoque"],
-#comunidade .estoque-card,
-#comunidade [id*="estoque"],
-#comunidade [class*="estoque"],
-#importar .estoque-card,
-#importar [id*="estoque"],
-#importar [class*="estoque"],
-#sistema .estoque-card,
-#sistema [id*="estoque"],
-#sistema [class*="estoque"],
-#auditoria .estoque-card,
-#auditoria [id*="estoque"],
-#auditoria [class*="estoque"],
-#configuracoes .estoque-card,
-#configuracoes [id*="estoque"],
-#configuracoes [class*="estoque"] {
+#dashboard [id*="estoque" i],
+#dashboard [class*="estoque" i],
+#dashboard [id*="Estoque"],
+#dashboard [class*="Estoque"],
+#dashboard .card:has([id*="estoque" i]),
+#dashboard .card:has([class*="estoque" i]),
+#dashboard *[style*="Estoque"],
+#dashboard h3:contains("Estoque"),
+#dashboard h4:contains("Estoque"),
+#dashboard div:contains("Estoque Baixo") {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Outras seções que não devem ter estoque */
+#agendamentos .estoque-card,
+#agendamentos [id*="estoque" i],
+#agendamentos [class*="estoque" i],
+#clientes .estoque-card,
+#clientes [id*="estoque" i],
+#clientes [class*="estoque" i],
+#profissionais .estoque-card,
+#profissionais [id*="estoque" i],
+#profissionais [class*="estoque" i],
+#servicos .estoque-card,
+#servicos [id*="estoque" i],
+#servicos [class*="estoque" i],
+#financeiro .estoque-card,
+#financeiro [id*="estoque" i],
+#financeiro [class*="estoque" i],
+#comunidade .estoque-card,
+#comunidade [id*="estoque" i],
+#comunidade [class*="estoque" i],
+#importar .estoque-card,
+#importar [id*="estoque" i],
+#importar [class*="estoque" i],
+#sistema .estoque-card,
+#sistema [id*="estoque" i],
+#sistema [class*="estoque" i],
+#auditoria .estoque-card,
+#auditoria [id*="estoque" i],
+#auditoria [class*="estoque" i],
+#configuracoes .estoque-card,
+#configuracoes [id*="estoque" i],
+#configuracoes [class*="estoque" i],
+#avaliacoes .estoque-card,
+#avaliacoes [id*="estoque" i],
+#avaliacoes [class*="estoque" i] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
 }
 
 /* Apenas permitir estoque nas seções corretas */
 #estoque .estoque-card,
-#estoque [id*="estoque"],
-#estoque [class*="estoque"],
-#produtos .estoque-relacionado {
+#estoque [id*="estoque" i],
+#estoque [class*="estoque" i],
+#produtos .estoque-relacionado,
+#produtos [id*="estoque" i] {
     display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    width: auto !important;
+    position: relative !important;
+    left: auto !important;
 }
 
 /* ========== RESPONSIVIDADE ========== */
