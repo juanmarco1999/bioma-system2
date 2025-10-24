@@ -7462,14 +7462,15 @@ async function carregarOrcamentosPendentes() {
     try {
         const res = await fetch('/api/orcamentos?status=Pendente', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar orçamentos');
-        
-        const orcamentos = await res.json();
-        
+
+        const data = await res.json();
+        const orcamentos = data.orcamentos || [];
+
         if (!orcamentos || orcamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum orçamento pendente</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = orcamentos.map(orc => {
             const data = new Date(orc.data).toLocaleDateString('pt-BR');
             const profs = orc.profissionais_vinculados?.map(p => p.nome).join(', ') || 'N/A';
@@ -7508,14 +7509,15 @@ async function carregarOrcamentosAprovados() {
     try {
         const res = await fetch('/api/orcamentos?status=Aprovado', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar orçamentos');
-        
-        const orcamentos = await res.json();
-        
+
+        const data = await res.json();
+        const orcamentos = data.orcamentos || [];
+
         if (!orcamentos || orcamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum orçamento aprovado</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = orcamentos.map(orc => {
             const data = new Date(orc.data).toLocaleDateString('pt-BR');
             return `
@@ -7550,14 +7552,15 @@ async function carregarOrcamentosRejeitados() {
     try {
         const res = await fetch('/api/orcamentos?status=Rejeitado', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar orçamentos');
-        
-        const orcamentos = await res.json();
-        
+
+        const data = await res.json();
+        const orcamentos = data.orcamentos || [];
+
         if (!orcamentos || orcamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum orçamento rejeitado</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = orcamentos.map(orc => {
             const data = new Date(orc.data).toLocaleDateString('pt-BR');
             return `
@@ -7600,14 +7603,15 @@ async function carregarHistoricoOrcamentos() {
         
         const res = await fetch(url, {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar histórico');
-        
-        const orcamentos = await res.json();
-        
+
+        const data = await res.json();
+        const orcamentos = data.orcamentos || [];
+
         if (!orcamentos || orcamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum orçamento encontrado</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = orcamentos.map(orc => {
             const data = new Date(orc.data).toLocaleDateString('pt-BR');
             const statusClass = orc.status === 'Aprovado' ? 'success' : orc.status === 'Rejeitado' ? 'danger' : 'warning';
@@ -7903,14 +7907,15 @@ async function carregarTodosAgendamentos() {
         
         const res = await fetch(url, {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar agendamentos');
-        
-        const agendamentos = await res.json();
-        
+
+        const data = await res.json();
+        const agendamentos = data.agendamentos || [];
+
         if (!agendamentos || agendamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento encontrado</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = agendamentos.map(ag => {
             const data = new Date(ag.data).toLocaleDateString('pt-BR');
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
