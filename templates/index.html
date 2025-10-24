@@ -69,9 +69,7 @@
         .content-section:not(#section-estoque) [id*="estoque"],
         .content-section:not(#section-estoque) [id*="Estoque"],
         .content-section:not(#section-estoque) [class*="estoque"],
-        .content-section:not(#section-estoque) [class*="Estoque"],
-        .content-section:not(#section-produtos) [id*="estoque-baixo"],
-        .content-section:not(#section-produtos) [id*="baixo-estoque"] {
+        .content-section:not(#section-estoque) [class*="Estoque"] {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
@@ -166,20 +164,24 @@
 
         /* ========== LOGO PERSONALIZADO: Ajustar tamanho do logo na sidebar ========== */
         .sidebar-logo {
-            min-height: 320px !important;
-            padding: 20px 10px !important;
+            min-height: 400px !important;
+            max-height: 400px !important;
+            padding: 15px 8px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
             background-size: cover !important;
+            background-position: center !important;
         }
 
         #sidebarLogoImage {
             width: 100% !important;
             height: 100% !important;
-            max-height: 280px !important;
-            object-fit: contain !important;
+            max-height: 360px !important;
+            min-height: 360px !important;
+            object-fit: cover !important;
+            object-position: center !important;
         }
 
         /* ========== CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE ========== */
@@ -1580,9 +1582,6 @@
                 <button class="sub-tab-btn" onclick="switchSubTab('produtos', 'inativos')">
                     <i class="bi bi-x-circle"></i> Inativos
                 </button>
-                <button class="sub-tab-btn" onclick="switchSubTab('produtos', 'baixoestoque')">
-                    <i class="bi bi-exclamation-triangle"></i> Baixo Estoque
-                </button>
             </div>
 
             <!-- Sub-tab: Todos -->
@@ -1673,65 +1672,6 @@
                                 </thead>
                                 <tbody id="produtosInativosBody">
                                     <tr><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sub-tab: Baixo Estoque -->
-            <div id="produtos-subtab-baixoestoque" class="sub-tab-content d-none">
-                <div class="row g-4 mb-4">
-                    <div class="col-md-4">
-                        <div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
-                            <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="produtosCriticos">0</div>
-                                <div class="stat-label">Estoque Crítico</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
-                            <div class="stat-icon"><i class="bi bi-exclamation-circle"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="produtosAtencao">0</div>
-                                <div class="stat-label">Atenção</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card" style="background:linear-gradient(135deg,#10b981,#059669);">
-                            <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
-                            <div class="stat-info">
-                                <div class="stat-value" id="produtosNormais">0</div>
-                                <div class="stat-label">Estoque Normal</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Produtos com Estoque Baixo</div>
-                    <div class="card-body">
-                        <div class="alert alert-danger">
-                            <i class="bi bi-info-circle"></i> 
-                            <strong>Alerta:</strong> Produtos abaixo do estoque mínimo. Reposição necessária!
-                        </div>
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Marca</th>
-                                        <th>Estoque Atual</th>
-                                        <th>Estoque Mínimo</th>
-                                        <th>Status</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="produtosBaixoEstoqueBody">
-                                    <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2132,19 +2072,22 @@
             <button class="btn btn-danger" onclick="novaSaidaEstoque()">
                 <i class="bi bi-box-arrow-up"></i> Nova Saída
             </button>
+            <button class="btn btn-primary" onclick="atualizarEstoque()">
+                <i class="bi bi-arrow-repeat"></i> Atualizar
+            </button>
         </div>
     </div>
 
     <!-- Sub-tabs para Estoque -->
     <div class="sub-tabs">
         <button class="sub-tab-btn active" onclick="switchSubTab('estoque', 'visaogeral')">
-            <i class="bi bi-bar-chart"></i> Visão Geral
+            <i class="bi bi-grid"></i> Visão Geral
+        </button>
+        <button class="sub-tab-btn" onclick="switchSubTab('estoque', 'produtos')">
+            <i class="bi bi-box-seam"></i> Produtos
         </button>
         <button class="sub-tab-btn" onclick="switchSubTab('estoque', 'movimentacoes')">
             <i class="bi bi-arrow-left-right"></i> Movimentações
-        </button>
-        <button class="sub-tab-btn" onclick="switchSubTab('estoque', 'alertas')">
-            <i class="bi bi-exclamation-triangle"></i> Alertas
         </button>
         <button class="sub-tab-btn" onclick="switchSubTab('estoque', 'relatorios')">
             <i class="bi bi-file-earmark-text"></i> Relatórios
@@ -2173,11 +2116,11 @@
                 </div>
             </div>
             <div class="col-xl-3 col-md-6">
-                <div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
-                    <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+                    <div class="stat-icon"><i class="bi bi-archive"></i></div>
                     <div class="stat-info">
-                        <div class="stat-value" id="alertasEstoque">0</div>
-                        <div class="stat-label">Alertas de Estoque</div>
+                        <div class="stat-value" id="itensAbaixoMinimo">0</div>
+                        <div class="stat-label">Abaixo do Mínimo</div>
                     </div>
                 </div>
             </div>
@@ -2192,11 +2135,61 @@
             </div>
         </div>
 
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-graph-up"></i> Resumo de Movimentações
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartEstoqueVisaoGeral" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart"></i> Distribuição
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartDistribuicaoEstoque" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Últimas Movimentações
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Produto</th>
+                                <th>Tipo</th>
+                                <th>Quantidade</th>
+                                <th>Responsável</th>
+                            </tr>
+                        </thead>
+                        <tbody id="estoqueUltimasMovimentacoesVisaoGeral">
+                            <tr><td colspan="5" class="text-center text-muted">Nenhuma movimentação recente</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub-tab: Produtos -->
+    <div id="estoque-subtab-produtos" class="sub-tab-content">
         <div class="card">
-            <div class="card-header"><i class="bi bi-box"></i> Produtos em Estoque</div>
+            <div class="card-header"><i class="bi bi-box"></i> Lista de Produtos</div>
             <div class="card-body">
                 <div class="mb-3">
-                    <input type="text" class="form-control" id="buscaEstoqueGeral" placeholder="Buscar produto..." onkeyup="filtrarEstoqueGeral()">
+                    <input type="text" class="form-control" id="buscaProdutosEstoque" placeholder="Buscar por nome, marca ou SKU..." onkeyup="filtrarProdutosEstoque()">
                 </div>
                 <div class="table-responsive">
                     <table>
@@ -2204,15 +2197,16 @@
                             <tr>
                                 <th>Produto</th>
                                 <th>Marca</th>
-                                <th>Estoque Atual</th>
-                                <th>Estoque Mínimo</th>
-                                <th>Valor Unitário</th>
+                                <th>SKU</th>
+                                <th>Quantidade</th>
+                                <th>Mínimo</th>
+                                <th>Preço</th>
                                 <th>Valor Total</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="estoqueProdutosBody">
-                            <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                            <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2264,90 +2258,6 @@
                         </thead>
                         <tbody id="estoqueMovimentacoesBody">
                             <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sub-tab: Alertas -->
-    <div id="estoque-subtab-alertas" class="sub-tab-content">
-        <div class="row g-4 mb-4">
-            <div class="col-md-4">
-                <div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
-                    <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="estoqueCritico">0</div>
-                        <div class="stat-label">Estoque Crítico</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
-                    <div class="stat-icon"><i class="bi bi-exclamation-circle"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="estoqueAtencao">0</div>
-                        <div class="stat-label">Requer Atenção</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card" style="background:linear-gradient(135deg,#10b981,#059669);">
-                    <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
-                    <div class="stat-info">
-                        <div class="stat-value" id="estoqueNormal">0</div>
-                        <div class="stat-label">Estoque Normal</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Produtos com Estoque Baixo</div>
-            <div class="card-body">
-                <div class="alert alert-danger">
-                    <i class="bi bi-info-circle"></i> 
-                    <strong>Atenção!</strong> Produtos abaixo do estoque mínimo. Reposição necessária!
-                </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Produto</th>
-                                <th>Marca</th>
-                                <th>Estoque Atual</th>
-                                <th>Estoque Mínimo</th>
-                                <th>Diferença</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="estoqueBaixoBody">
-                            <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mt-4">
-            <div class="card-header"><i class="bi bi-clock-history"></i> Últimas Movimentações</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Hora</th>
-                                <th>Produto</th>
-                                <th>Tipo</th>
-                                <th>Quantidade</th>
-                                <th>Responsável</th>
-                            </tr>
-                        </thead>
-                        <tbody id="estoqueUltimasMovimentacoesBody">
-                            <tr><td colspan="6" class="text-center text-muted">Nenhuma movimentação recente</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2441,7 +2351,7 @@
                             <span id="estoqueResumoCriticos">0</span>
                         </div>
                         <div class="stock-summary-metric">
-                            <strong>Baixo estoque</strong>
+                            <strong>Abaixo do mínimo</strong>
                             <span id="estoqueResumoBaixo">0</span>
                         </div>
                     </div>
@@ -2449,7 +2359,7 @@
             </div>
             <div class="col-xl-8">
                 <div class="card">
-                    <div class="card-header"><i class="bi bi-exclamation-triangle-fill"></i> Estoque Baixo</div>
+                    <div class="card-header"><i class="bi bi-info-circle"></i> Produtos Abaixo do Mínimo</div>
                     <div class="card-body">
                         <div class="table-responsive">
                             <table>
@@ -3212,7 +3122,6 @@ async function loadEstoque(){
     try {
         await Promise.all([
             loadEstoqueResumo(),
-            loadEstoqueBaixo(),
             loadEstoquePendentes(),
             loadEstoqueMovimentos()
         ]);
@@ -3395,7 +3304,6 @@ async function gerarRelatorioEstoque() {
             // Atualizar cards
             document.getElementById('relTotalProdutos').textContent = rel.total_produtos || 0;
             document.getElementById('relValorEstoque').textContent = formatarMoeda(rel.valor_total_estoque);
-            document.getElementById('relBaixoEstoque').textContent = rel.produtos_baixo_estoque || 0;
             document.getElementById('relSemEstoque').textContent = rel.produtos_sem_estoque || 0;
             
             // Top produtos
@@ -3906,9 +3814,9 @@ async function loadDashboard(){
         const estoqueData=await estoqueRes.json();
         if(estoqueData.success&&estoqueData.produtos&&estoqueData.produtos.length>0){
             const html=estoqueData.produtos.slice(0,5).map(p=>`<div style="padding:10px;border-bottom:1px solid var(--border-color)"><strong>${p.nome}</strong><br><small>Estoque: ${p.estoque} | Mínimo: ${p.estoque_minimo}</small></div>`).join('');
-            document.getElementById('alertasEstoque').innerHTML=html;
+            // document.getElementById('alertasEstoque').innerHTML=html;
         }else{
-            document.getElementById('alertasEstoque').innerHTML='<p class="text-center text-success">✅ Estoque OK</p>';
+            // document.getElementById('alertasEstoque').innerHTML='<p class="text-center text-success">✅ Estoque OK</p>';
         }
         const agendRes=await fetch('/api/agendamentos',{credentials:'include'});
         const agendData=await agendRes.json();
@@ -4625,8 +4533,7 @@ async function loadProdutosLista(){
         const tbodies = [
             document.getElementById('produtosTodosBody'),
             document.getElementById('produtosAtivosBody'),
-            document.getElementById('produtosInativosBody'),
-            document.getElementById('produtosBaixoEstoqueBody')
+            document.getElementById('produtosInativosBody')
         ];
 
         if(data.success&&data.produtos&&data.produtos.length>0){
@@ -4651,13 +4558,6 @@ async function loadProdutosLista(){
                 const inativos = data.produtos.filter(p => !p.ativo);
                 const htmlInativos = inativos.length > 0 ? inativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge danger">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-success" onclick="ativarProduto('${p._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
                 tbodies[2].innerHTML=htmlInativos;
-            }
-
-            // Produtos com baixo estoque
-            if(tbodies[3]){
-                const baixoEstoque = data.produtos.filter(p => p.estoque <= (p.estoque_minimo || 5));
-                const htmlBaixo = baixoEstoque.length > 0 ? baixoEstoque.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><span class="badge danger">${p.estoque||0}</span></td><td>${p.estoque_minimo||5}</td><td><button class="btn btn-sm btn-primary" onclick="ajustarEstoque('${p._id}')"><i class="bi bi-plus-circle"></i> Ajustar</button></td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-success">✅ Todos os produtos estão com estoque adequado</td></tr>';
-                tbodies[3].innerHTML=htmlBaixo;
             }
         }else{
             tbodies.forEach(tb => {
@@ -4942,42 +4842,6 @@ function showModalFila(){
             }
         }
     });
-}
-
-async function loadEstoqueBaixo(){
-    const tbody = document.getElementById('estoqueBaixoBody');
-    const tbodyResumo = document.getElementById('estoqueBaixoBodyResumo');
-
-    if(!tbody && !tbodyResumo){
-        return;
-    }
-    try{
-        const res = await fetch('/api/estoque/alertas',{credentials:'include'});
-        const data = await res.json();
-        if(data.success && data.alertas && data.alertas.length){
-            const htmlContent = data.alertas.map(item => {
-                const statusClass = item.status === 'CRÍTICO' ? 'danger' : 'warning';
-                return `<tr data-id="${item.produto_id}">
-                            <td>${item.nome || '-'}</td>
-                            <td>${item.sku || '-'}</td>
-                            <td><span class="badge ${statusClass}">${item.estoque_atual ?? 0}</span></td>
-                            <td>${item.estoque_minimo ?? 0}</td>
-                            <td><span class="badge ${statusClass}">${item.status}</span></td>
-                        </tr>`;
-            }).join('');
-            if(tbody) tbody.innerHTML = htmlContent;
-            if(tbodyResumo) tbodyResumo.innerHTML = htmlContent;
-        }else{
-            const emptyMsg = '<tr><td colspan="5" class="text-center text-success">Estoque saudável</td></tr>';
-            if(tbody) tbody.innerHTML = emptyMsg;
-            if(tbodyResumo) tbodyResumo.innerHTML = emptyMsg;
-        }
-    }catch(error){
-        console.error('Erro ao carregar alertas de estoque', error);
-        const errorMsg = '<tr><td colspan="5" class="text-center text-muted">Erro ao carregar dados</td></tr>';
-        if(tbody) tbody.innerHTML = errorMsg;
-        if(tbodyResumo) tbodyResumo.innerHTML = errorMsg;
-    }
 }
 
 async function loadAgendamentos(){
@@ -5663,6 +5527,155 @@ async function editarOrcamento(id){
         }
     }catch(e){
         Swal.fire('Erro','Não foi possível carregar para edição','error');
+    }
+}
+
+async function imprimirContrato(id) {
+    try {
+        // Buscar dados do orçamento
+        const res = await fetch(`/api/orcamentos/${id}`, {credentials: 'include'});
+        const data = await res.json();
+
+        if (!data.success || !data.orcamento) {
+            Swal.fire('Erro', 'Orçamento não encontrado', 'error');
+            return;
+        }
+
+        const orc = data.orcamento;
+
+        // Gerar PDF via backend
+        const pdfRes = await fetch(`/api/orcamentos/${id}/pdf`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (pdfRes.ok) {
+            // Baixar o PDF
+            const blob = await pdfRes.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `contrato_${orc.numero || id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Contrato gerado!',
+                text: 'O PDF do contrato foi baixado com sucesso',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            // Fallback: abrir em nova janela para impressão
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Contrato #${orc.numero || id}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 40px; }
+                        h1 { color: #7C3AED; border-bottom: 3px solid #7C3AED; padding-bottom: 10px; }
+                        .info { margin: 20px 0; }
+                        .info strong { color: #333; }
+                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                        th { background-color: #7C3AED; color: white; }
+                        .total { font-size: 1.2em; font-weight: bold; color: #7C3AED; }
+                        @media print { button { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>CONTRATO DE SERVIÇOS - #${orc.numero || id}</h1>
+
+                    <div class="info">
+                        <p><strong>Cliente:</strong> ${orc.cliente_nome || 'N/A'}</p>
+                        <p><strong>CPF:</strong> ${orc.cliente_cpf || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${orc.cliente_email || 'N/A'}</p>
+                        <p><strong>Telefone:</strong> ${orc.cliente_telefone || 'N/A'}</p>
+                        <p><strong>Data:</strong> ${orc.data || new Date().toLocaleDateString('pt-BR')}</p>
+                        <p><strong>Status:</strong> ${orc.status || 'Pendente'}</p>
+                    </div>
+
+                    ${orc.servicos && orc.servicos.length > 0 ? `
+                    <h2>Serviços Contratados</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Serviço</th>
+                                <th>Quantidade</th>
+                                <th>Valor Unit.</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${orc.servicos.map(s => `
+                                <tr>
+                                    <td>${s.nome || 'N/A'}</td>
+                                    <td>${s.quantidade || 1}</td>
+                                    <td>R$ ${(s.preco || 0).toFixed(2)}</td>
+                                    <td>R$ ${((s.quantidade || 1) * (s.preco || 0)).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ` : ''}
+
+                    ${orc.produtos && orc.produtos.length > 0 ? `
+                    <h2>Produtos Inclusos</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Valor Unit.</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${orc.produtos.map(p => `
+                                <tr>
+                                    <td>${p.nome || 'N/A'}</td>
+                                    <td>${p.quantidade || 1}</td>
+                                    <td>R$ ${(p.preco || 0).toFixed(2)}</td>
+                                    <td>R$ ${((p.quantidade || 1) * (p.preco || 0)).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    ` : ''}
+
+                    <div style="text-align: right; margin-top: 30px;">
+                        <p class="total">VALOR TOTAL: R$ ${(orc.total_final || 0).toFixed(2)}</p>
+                        ${orc.desconto_global ? `<p>Desconto: R$ ${orc.desconto_global.toFixed(2)}</p>` : ''}
+                        ${orc.cashback_valor ? `<p>Cashback: R$ ${orc.cashback_valor.toFixed(2)}</p>` : ''}
+                    </div>
+
+                    <div style="margin-top: 60px;">
+                        <p><strong>Termos e Condições:</strong></p>
+                        <p>${orc.observacoes || 'Contrato válido conforme termos gerais da empresa.'}</p>
+                    </div>
+
+                    <div style="margin-top: 80px; display: flex; justify-content: space-between;">
+                        <div style="border-top: 1px solid #000; padding-top: 10px; width: 45%;">
+                            <p style="text-align: center;">Assinatura do Cliente</p>
+                        </div>
+                        <div style="border-top: 1px solid #000; padding-top: 10px; width: 45%;">
+                            <p style="text-align: center;">Assinatura BIOMA</p>
+                        </div>
+                    </div>
+
+                    <button onclick="window.print()" style="margin-top: 20px; padding: 10px 20px; background: #7C3AED; color: white; border: none; border-radius: 8px; cursor: pointer;">Imprimir</button>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+    } catch (error) {
+        console.error('Erro ao imprimir contrato:', error);
+        Swal.fire('Erro', 'Não foi possível gerar o contrato', 'error');
     }
 }
 
@@ -6577,32 +6590,34 @@ async function disponibilidade(profId, dataISO){
 function startSSE(){
   // Evitar múltiplas instâncias do SSE
   if (sseInstance) {
-    console.log('⏳ SSE já está ativo');
     return;
   }
-  
+
   try{
     const ev = new EventSource('/api/stream');
     sseInstance = ev;
-    
+
     ev.onopen = () => {
       console.log('✅ SSE conectado');
       sseReconnectAttempts = 0; // Reset contador de reconexão
     };
-    
+
     ev.onerror = (error) => {
-      console.error('❌ Erro no SSE:', error);
-      ev.close();
-      sseInstance = null;
-      
-      // Reconectar apenas se não exceder o limite
-      if (sseReconnectAttempts < MAX_SSE_RECONNECT) {
-        sseReconnectAttempts++;
-        const delay = Math.min(1000 * Math.pow(2, sseReconnectAttempts), 30000); // Backoff exponencial
-        console.log(`🔄 Tentando reconectar SSE em ${delay/1000}s (tentativa ${sseReconnectAttempts}/${MAX_SSE_RECONNECT})`);
-        setTimeout(startSSE, delay);
-      } else {
-        console.log('⚠️ Limite de reconexões SSE atingido');
+      // Verificar se é um erro real ou apenas uma desconexão normal
+      if (ev.readyState === EventSource.CLOSED) {
+        // Conexão foi fechada
+        ev.close();
+        sseInstance = null;
+
+        // Reconectar apenas se não exceder o limite
+        if (sseReconnectAttempts < MAX_SSE_RECONNECT) {
+          sseReconnectAttempts++;
+          const delay = Math.min(2000 * sseReconnectAttempts, 10000); // Backoff linear
+          setTimeout(startSSE, delay);
+        }
+      } else if (ev.readyState === EventSource.CONNECTING) {
+        // Tentando reconectar automaticamente
+        // Não fazer nada, o EventSource está tratando
       }
     };
     
@@ -7541,7 +7556,6 @@ function carregarDadosSubTab(section, subtab) {
         if (subtab === 'todos') carregarProdutosTodos();
         else if (subtab === 'ativos') carregarProdutosAtivos();
         else if (subtab === 'inativos') carregarProdutosInativos();
-        else if (subtab === 'baixoestoque') carregarProdutosBaixoEstoque();
     }
     
     // Serviços
@@ -7555,7 +7569,6 @@ function carregarDadosSubTab(section, subtab) {
     if (section === 'estoque') {
         if (subtab === 'visaogeral') carregarEstoqueVisaoGeral();
         else if (subtab === 'movimentacoes') carregarMovimentacoesEstoque();
-        else if (subtab === 'alertas') carregarAlertasEstoque();
         else if (subtab === 'relatorios') carregarRelatoriosEstoque();
     }
 
@@ -8163,63 +8176,6 @@ async function carregarProdutosInativos() {
     }
 }
 
-async function carregarProdutosBaixoEstoque() {
-    const FUNC_KEY = 'produtosBaixoEstoque';
-    const tbody = document.getElementById('produtosBaixoEstoqueBody');
-    if (!tbody) return;
-    if (window.loadingStates?.[FUNC_KEY]) return;
-    
-    try {
-        if (!window.loadingStates) window.loadingStates = {};
-        window.loadingStates[FUNC_KEY] = true;
-        
-        const res = await fetch('/api/produtos/baixo-estoque', {credentials: 'include'});
-        if (!res.ok) throw new Error('Erro ao carregar produtos');
-        
-        const data = await res.json();
-        const produtos = data.produtos || [];
-        
-        // Atualizar estatísticas
-        document.getElementById('produtosCriticos').textContent = data.criticos || 0;
-        document.getElementById('produtosAtencao').textContent = data.atencao || 0;
-        document.getElementById('produtosNormais').textContent = data.normais || 0;
-        
-        if (!produtos || produtos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-success">✓ Todos os produtos com estoque adequado!</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = produtos.map(p => {
-            const statusClass = p.estoque_atual === 0 ? 'danger' : p.estoque_atual < (p.estoque_minimo / 2) ? 'danger' : 'warning';
-            const statusText = p.estoque_atual === 0 ? 'CRÍTICO' : 'Baixo';
-            const diferenca = p.estoque_minimo - p.estoque_atual;
-            
-            return `
-                <tr>
-                    <td>${p.nome}</td>
-                    <td>${p.marca || 'N/A'}</td>
-                    <td><span class="badge ${statusClass}">${p.estoque_atual}</span></td>
-                    <td>${p.estoque_minimo}</td>
-                    <td><span class="badge danger">-${diferenca}</span></td>
-                    <td><span class="badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-success" onclick="registrarEntradaProduto('${p._id}')">
-                            <i class="bi bi-plus-circle"></i> Repor
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-        
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        Swal.fire('Erro', 'Falha ao carregar produtos de baixo estoque', 'error');
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar produtos</td></tr>';
-    } finally {
-        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
-    }
-}
-
 function renderizarTabelaProdutos(produtos, tbody, incluirStatus) {
     if (!produtos || produtos.length === 0) {
         const colspan = incluirStatus ? 6 : 5;
@@ -8489,7 +8445,7 @@ async function carregarEstoqueVisaoGeral() {
         // Atualizar estatísticas
         document.getElementById('totalProdutosEstoque').textContent = data.total_produtos || 0;
         document.getElementById('valorTotalEstoque').textContent = `R$ ${parseFloat(data.valor_total || 0).toFixed(2)}`;
-        document.getElementById('alertasEstoque').textContent = data.alertas || 0;
+        // document.getElementById('alertasEstoque').textContent = data.alertas || 0;
         document.getElementById('movimentacoesEstoque').textContent = data.movimentacoes_mes || 0;
         
         // Renderizar tabela
@@ -8577,88 +8533,6 @@ async function carregarMovimentacoesEstoque() {
         console.error('❌ Erro:', error);
         Swal.fire('Erro', 'Falha ao carregar movimentações de estoque', 'error');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar movimentações</td></tr>';
-    } finally {
-        if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
-    }
-}
-
-async function carregarAlertasEstoque() {
-    const FUNC_KEY = 'alertasEstoque';
-    const tbody = document.getElementById('estoqueBaixoBody');
-    const ultimasMovBody = document.getElementById('estoqueUltimasMovimentacoesBody');
-    
-    if (!tbody) return;
-    if (window.loadingStates?.[FUNC_KEY]) return;
-    
-    try {
-        if (!window.loadingStates) window.loadingStates = {};
-        window.loadingStates[FUNC_KEY] = true;
-        
-        const res = await fetch('/api/estoque/alertas', {credentials: 'include'});
-        if (!res.ok) throw new Error('Erro ao carregar alertas');
-        
-        const data = await res.json();
-        
-        // Atualizar estatísticas
-        document.getElementById('estoqueCritico').textContent = data.criticos || 0;
-        document.getElementById('estoqueAtencao').textContent = data.atencao || 0;
-        document.getElementById('estoqueNormal').textContent = data.normais || 0;
-        
-        // Produtos com estoque baixo
-        const produtos = data.produtos_baixo || [];
-        if (!produtos || produtos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-success">✓ Todos os produtos com estoque adequado!</td></tr>';
-        } else {
-            tbody.innerHTML = produtos.map(p => {
-                const diferenca = p.estoque_minimo - p.estoque_atual;
-                const statusClass = p.estoque_atual === 0 ? 'danger' : 'warning';
-                const statusText = p.estoque_atual === 0 ? 'CRÍTICO' : 'Baixo';
-                
-                return `
-                    <tr>
-                        <td>${p.nome}</td>
-                        <td>${p.marca || 'N/A'}</td>
-                        <td><span class="badge ${statusClass}">${p.estoque_atual}</span></td>
-                        <td>${p.estoque_minimo}</td>
-                        <td><span class="badge danger">-${diferenca}</span></td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-success" onclick="registrarEntradaProduto('${p._id}')">
-                                <i class="bi bi-plus-circle"></i> Repor
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        
-        // Últimas movimentações
-        const movimentacoes = data.ultimas_movimentacoes || [];
-        if (!movimentacoes || movimentacoes.length === 0) {
-            ultimasMovBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma movimentação recente</td></tr>';
-        } else {
-            ultimasMovBody.innerHTML = movimentacoes.map(m => {
-                const data = new Date(m.data).toLocaleDateString('pt-BR');
-                const hora = new Date(m.data).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
-                const tipoClass = m.tipo === 'entrada' ? 'success' : 'danger';
-                
-                return `
-                    <tr>
-                        <td>${data}</td>
-                        <td>${hora}</td>
-                        <td>${m.produto_nome}</td>
-                        <td><span class="badge ${tipoClass}">${m.tipo.toUpperCase()}</span></td>
-                        <td>${m.quantidade}</td>
-                        <td>${m.responsavel || 'N/A'}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        Swal.fire('Erro', 'Falha ao carregar alertas de estoque', 'error');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar alertas</td></tr>';
     } finally {
         if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }

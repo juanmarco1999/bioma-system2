@@ -337,6 +337,101 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def permission_required(*allowed_roles):
+    """
+    Decorator para verificar permissões do usuário
+
+    Uso:
+        @permission_required('Admin')
+        @permission_required('Admin', 'Gestor')
+
+    Tipos de acesso disponíveis:
+        - Admin: Acesso total ao sistema
+        - Gestor: Acesso gerencial (sem configurações críticas)
+        - Profissional: Acesso limitado (agenda, atendimentos, prontuários)
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                logger.warning(f"🚫 Unauthorized access attempt: {request.endpoint}")
+                return jsonify({
+                    'success': False,
+                    'message': 'Acesso não autorizado. Faça login.'
+                }), 401
+
+            # Buscar tipo de acesso do usuário
+            user_tipo_acesso = session.get('tipo_acesso', 'Profissional')
+
+            # Verificar se o tipo de acesso do usuário está entre os permitidos
+            if user_tipo_acesso not in allowed_roles:
+                logger.warning(f"🚫 Forbidden: {session.get('username')} ({user_tipo_acesso}) tried to access {request.endpoint}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Acesso negado. Esta funcionalidade requer permissão de: {", ".join(allowed_roles)}'
+                }), 403
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_user_permissions():
+    """Retorna as permissões do usuário atual"""
+    if 'user_id' not in session or db is None:
+        return None
+
+    try:
+        user = db.users.find_one({'_id': ObjectId(session['user_id'])})
+        if not user:
+            return None
+
+        tipo_acesso = user.get('tipo_acesso', 'Profissional')
+
+        # Definir permissões por tipo de acesso
+        permissions = {
+            'Admin': {
+                'can_manage_users': True,
+                'can_manage_products': True,
+                'can_manage_services': True,
+                'can_view_financial': True,
+                'can_manage_settings': True,
+                'can_view_audit': True,
+                'can_manage_contracts': True,
+                'can_view_reports': True,
+                'can_manage_employees': True
+            },
+            'Gestor': {
+                'can_manage_users': False,
+                'can_manage_products': True,
+                'can_manage_services': True,
+                'can_view_financial': True,
+                'can_manage_settings': False,
+                'can_view_audit': True,
+                'can_manage_contracts': True,
+                'can_view_reports': True,
+                'can_manage_employees': True
+            },
+            'Profissional': {
+                'can_manage_users': False,
+                'can_manage_products': False,
+                'can_manage_services': False,
+                'can_view_financial': False,
+                'can_manage_settings': False,
+                'can_view_audit': False,
+                'can_manage_contracts': False,
+                'can_view_reports': False,
+                'can_manage_employees': False
+            }
+        }
+
+        return {
+            'tipo_acesso': tipo_acesso,
+            'permissions': permissions.get(tipo_acesso, permissions['Profissional'])
+        }
+    except Exception as e:
+        logger.error(f"Erro ao obter permissões: {e}")
+        return None
+
 def send_email(to, name, subject, html_content, pdf=None):
     api_key = os.getenv('MAILERSEND_API_KEY')
     from_email = os.getenv('MAILERSEND_FROM_EMAIL')
@@ -516,6 +611,9 @@ def current_user():
         try:
             user = db.users.find_one({'_id': ObjectId(session['user_id'])})
             if user:
+                # Obter permissões do usuário
+                permissions_data = get_user_permissions()
+
                 return jsonify({
                     'success': True,
                     'user': {
@@ -525,12 +623,31 @@ def current_user():
                         'email': user['email'],
                         'role': user.get('role', 'admin'),
                         'tipo_acesso': user.get('tipo_acesso', 'Admin'),
-                        'theme': user.get('theme', 'light')
+                        'theme': user.get('theme', 'light'),
+                        'permissions': permissions_data['permissions'] if permissions_data else {}
                     }
                 })
         except Exception as e:
             logger.error(f"❌ Current user error: {e}")
     return jsonify({'success': False})
+
+@app.route('/api/permissions')
+@login_required
+def get_permissions():
+    """Retorna as permissões do usuário atual"""
+    permissions_data = get_user_permissions()
+
+    if permissions_data:
+        return jsonify({
+            'success': True,
+            'tipo_acesso': permissions_data['tipo_acesso'],
+            'permissions': permissions_data['permissions']
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'Não foi possível obter permissões'
+        }), 500
 
 @app.route('/api/update-theme', methods=['POST'])
 @login_required
