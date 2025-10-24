@@ -14,7 +14,7 @@
          */
         init: function() {
             console.log('🧭 NavigationSystem: Inicializando...');
-            this.override Functions();
+            this.overrideFunctions();
             this.setupInterceptors();
             console.log('✅ NavigationSystem: Pronto!');
         },
