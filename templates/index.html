@@ -6479,6 +6479,20 @@ async function heatmapDias(dias=60){
     }
   }catch{}
 }
+
+// ========== FUNÇÕES AUXILIARES - AUTOCOMPLETE E MAPA DE CALOR ==========
+function bindAutocompletes() {
+  console.log('📝 Inicializando autocompletes...');
+  // Stub: Autocompletes serão implementados conforme necessário
+  // Esta função evita erro de "is not defined" no initApp
+}
+
+async function carregarMapaCalor() {
+  console.log('🗓️ Carregando mapa de calor...');
+  // Reutiliza a função heatmapDias existente
+  await heatmapDias(60);
+}
+
 async function disponibilidade(profId, dataISO){
   try{
     const r = await API.get(`/api/agendamentos/disponibilidade?profissional_id=${profId}&data=${dataISO}`);
