@@ -1,0 +1,2 @@
+Rebuild trigger - Timestamp: 2025-10-24 01:35:00
+Este arquivo força o Render a fazer rebuild completo.
