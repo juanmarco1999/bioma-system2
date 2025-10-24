@@ -6201,6 +6201,77 @@ def admin_database_stats():
 
 # ==================== FIM ROTAS ADMINISTRATIVAS ====================
 
+# ==================== ROTAS ADICIONAIS ====================
+
+@app.route('/api/stream')
+@login_required
+def stream_updates():
+    """Route for Server-Sent Events (SSE) for real-time updates"""
+    def generate():
+        """Generator function for SSE"""
+        try:
+            # Enviar heartbeat inicial
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'SSE conectado com sucesso'})}\n\n"
+
+            # Loop para manter conexão viva
+            import time
+            counter = 0
+            while True:
+                counter += 1
+
+                # Buscar atualizações do banco de dados
+                try:
+                    # Verificar novos agendamentos
+                    recent_appointments = list(db.agendamentos.find(
+                        {'data': {'$gte': datetime.now().strftime('%Y-%m-%d')}},
+                        {'_id': 1, 'cliente_nome': 1, 'data': 1, 'hora': 1, 'servico': 1}
+                    ).sort('_id', -1).limit(5))
+
+                    for apt in recent_appointments:
+                        apt['_id'] = str(apt['_id'])
+
+                    # Enviar dados atualizados
+                    data = {
+                        'type': 'update',
+                        'timestamp': datetime.now().isoformat(),
+                        'recent_appointments': recent_appointments,
+                        'counter': counter
+                    }
+
+                    yield f"data: {json.dumps(data)}\n\n"
+
+                except Exception as e:
+                    logger.error(f"Erro ao buscar atualizações SSE: {e}")
+                    yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+                # Aguardar 30 segundos antes da próxima atualização
+                time.sleep(30)
+
+                # Enviar heartbeat a cada 30 segundos para manter conexão viva
+                if counter % 2 == 0:
+                    yield f": heartbeat\n\n"
+
+        except GeneratorExit:
+            logger.info("Cliente SSE desconectado")
+        except Exception as e:
+            logger.error(f"Erro no SSE stream: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    from flask import Response
+    return Response(generate(), mimetype='text/event-stream')
+
+
+@app.route('/api/agendamentos/heatmap', methods=['GET'])
+@login_required
+def heatmap_agendamentos_alias():
+    """Alias route for heatmap - redirects to the actual route"""
+    # Redirecionar para a rota existente
+    dias = request.args.get('dias', 60, type=int)
+    return mapa_calor_agendamentos()
+
+
+# ==================== FIM ROTAS ADICIONAIS ====================
+
 if __name__ == '__main__':
     print("\n" + "=" * 80)
     print("🌳 BIOMA UBERABA v3.7 COMPLETO E DEFINITIVO")
