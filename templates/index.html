@@ -122,20 +122,18 @@
             .sidebar{width:100%;height:auto;position:relative}
         }
 
-        /* ========== CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE ========== */
-        /* IMPORTANTE: Elementos com data-keep-visible="true" NUNCA são escondidos */
-        [data-keep-visible="true"] {
-            display: table-row !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            position: relative !important;
-            left: auto !important;
-            pointer-events: auto !important;
+        /* ========== LOGO PERSONALIZADO: Ajustar tamanho do logo na sidebar ========== */
+        .sidebar-logo {
+            min-height: 200px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
         }
 
-        /* Esconder TUDO que contenha "estoque" no ID ou classe fora da seção de estoque */
-        /* EXCETO se tiver data-keep-visible="true" */
-        #section-dashboard [id*="estoque"]:not([data-keep-visible="true"]),
+        /* ========== CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE ========== */
+        /* Esconder TUDO que contenha "estoque" no ID ou classe fora da seção de estoque e produtos */
+        #section-dashboard [id*="estoque"],
         #section-dashboard [id*="Estoque"],
         #section-dashboard [class*="estoque"],
         #section-dashboard [class*="Estoque"],
@@ -2932,6 +2930,7 @@ function goTo(section){
         else if(section==='estoque')loadEstoque();
         else if(section==='configuracoes')loadConfiguracoes();
         else if(section==='agendamentos')loadAgendamentos();
+        else if(section==='auditoria')loadAuditoria();
     }catch(e){
         console.error('❌ Erro navegação:',e);
     } finally {
@@ -3676,17 +3675,29 @@ function aplicarLogosNaInterface(){
         return;
     }
     let img = document.getElementById('sidebarLogoImage');
+    const h1 = sidebarLogo.querySelector('h1');
+    const p = sidebarLogo.querySelector('p');
+
     if(logosPersonalizados.principal){
         if(!img){
             img = document.createElement('img');
             img.id = 'sidebarLogoImage';
-            img.style.maxHeight = '80px';
-            img.style.marginBottom = '12px';
+            img.style.width = '100%';
+            img.style.maxHeight = '180px';
+            img.style.objectFit = 'contain';
+            img.style.margin = '0';
+            img.style.padding = '10px';
             sidebarLogo.prepend(img);
         }
         img.src = logosPersonalizados.principal;
-    }else if(img){
-        img.remove();
+        // ESCONDER texto quando há logo personalizado
+        if(h1) h1.style.display = 'none';
+        if(p) p.style.display = 'none';
+    }else{
+        if(img) img.remove();
+        // MOSTRAR texto quando NÃO há logo personalizado
+        if(h1) h1.style.display = 'block';
+        if(p) p.style.display = 'block';
     }
     let authImg = document.getElementById('authLogoCustom');
     if(!authImg){
@@ -4588,7 +4599,7 @@ async function loadProdutosLista(){
             // Produtos com baixo estoque
             if(tbodies[3]){
                 const baixoEstoque = data.produtos.filter(p => p.estoque <= (p.estoque_minimo || 5));
-                const htmlBaixo = baixoEstoque.length > 0 ? baixoEstoque.map(p=>`<tr data-id="${p._id}" data-keep-visible="true"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><span class="badge danger">${p.estoque||0}</span></td><td>${p.estoque_minimo||5}</td><td><button class="btn btn-sm btn-primary" onclick="ajustarEstoque('${p._id}')"><i class="bi bi-plus-circle"></i> Ajustar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-success">✅ Todos os produtos estão com estoque adequado</td></tr>';
+                const htmlBaixo = baixoEstoque.length > 0 ? baixoEstoque.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><span class="badge danger">${p.estoque||0}</span></td><td>${p.estoque_minimo||5}</td><td><button class="btn btn-sm btn-primary" onclick="ajustarEstoque('${p._id}')"><i class="bi bi-plus-circle"></i> Ajustar</button></td></tr>`).join('') : '<tr><td colspan="5" class="text-center text-success">✅ Todos os produtos estão com estoque adequado</td></tr>';
                 tbodies[3].innerHTML=htmlBaixo;
             }
         }else{
