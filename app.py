@@ -5466,6 +5466,163 @@ def financeiro_relatorio():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@app.route('/api/financeiro/receitas', methods=['GET'])
+@login_required
+def financeiro_receitas():
+    """Listar receitas (orçamentos aprovados)"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    try:
+        # Filtros opcionais
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        cliente_id = request.args.get('cliente_id')
+
+        # Query base para orçamentos aprovados
+        query = {'status': 'Aprovado'}
+
+        # Aplicar filtros
+        if data_inicio and data_fim:
+            query['created_at'] = {
+                '$gte': datetime.fromisoformat(data_inicio),
+                '$lte': datetime.fromisoformat(data_fim)
+            }
+
+        if cliente_id:
+            query['cliente_id'] = cliente_id
+
+        # Buscar orçamentos aprovados
+        orcamentos = list(db.orcamentos.find(query).sort('created_at', DESCENDING))
+
+        # Formatar receitas
+        receitas = []
+        total = 0
+        for orc in orcamentos:
+            valor = orc.get('total_final', 0)
+            total += valor
+
+            receitas.append({
+                '_id': str(orc['_id']),
+                'cliente_nome': orc.get('cliente_nome', 'N/A'),
+                'cliente_cpf': orc.get('cliente_cpf', 'N/A'),
+                'data': orc.get('created_at', datetime.now()).strftime('%Y-%m-%d') if isinstance(orc.get('created_at'), datetime) else orc.get('data', 'N/A'),
+                'valor': valor,
+                'forma_pagamento': orc.get('forma_pagamento', 'N/A'),
+                'status': orc.get('status', 'N/A'),
+                'observacoes': orc.get('observacoes', '')
+            })
+
+        logger.info(f"✅ Listadas {len(receitas)} receitas - Total: R$ {total:.2f}")
+        return jsonify({
+            'success': True,
+            'receitas': receitas,
+            'total': round(total, 2),
+            'quantidade': len(receitas)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao listar receitas: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/financeiro/comissoes', methods=['GET'])
+@login_required
+def financeiro_comissoes():
+    """Listar comissões de todos os profissionais"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    try:
+        # Filtros opcionais
+        data_inicio = request.args.get('data_inicio')
+        data_fim = request.args.get('data_fim')
+        profissional_id = request.args.get('profissional_id')
+
+        # Query base
+        query = {}
+
+        # Aplicar filtros
+        if data_inicio and data_fim:
+            query['data_registro'] = {
+                '$gte': datetime.fromisoformat(data_inicio),
+                '$lte': datetime.fromisoformat(data_fim)
+            }
+
+        if profissional_id:
+            query['profissional_id'] = ObjectId(profissional_id)
+
+        # Buscar comissões do histórico
+        comissoes_historico = list(db.comissoes_historico.find(query).sort('data_registro', DESCENDING))
+
+        # Se não há histórico, buscar de orçamentos aprovados
+        if not comissoes_historico:
+            query_orc = {'status': 'Aprovado'}
+            if data_inicio and data_fim:
+                query_orc['created_at'] = {
+                    '$gte': datetime.fromisoformat(data_inicio),
+                    '$lte': datetime.fromisoformat(data_fim)
+                }
+
+            orcamentos = list(db.orcamentos.find(query_orc))
+            comissoes_lista = []
+
+            for orc in orcamentos:
+                for prof in orc.get('profissionais_vinculados', []):
+                    if not profissional_id or str(prof.get('profissional_id')) == profissional_id:
+                        comissoes_lista.append({
+                            'profissional_id': str(prof.get('profissional_id', '')),
+                            'profissional_nome': prof.get('nome', 'N/A'),
+                            'comissao_percentual': prof.get('comissao_percentual', 0),
+                            'comissao_valor': prof.get('comissao_valor', 0),
+                            'orcamento_id': str(orc['_id']),
+                            'cliente_nome': orc.get('cliente_nome', 'N/A'),
+                            'data': orc.get('created_at', datetime.now()).strftime('%Y-%m-%d') if isinstance(orc.get('created_at'), datetime) else 'N/A',
+                            'status': 'Aprovado'
+                        })
+
+            total = sum(c.get('comissao_valor', 0) for c in comissoes_lista)
+
+            logger.info(f"✅ Listadas {len(comissoes_lista)} comissões de orçamentos - Total: R$ {total:.2f}")
+            return jsonify({
+                'success': True,
+                'comissoes': comissoes_lista,
+                'total': round(total, 2),
+                'quantidade': len(comissoes_lista)
+            })
+
+        # Formatar comissões do histórico
+        comissoes_lista = []
+        total = 0
+        for com in comissoes_historico:
+            valor = com.get('comissao_valor', 0)
+            total += valor
+
+            comissoes_lista.append({
+                '_id': str(com['_id']),
+                'profissional_id': str(com.get('profissional_id', '')),
+                'profissional_nome': com.get('profissional_nome', 'N/A'),
+                'comissao_percentual': com.get('comissao_percentual', 0),
+                'comissao_valor': valor,
+                'orcamento_id': str(com.get('orcamento_id', '')),
+                'cliente_nome': com.get('cliente_nome', 'N/A'),
+                'data': com.get('data_registro', datetime.now()).strftime('%Y-%m-%d') if isinstance(com.get('data_registro'), datetime) else 'N/A',
+                'status': com.get('status_orcamento', 'N/A')
+            })
+
+        logger.info(f"✅ Listadas {len(comissoes_lista)} comissões - Total: R$ {total:.2f}")
+        return jsonify({
+            'success': True,
+            'comissoes': comissoes_lista,
+            'total': round(total, 2),
+            'quantidade': len(comissoes_lista)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao listar comissões: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @app.route('/api/profissionais/<id>/comissoes', methods=['GET'])
 @login_required
 def get_comissoes_profissional(id):
