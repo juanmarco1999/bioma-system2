@@ -65,32 +65,46 @@
             z-index: 10 !important;
         }
 
-        /* FORÇAR REMOÇÃO TOTAL DE ESTOQUE FORA DA ABA ESTOQUE */
+        /* === CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE (MAIS ROBUSTO) === */
+
+        /* Esconder TUDO que contenha "estoque" no ID ou classe FORA da #section-estoque */
         .content-section:not(#section-estoque) [id*="estoque"],
         .content-section:not(#section-estoque) [id*="Estoque"],
         .content-section:not(#section-estoque) [class*="estoque"],
         .content-section:not(#section-estoque) [class*="Estoque"] {
             display: none !important;
             visibility: hidden !important;
+            opacity: 0 !important;
+            position: absolute !important; /* Remove from layout flow */
+            left: -9999px !important; /* Move off-screen */
             height: 0 !important;
+            width: 0 !important;
             overflow: hidden !important;
-            position: absolute !important;
-            left: -9999px !important;
+            pointer-events: none !important; /* Disable interactions */
         }
 
-        /* Forçar remoção de qualquer elemento de estoque nessas seções */
-        #section-clube table, #section-importar table, #section-sistema table {
-            display: none !important;
-        }
-
-        /* Garantir que elementos de estoque SÓ apareçam na aba de estoque */
+        /* GARANTIR que elementos de estoque SÓ apareçam DENTRO da #section-estoque */
         #section-estoque [id*="estoque"],
-        #section-estoque [class*="estoque"] {
-            display: block !important;
-            visibility: visible !important;
-            height: auto !important;
-            position: relative !important;
-            left: 0 !important;
+        #section-estoque [id*="Estoque"],
+        #section-estoque [class*="estoque"],
+        #section-estoque [class*="Estoque"] {
+            /* Reverter para o display original ou o necessário (block, flex, grid, etc.) */
+            /* 'revert' é uma boa opção geral, mas ajuste se necessário */
+            display: revert !important;
+            visibility: revert !important;
+            opacity: revert !important;
+            position: revert !important;
+            left: revert !important;
+            height: revert !important;
+            width: revert !important;
+            overflow: revert !important;
+            pointer-events: revert !important;
+        }
+
+        /* Adicional: Se tabelas de estoque estavam sendo escondidas indevidamente */
+        #section-estoque table[id*="estoque"],
+        #section-estoque table[class*="estoque"] {
+            display: table !important; /* Ou revert, se apropriado */
         }
 
         /* === SUB-TABS SYSTEM === */
@@ -183,91 +197,6 @@
             object-position: center !important;
         }
 
-        /* ========== CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE ========== */
-        /* Esconder TUDO que contenha "estoque" no ID ou classe fora da seção de estoque e produtos */
-        #section-dashboard [id*="estoque"],
-        #section-dashboard [id*="Estoque"],
-        #section-dashboard [class*="estoque"],
-        #section-dashboard [class*="Estoque"],
-        #section-orcamento [id*="estoque"],
-        #section-orcamento [id*="Estoque"],
-        #section-orcamento [class*="estoque"],
-        #section-orcamento [class*="Estoque"],
-        #section-consultar [id*="estoque"],
-        #section-consultar [id*="Estoque"],
-        #section-consultar [class*="estoque"],
-        #section-consultar [class*="Estoque"],
-        #section-contratos [id*="estoque"],
-        #section-contratos [id*="Estoque"],
-        #section-contratos [class*="estoque"],
-        #section-contratos [class*="Estoque"],
-        #section-relatorios [id*="estoque"],
-        #section-relatorios [id*="Estoque"],
-        #section-relatorios [class*="estoque"],
-        #section-relatorios [class*="Estoque"],
-        #section-perfil [id*="estoque"],
-        #section-perfil [id*="Estoque"],
-        #section-perfil [class*="estoque"],
-        #section-perfil [class*="Estoque"],
-        #section-comissoes [id*="estoque"],
-        #section-comissoes [id*="Estoque"],
-        #section-comissoes [class*="estoque"],
-        #section-comissoes [class*="Estoque"],
-        #section-financeiro [id*="estoque"],
-        #section-financeiro [id*="Estoque"],
-        #section-financeiro [class*="estoque"],
-        #section-financeiro [class*="Estoque"],
-        #section-agendamentos [id*="estoque"],
-        #section-agendamentos [id*="Estoque"],
-        #section-agendamentos [class*="estoque"],
-        #section-agendamentos [class*="Estoque"],
-        #section-fila [id*="estoque"],
-        #section-fila [id*="Estoque"],
-        #section-fila [class*="estoque"],
-        #section-fila [class*="Estoque"],
-        #section-clientes [id*="estoque"],
-        #section-clientes [id*="Estoque"],
-        #section-clientes [class*="estoque"],
-        #section-clientes [class*="Estoque"],
-        #section-profissionais [id*="estoque"],
-        #section-profissionais [id*="Estoque"],
-        #section-profissionais [class*="estoque"],
-        #section-profissionais [class*="Estoque"],
-        #section-servicos [id*="estoque"],
-        #section-servicos [id*="Estoque"],
-        #section-servicos [class*="estoque"],
-        #section-servicos [class*="Estoque"],
-        #section-produtos [id*="estoque"],
-        #section-produtos [id*="Estoque"],
-        #section-produtos [class*="estoque"],
-        #section-produtos [class*="Estoque"],
-        #section-clube [id*="estoque"],
-        #section-clube [id*="Estoque"],
-        #section-clube [class*="estoque"],
-        #section-clube [class*="Estoque"],
-        #section-importar [id*="estoque"],
-        #section-importar [id*="Estoque"],
-        #section-importar [class*="estoque"],
-        #section-importar [class*="Estoque"],
-        #section-sistema [id*="estoque"],
-        #section-sistema [id*="Estoque"],
-        #section-sistema [class*="estoque"],
-        #section-sistema [class*="Estoque"],
-        #section-auditoria [id*="estoque"],
-        #section-auditoria [id*="Estoque"],
-        #section-auditoria [class*="estoque"],
-        #section-auditoria [class*="Estoque"],
-        #section-configuracoes [id*="estoque"],
-        #section-configuracoes [id*="Estoque"],
-        #section-configuracoes [class*="estoque"],
-        #section-configuracoes [class*="Estoque"] {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            position: absolute !important;
-            left: -9999px !important;
-            pointer-events: none !important;
-        }
 </style>
 </head>
 <body>
@@ -3113,6 +3042,13 @@ async function loadEstoque(){
 }
 
 async function loadEstoqueResumo(){
+    const key = 'loadEstoqueResumo';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res = await fetch('/api/estoque/relatorio',{credentials:'include'});
         const data = await res.json();
@@ -3127,21 +3063,31 @@ async function loadEstoqueResumo(){
         }
     }catch(error){
         console.error('Erro ao carregar resumo de estoque', error);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
 async function loadEstoquePendentes(){
+    const key = 'loadEstoquePendentes';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
     const tbody = document.getElementById('estoquePendentesBody');
     const container = document.getElementById('estoqueAprovacoesBody');
-    
+
     if(!tbody && !container){
         return;
     }
-    
+
+    setLoading(key, true);
+
     try{
         const res = await fetch('/api/estoque/produtos/pendentes',{credentials:'include'});
         const data = await res.json();
-        
+
         if(data.success && data.entradas && data.entradas.length){
             const html = data.entradas.map(item => `
                 <tr data-id="${item._id}">
@@ -3159,9 +3105,9 @@ async function loadEstoquePendentes(){
                         </button>
                     </td>
                 </tr>`).join('');
-            
+
             if(tbody) tbody.innerHTML = html;
-            
+
             // Para a tab de aprovações com cards
             if(container) {
                 const cards = data.entradas.map(item => `
@@ -3195,13 +3141,23 @@ async function loadEstoquePendentes(){
         const errorMsg = '<tr><td colspan="6" class="text-center text-muted">Erro ao carregar dados</td></tr>';
         if(tbody) tbody.innerHTML = errorMsg;
         if(container) container.innerHTML = '<p class="text-center text-danger">Erro ao carregar dados</p>';
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
 async function loadEstoqueMovimentos(){
+    const key = 'loadEstoqueMovimentos';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
     const tbody = document.getElementById('estoqueMovimentacoesBody');
     if(!tbody) return;
-    
+
+    setLoading(key, true);
+
     try {
         // Obter filtros
         const tipo = document.getElementById('filtroTipoMov')?.value || '';
@@ -3209,16 +3165,16 @@ async function loadEstoqueMovimentos(){
         const dataFim = document.getElementById('filtroDataFimMov')?.value || '';
         const perPage = document.getElementById('filtroPerPageMov')?.value || '50';
         const page = window.currentPageMov || 1;
-        
+
         // Construir URL com parâmetros
         let url = `/api/estoque/movimentacoes?page=${page}&per_page=${perPage}`;
         if (tipo) url += `&tipo=${tipo}`;
         if (dataInicio) url += `&data_inicio=${dataInicio}`;
         if (dataFim) url += `&data_fim=${dataFim}`;
-        
+
         const res = await fetch(url, {credentials: 'include'});
         const data = await res.json();
-        
+
         if (data.success && data.movimentacoes && data.movimentacoes.length) {
             tbody.innerHTML = data.movimentacoes.map(item => `
                 <tr>
@@ -3230,15 +3186,15 @@ async function loadEstoqueMovimentos(){
                     <td>${item.usuario || '-'}</td>
                     <td>${item.nota_fiscal || '-'}</td>
                 </tr>`).join('');
-            
+
             // Atualizar paginação
             if (data.pagination) {
                 window.totalPagesMov = data.pagination.total_pages;
                 window.currentPageMov = data.pagination.page;
-                
+
                 const paginacaoDiv = document.getElementById('paginacaoMovimentacoes');
                 const infoPagina = document.getElementById('infoPaginaMov');
-                
+
                 if (paginacaoDiv && infoPagina) {
                     paginacaoDiv.style.display = 'flex';
                     infoPagina.textContent = `Página ${data.pagination.page} de ${data.pagination.total_pages} (Total: ${data.pagination.total} registros)`;
@@ -3251,6 +3207,8 @@ async function loadEstoqueMovimentos(){
     } catch (error) {
         console.error('Erro ao carregar movimentações', error);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -3670,10 +3628,19 @@ function aplicarLogosNaInterface(){
 }
 
 async function loadConfiguracoes(force=false){
+    const key = 'loadConfiguracoes';
+
     if(!force && configuracoesAtuais){
         aplicarLogosNaInterface();
         return configuracoesAtuais;
     }
+
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res = await fetch('/api/config',{credentials:'include'});
         const data = await res.json();
@@ -3692,6 +3659,8 @@ async function loadConfiguracoes(force=false){
         }
     }catch(error){
         console.error('Erro ao carregar configurações', error);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
     return configuracoesAtuais;
 }
@@ -4316,11 +4285,18 @@ async function loadProfissionais(){
 
 // Função para carregar lista de assistentes
 async function loadAssistentes() {
+    const key = 'loadAssistentes';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try {
         const res = await fetch('/api/assistentes', {credentials: 'include'});
         const data = await res.json();
         const tbody = document.getElementById('assistentesBody');
-        
+
         if (data.success && data.assistentes && data.assistentes.length > 0) {
             const html = data.assistentes.map(a => {
                 const profissionalNome = a.profissional?.nome || 'Independente';
@@ -4343,6 +4319,8 @@ async function loadAssistentes() {
         }
     } catch(e) {
         console.error('Erro ao carregar assistentes:', e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -4397,6 +4375,13 @@ function showModalProfissional(){
 }
 
 async function loadServicosLista(){
+    const key = 'loadServicosLista';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/servicos',{credentials:'include'});
         const data=await res.json();
@@ -4437,6 +4422,8 @@ async function loadServicosLista(){
         }
     }catch(e){
         console.error('❌ Erro ao carregar serviços:', e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -4516,6 +4503,13 @@ function showModalServico(){
 }
 
 async function loadProdutosLista(){
+    const key = 'loadProdutosLista';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/produtos',{credentials:'include'});
         const data=await res.json();
@@ -4557,6 +4551,8 @@ async function loadProdutosLista(){
         }
     }catch(e){
         console.error('❌ Erro ao carregar produtos:', e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -4593,6 +4589,13 @@ function showModalProduto(){
 }
 
 async function loadConsultar(){
+    const key = 'loadConsultar';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/orcamentos',{credentials:'include'});
         const data=await res.json();
@@ -4605,6 +4608,8 @@ async function loadConsultar(){
         }
     }catch(e){
         console.error(e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -4622,6 +4627,13 @@ async function deleteOrcamento(id){
 }
 
 async function loadContratos(){
+    const key = 'loadContratos';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/contratos',{credentials:'include'});
         const data=await res.json();
@@ -4652,15 +4664,24 @@ async function loadContratos(){
     }catch(e){
         console.error('❌ Erro ao carregar contratos:',e);
         Swal.fire('Erro','Não foi possível carregar os contratos','error');
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
 async function loadFila(){
+    const key = 'loadFila';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/fila',{credentials:'include'});
         const data=await res.json();
         const container=document.getElementById('filaContainer');
-        
+
         if(data.success&&data.fila&&data.fila.length>0){
             document.getElementById('totalFila').textContent=data.fila.length;
             
@@ -4707,6 +4728,8 @@ async function loadFila(){
     }catch(e){
         console.error('❌ Erro ao carregar fila:',e);
         Swal.fire('Erro','Não foi possível carregar a fila','error');
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -5693,6 +5716,13 @@ let assistentesCache=[];
 let anamneseDef=null;
 let prontuarioDef=null;
 async function loadRelatorios(){
+    const key = 'loadRelatorios';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
     try{
         const res=await fetch('/api/orcamentos',{credentials:'include'});
         const data=await res.json();
@@ -5748,6 +5778,8 @@ async function loadRelatorios(){
         }
     }catch(e){
         console.error('❌ Relatórios error:',e);
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -5848,11 +5880,18 @@ window.totalPagesAuditoria = 1;
 
 // Função para carregar auditoria
 async function loadAuditoria() {
+    const key = 'loadAuditoria';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+
     const tbody = document.getElementById('auditoriaTableBody');
     if (!tbody) return;
-    
+
+    setLoading(key, true);
     tbody.innerHTML = '<tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>';
-    
+
     try {
         const username = document.getElementById('auditoriaUsername')?.value || '';
         const acao = document.getElementById('auditoriaAcao')?.value || '';
@@ -5922,6 +5961,8 @@ async function loadAuditoria() {
     } catch (error) {
         console.error('Erro ao carregar auditoria:', error);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar registros de auditoria</td></tr>';
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
     }
 }
 
@@ -6651,6 +6692,13 @@ function startSSE(){
 
 // ===== Sistema / Config =====
 async function loadSystem(){
+  const key = 'loadSystem';
+  if (isLoading(key)) {
+      console.warn(`⚠️ Já carregando: ${key}`);
+      return;
+  }
+  setLoading(key, true);
+
   try{
     const r = await API.get('/api/system/status');
     const el = document.querySelector('#sistemaStatus'); if(!el) return;
@@ -6661,6 +6709,9 @@ async function loadSystem(){
         <div class="col-md-4"><div class="stat-card"><div class="icon"><i class="bi bi-hdd-network"></i></div><h3>${r.status.server.version}</h3><p>Versão</p></div></div>
       </div>`;
   }catch{}
+  finally {
+      setTimeout(() => setLoading(key, false), 1000);
+  }
 }
 async function uploadLogo(inputSel='#logoArquivo'){
   const f = document.querySelector(inputSel)?.files?.[0]; if(!f) return toast('Selecione um arquivo','warning');
