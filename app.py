@@ -289,6 +289,55 @@ def convert_objectid(obj):
     else:
         return obj
 
+def update_cliente_denormalized_fields(cliente_cpf):
+    """
+    Update denormalized fields on cliente document for performance.
+
+    This function calculates and stores:
+    - total_faturado: Sum of all approved orcamentos
+    - ultima_visita: Date of last orcamento
+    - total_visitas: Count of all orcamentos
+
+    This prevents N+1 query problem when loading cliente lists.
+    """
+    if db is None or not cliente_cpf:
+        return
+
+    try:
+        # Calculate aggregated values
+        total_faturado = sum(
+            o.get('total_final', 0)
+            for o in db.orcamentos.find(
+                {'cliente_cpf': cliente_cpf, 'status': 'Aprovado'},
+                {'total_final': 1}
+            )
+        )
+
+        ultimo_orc = db.orcamentos.find_one(
+            {'cliente_cpf': cliente_cpf},
+            sort=[('created_at', DESCENDING)],
+            projection={'created_at': 1}
+        )
+
+        ultima_visita = ultimo_orc['created_at'] if ultimo_orc else None
+        total_visitas = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
+
+        # Update cliente document with denormalized values
+        db.clientes.update_one(
+            {'cpf': cliente_cpf},
+            {'$set': {
+                'total_faturado': total_faturado,
+                'ultima_visita': ultima_visita,
+                'total_visitas': total_visitas,
+                'updated_at': datetime.now()
+            }}
+        )
+
+        logger.debug(f"✅ Updated denormalized fields for cliente CPF: {cliente_cpf}")
+
+    except Exception as e:
+        logger.error(f"❌ Error updating denormalized fields for cliente {cliente_cpf}: {e}")
+
 def get_assistente_details(assistente_id, assistente_tipo=None):
     """Recupera os dados do assistente a partir do ID informado.
 
@@ -665,17 +714,13 @@ def update_theme():
 
 @app.route('/api/users', methods=['GET'])
 @login_required
+@permission_required('Admin')
 def list_users():
-    """Listar todos os usuários do sistema"""
+    """Listar todos os usuários do sistema (Admin only)"""
     if db is None:
         return jsonify({'success': False}), 500
 
     try:
-        # Verificar se usuário tem permissão (apenas Admin)
-        current_user_tipo = session.get('tipo_acesso', 'Admin')
-        if current_user_tipo != 'Admin':
-            return jsonify({'success': False, 'message': 'Acesso negado. Apenas Admins podem listar usuários.'}), 403
-
         users = list(db.users.find({}, {'password': 0}).sort('name', ASCENDING))
         return jsonify({'success': True, 'users': convert_objectid(users)})
 
@@ -686,17 +731,13 @@ def list_users():
 
 @app.route('/api/users/<id>/tipo-acesso', methods=['PUT'])
 @login_required
+@permission_required('Admin')
 def update_user_tipo_acesso(id):
-    """Atualizar tipo de acesso de um usuário (Admin, Gestão, Profissional)"""
+    """Atualizar tipo de acesso de um usuário (Admin only)"""
     if db is None:
         return jsonify({'success': False}), 500
 
     try:
-        # Verificar se usuário tem permissão (apenas Admin)
-        current_user_tipo = session.get('tipo_acesso', 'Admin')
-        if current_user_tipo != 'Admin':
-            return jsonify({'success': False, 'message': 'Acesso negado. Apenas Admins podem alterar tipos de acesso.'}), 403
-
         data = request.json
         novo_tipo = data.get('tipo_acesso')
 
@@ -916,20 +957,91 @@ def dashboard_stats_realtime():
 def clientes():
     if db is None:
         return jsonify({'success': False}), 500
-    
+
     if request.method == 'GET':
         try:
-            clientes_list = list(db.clientes.find({}).sort('nome', ASCENDING))
+            # ==================== PERFORMANCE OPTIMIZATION ====================
+            # Implement pagination to prevent loading thousands of records at once
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 50, type=int)
+            skip = (page - 1) * per_page
+
+            # Get total count for pagination metadata
+            total_count = db.clientes.count_documents({})
+            total_pages = (total_count + per_page - 1) // per_page
+
+            # Use projection to only return needed fields (reduces data transfer)
+            projection = {
+                'nome': 1,
+                'cpf': 1,
+                'email': 1,
+                'telefone': 1,
+                'total_faturado': 1,  # Denormalized field
+                'ultima_visita': 1,    # Denormalized field
+                'total_visitas': 1,    # Denormalized field
+                'created_at': 1
+            }
+
+            clientes_list = list(
+                db.clientes.find({}, projection)
+                .sort('nome', ASCENDING)
+                .skip(skip)
+                .limit(per_page)
+            )
+
+            # If denormalized fields don't exist, calculate and store them
+            # This is a one-time migration for existing records
             for cliente in clientes_list:
                 cliente_cpf = cliente.get('cpf')
-                # ALTERADO: total_gasto -> total_faturado (Diretriz #11)
-                cliente['total_faturado'] = sum(o.get('total_final', 0) for o in db.orcamentos.find({'cliente_cpf': cliente_cpf, 'status': 'Aprovado'}))
-                cliente['total_gasto'] = cliente['total_faturado']  # Mantém compatibilidade
-                ultimo_orc = db.orcamentos.find_one({'cliente_cpf': cliente_cpf}, sort=[('created_at', DESCENDING)])
-                cliente['ultima_visita'] = ultimo_orc['created_at'] if ultimo_orc else None
-                cliente['total_visitas'] = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
-            return jsonify({'success': True, 'clientes': convert_objectid(clientes_list)})
+
+                if 'total_faturado' not in cliente:
+                    # Calculate and denormalize
+                    total_faturado = sum(
+                        o.get('total_final', 0)
+                        for o in db.orcamentos.find(
+                            {'cliente_cpf': cliente_cpf, 'status': 'Aprovado'},
+                            {'total_final': 1}
+                        )
+                    )
+                    ultimo_orc = db.orcamentos.find_one(
+                        {'cliente_cpf': cliente_cpf},
+                        sort=[('created_at', DESCENDING)],
+                        projection={'created_at': 1}
+                    )
+                    ultima_visita = ultimo_orc['created_at'] if ultimo_orc else None
+                    total_visitas = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
+
+                    # Store denormalized values for future queries
+                    db.clientes.update_one(
+                        {'_id': cliente['_id']},
+                        {'$set': {
+                            'total_faturado': total_faturado,
+                            'ultima_visita': ultima_visita,
+                            'total_visitas': total_visitas
+                        }}
+                    )
+
+                    cliente['total_faturado'] = total_faturado
+                    cliente['ultima_visita'] = ultima_visita
+                    cliente['total_visitas'] = total_visitas
+
+                # Maintain backwards compatibility
+                cliente['total_gasto'] = cliente.get('total_faturado', 0)
+
+            return jsonify({
+                'success': True,
+                'clientes': convert_objectid(clientes_list),
+                'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total_count': total_count,
+                    'total_pages': total_pages,
+                    'has_next': page < total_pages,
+                    'has_prev': page > 1
+                }
+            })
         except Exception as e:
+            logger.error(f"❌ Error loading clientes: {e}")
             return jsonify({'success': False, 'message': str(e)}), 500
     
     data = request.json
@@ -3347,8 +3459,9 @@ def relatorio_completo():
 
 @app.route('/api/auditoria', methods=['GET'])
 @login_required
+@permission_required('Admin', 'Gestão')
 def consultar_auditoria():
-    """Consultar logs de auditoria do sistema"""
+    """Consultar logs de auditoria do sistema (Admin/Gestão only)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
@@ -3451,12 +3564,59 @@ def init_db():
                 db.servicos.insert_one({'nome': nome, 'sku': f"{nome.upper()}-{tam.upper()}", 'tamanho': tam, 'preco': preco, 'categoria': cat, 'duracao': 60, 'ativo': True, 'created_at': datetime.now()})
         logger.info(f"✅ {len(services) * 6} service SKUs created")
     try:
+        # ==================== STRATEGIC INDEXING FOR PERFORMANCE ====================
+        # User indexes (existing)
         db.users.create_index([('username', ASCENDING)], unique=True)
         db.users.create_index([('email', ASCENDING)], unique=True)
+
+        # Clientes - For lookups and filtering
         db.clientes.create_index([('cpf', ASCENDING)])
+        db.clientes.create_index([('email', ASCENDING)])
+        db.clientes.create_index([('nome', ASCENDING)])
+
+        # Produtos - For catalog search and filtering
+        db.produtos.create_index([('nome', ASCENDING), ('categoria', ASCENDING)])
+        db.produtos.create_index([('sku', ASCENDING)], unique=True, sparse=True)
+        db.produtos.create_index([('ativo', ASCENDING)])
+
+        # Servicos - For service catalog
+        db.servicos.create_index([('nome', ASCENDING), ('categoria', ASCENDING)])
+        db.servicos.create_index([('sku', ASCENDING)], unique=True, sparse=True)
+        db.servicos.create_index([('ativo', ASCENDING)])
+
+        # Agendamentos - CRITICAL for calendar performance
+        db.agendamentos.create_index([('profissional_id', ASCENDING), ('data', ASCENDING)])
+        db.agendamentos.create_index([('data', ASCENDING), ('hora', ASCENDING)])
+        db.agendamentos.create_index([('cliente_id', ASCENDING), ('data', DESCENDING)])
+        db.agendamentos.create_index([('status', ASCENDING)])
+
+        # Orçamentos
         db.orcamentos.create_index([('numero', ASCENDING)], unique=True)
+        db.orcamentos.create_index([('cliente_id', ASCENDING), ('created_at', DESCENDING)])
+        db.orcamentos.create_index([('status', ASCENDING)])
+
+        # Profissionais
+        db.profissionais.create_index([('nome', ASCENDING)])
+        db.profissionais.create_index([('email', ASCENDING)])
+        db.profissionais.create_index([('ativo', ASCENDING)])
+
+        # Profissionais Avaliacoes (existing)
         db.profissionais_avaliacoes.create_index([('profissional_id', ASCENDING), ('created_at', DESCENDING)])
-        logger.info('Database indexes created')
+
+        # Auditoria - For filtering audit logs by user and time
+        db.auditoria.create_index([('user_id', ASCENDING), ('timestamp', DESCENDING)])
+        db.auditoria.create_index([('timestamp', DESCENDING)])
+        db.auditoria.create_index([('action', ASCENDING)])
+
+        # Estoque/Movimentacoes - For stock tracking
+        db.movimentacoes.create_index([('produto_id', ASCENDING), ('data', DESCENDING)])
+        db.movimentacoes.create_index([('tipo', ASCENDING), ('data', DESCENDING)])
+
+        # Fila - For queue management
+        db.fila.create_index([('status', ASCENDING), ('created_at', ASCENDING)])
+        db.fila.create_index([('cliente_id', ASCENDING)])
+
+        logger.info('✅ Strategic database indexes created for optimal performance')
     except Exception as e:
         logger.warning(f"⚠️ Index creation warning: {e}")
     logger.info("🎉 DB initialization complete!")
@@ -4847,7 +5007,11 @@ def handle_orcamentos():
             
             result = db.orcamentos.insert_one(orcamento)
             orcamento['_id'] = str(result.inserted_id)
-            
+
+            # Update cliente denormalized fields for performance
+            if orcamento.get('cliente_cpf'):
+                update_cliente_denormalized_fields(orcamento['cliente_cpf'])
+
             # Registrar comissões no histórico
             if profissionais_vinculados:
                 for prof in profissionais_vinculados:
@@ -4924,7 +5088,11 @@ def handle_orcamento_by_id(id):
             }
             
             db.orcamentos.update_one({'_id': ObjectId(id)}, {'$set': update_data})
-            
+
+            # Update cliente denormalized fields for performance
+            if update_data.get('cliente_cpf'):
+                update_cliente_denormalized_fields(update_data['cliente_cpf'])
+
             # Atualizar histórico de comissões
             db.comissoes_historico.delete_many({'orcamento_id': ObjectId(id)})
             if profissionais_vinculados:
@@ -4945,8 +5113,17 @@ def handle_orcamento_by_id(id):
             return jsonify({'success': True, 'message': 'Orçamento atualizado com sucesso'})
         
         elif request.method == 'DELETE':
+            # Get cliente_cpf before deleting for denormalized field update
+            orcamento = db.orcamentos.find_one({'_id': ObjectId(id)}, {'cliente_cpf': 1})
+            cliente_cpf = orcamento.get('cliente_cpf') if orcamento else None
+
             db.orcamentos.delete_one({'_id': ObjectId(id)})
             db.comissoes_historico.delete_many({'orcamento_id': ObjectId(id)})
+
+            # Update cliente denormalized fields after deletion
+            if cliente_cpf:
+                update_cliente_denormalized_fields(cliente_cpf)
+
             logger.info(f"🗑️ Orçamento {id} deletado")
             return jsonify({'success': True, 'message': 'Orçamento deletado com sucesso'})
             
