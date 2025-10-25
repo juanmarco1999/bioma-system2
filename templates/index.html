@@ -65,9 +65,11 @@
             z-index: 10 !important;
         }
 
-        /* === CORREÇÃO: ESCONDER ESTOQUE FORA DA SEÇÃO DE ESTOQUE (MAIS ROBUSTO) === */
+        /* ================================================================ */
+        /* === ROBUST STOCK ELEMENT VISIBILITY CONTROL (REPLACES OTHERS) === */
+        /* ================================================================ */
 
-        /* Esconder TUDO que contenha "estoque" no ID ou classe FORA da #section-estoque */
+        /* Default: Hide stock-related elements if NOT inside #section-estoque */
         .content-section:not(#section-estoque) [id*="estoque"],
         .content-section:not(#section-estoque) [id*="Estoque"],
         .content-section:not(#section-estoque) [class*="estoque"],
@@ -81,16 +83,17 @@
             width: 0 !important;
             overflow: hidden !important;
             pointer-events: none !important; /* Disable interactions */
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
         }
 
-        /* GARANTIR que elementos de estoque SÓ apareçam DENTRO da #section-estoque */
+        /* Explicitly SHOW stock-related elements ONLY WHEN inside #section-estoque */
         #section-estoque [id*="estoque"],
         #section-estoque [id*="Estoque"],
         #section-estoque [class*="estoque"],
         #section-estoque [class*="Estoque"] {
-            /* Reverter para o display original ou o necessário (block, flex, grid, etc.) */
-            /* 'revert' é uma boa opção geral, mas ajuste se necessário */
-            display: revert !important;
+            display: revert !important; /* Use default display (block, flex, grid, etc.) */
             visibility: revert !important;
             opacity: revert !important;
             position: revert !important;
@@ -99,12 +102,46 @@
             width: revert !important;
             overflow: revert !important;
             pointer-events: revert !important;
+            margin: revert !important;
+            padding: revert !important;
+            border: revert !important;
         }
 
-        /* Adicional: Se tabelas de estoque estavam sendo escondidas indevidamente */
-        #section-estoque table[id*="estoque"],
-        #section-estoque table[class*="estoque"] {
-            display: table !important; /* Ou revert, se apropriado */
+        /* Ensure specific stock containers inside #section-estoque are visible */
+        #section-estoque .stock-summary-card,
+        #section-estoque .card[id*="estoque"],
+        #section-estoque .table-responsive[id*="estoque"],
+        #section-estoque #estoque-subtab-visaogeral,
+        #section-estoque #estoque-subtab-produtos,
+        #section-estoque #estoque-subtab-movimentacoes,
+        #section-estoque #estoque-subtab-relatorios {
+            display: revert !important;
+        }
+
+        /* Ensure the ACTIVE stock sub-tab content is displayed */
+        #section-estoque .sub-tab-content.active {
+             display: block !important;
+        }
+
+        /* Ensure active sections and sub-tabs are displayed */
+        .content-section.active {
+            display: block !important;
+            height: auto !important;
+            overflow: revert !important;
+            position: relative !important;
+            left: 0 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .sub-tab-content.active {
+            display: block !important;
+            height: auto !important;
+            overflow: revert !important;
+            position: relative !important;
+            left: 0 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         /* === SUB-TABS SYSTEM === */
@@ -7582,61 +7619,48 @@ async function deletarProntuario(id) {
 // ========== SISTEMA DE SUB-TABS GLOBAL ====================
 // switchSubTab já foi definida no início do script (linha ~2709)
 
-function carregarDadosSubTab(section, subtab) {
-    const key = `${section}-${subtab}`;
-
-    // PROTEÇÃO ANTI-LOOP: Não carregar se já estiver carregando
-    if (isLoading(key)) {
-        console.warn(`⚠️ Carregamento em andamento: ${key}`);
-        return;
-    }
-
-    setLoading(key, true);
+async function carregarDadosSubTab(section, subtab) {
+    console.log(`🚀 Loading data for sub-tab: ${section} -> ${subtab}`);
 
     try {
-        // Orçamentos
+        // Add specific calls based on section and subtab
         if (section === 'orcamento') {
-            if (subtab === 'pendentes') carregarOrcamentosPendentes();
-            else if (subtab === 'aprovados') carregarOrcamentosAprovados();
-            else if (subtab === 'rejeitados') carregarOrcamentosRejeitados();
-            else if (subtab === 'historico') carregarHistoricoOrcamentos();
+            if (subtab === 'pendentes') await carregarOrcamentosPendentes();
+            else if (subtab === 'aprovados') await carregarOrcamentosAprovados();
+            else if (subtab === 'rejeitados') await carregarOrcamentosRejeitados();
+            else if (subtab === 'historico') await carregarHistoricoOrcamentos();
+        } else if (section === 'agendamentos') {
+            if (subtab === 'hoje') await carregarAgendamentosHoje();
+            else if (subtab === 'semana') await carregarAgendamentosSemana();
+            else if (subtab === 'mes') await carregarAgendamentosMes();
+            else if (subtab === 'todos') await carregarTodosAgendamentos();
+        } else if (section === 'produtos') {
+            if (subtab === 'todos') await carregarProdutosTodos();
+            else if (subtab === 'ativos') await carregarProdutosAtivos();
+            else if (subtab === 'inativos') await carregarProdutosInativos();
+        } else if (section === 'servicos') {
+            if (subtab === 'todos') await carregarServicosTodos();
+            else if (subtab === 'ativos') await carregarServicosAtivos();
+        } else if (section === 'estoque') {
+            if (subtab === 'visaogeral') await carregarEstoqueVisaoGeral();
+            else if (subtab === 'produtos') await carregarProdutosEstoque();
+            else if (subtab === 'movimentacoes') await carregarMovimentacoesEstoque();
+            else if (subtab === 'relatorios') await carregarRelatoriosEstoque();
+        } else if (section === 'profissionais') {
+            if (subtab === 'lista') await loadProfissionais();
+            else if (subtab === 'comissoes') await carregarComissoesProfissionais();
+            else if (subtab === 'estatisticas') await carregarEstatisticasProfissionais();
+            else if (subtab === 'assistentes') await loadAssistentes();
+        } else if (section === 'financeiro') {
+            if (subtab === 'resumo') await carregarFinanceiroResumo();
+            else if (subtab === 'receitas') await carregarReceitas();
+            else if (subtab === 'despesas') await carregarDespesas();
+            else if (subtab === 'comissoes') await carregarHistoricoComissoes();
         }
 
-        // Agendamentos
-    if (section === 'agendamentos') {
-        if (subtab === 'hoje') carregarAgendamentosHoje();
-        else if (subtab === 'semana') carregarAgendamentosSemana();
-        else if (subtab === 'mes') carregarAgendamentosMes();
-        else if (subtab === 'todos') carregarTodosAgendamentos();
-    }
-    
-    // Produtos
-    if (section === 'produtos') {
-        if (subtab === 'todos') carregarProdutosTodos();
-        else if (subtab === 'ativos') carregarProdutosAtivos();
-        else if (subtab === 'inativos') carregarProdutosInativos();
-    }
-    
-    // Serviços
-    if (section === 'servicos') {
-        if (subtab === 'todos') carregarServicosTodos();
-        else if (subtab === 'ativos') carregarServicosAtivos();
-        else if (subtab === 'inativos') carregarServicosInativos();
-    }
-    
-    // Estoque
-    if (section === 'estoque') {
-        if (subtab === 'visaogeral') carregarEstoqueVisaoGeral();
-        else if (subtab === 'movimentacoes') carregarMovimentacoesEstoque();
-        else if (subtab === 'relatorios') carregarRelatoriosEstoque();
-    }
-
-    // Clientes (já existente - anamnese e prontuário)
-    // Profissionais (já existente - comissões)
-
-    } finally {
-        // Resetar flag após 1 segundo
-        setTimeout(() => setLoading(key, false), 1000);
+        console.log(`✅ Finished loading: ${section} -> ${subtab}`);
+    } catch(e) {
+        console.error(`❌ Error loading sub-tab ${section} -> ${subtab}:`, e);
     }
 }
 // ========== FIM SUB-TABS GLOBAL ==========
@@ -8664,6 +8688,41 @@ async function exportarRelatorioPDF() {
     Swal.fire('Info', 'Funcionalidade de exportação será implementada em breve', 'info');
 }
 // ========== FIM SUB-TABS ESTOQUE ==========
+
+// ========== STUB FUNCTIONS FOR MISSING SUB-TAB LOADERS ==========
+// TODO: Implementar estas funções completamente quando os endpoints estiverem prontos
+
+async function carregarProdutosEstoque() {
+    console.log('📦 Carregando produtos do estoque...');
+    // TODO: Implementar carregamento de produtos específicos do estoque
+}
+
+async function carregarComissoesProfissionais() {
+    console.log('💰 Carregando comissões dos profissionais...');
+    // TODO: Implementar carregamento de comissões por profissional
+}
+
+async function carregarEstatisticasProfissionais() {
+    console.log('📊 Carregando estatísticas dos profissionais...');
+    // TODO: Implementar carregamento de estatísticas (atendimentos, receita, etc)
+}
+
+async function carregarFinanceiroResumo() {
+    console.log('💵 Carregando resumo financeiro...');
+    // TODO: Implementar carregamento de resumo (receitas, despesas, saldo)
+}
+
+async function carregarReceitas() {
+    console.log('💰 Carregando receitas...');
+    // TODO: Implementar carregamento de receitas
+}
+
+async function carregarDespesas() {
+    console.log('💸 Carregando despesas...');
+    // TODO: Implementar carregamento de despesas
+}
+
+// ========== FIM STUB FUNCTIONS ==========
 
 (async function boot(){
   try{
