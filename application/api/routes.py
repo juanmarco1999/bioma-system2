@@ -46,22 +46,34 @@ from application.extensions import get_from_cache, set_in_cache
 
 logger = logging.getLogger(__name__)
 
-# Helper para obter DB do current_app
-def get_db():
-    return current_app.config.get('DB_CONNECTION')
+# Importar DB diretamente de extensions
+from application.extensions import db as database_connection
 
-# Alias para compatibilidade com código existente
-db = None  # Será definido em cada função usando get_db()
+# Helper para obter DB
+def get_db():
+    """Retorna instância do MongoDB"""
+    # Tentar primeiro de current_app (produção)
+    try:
+        db_from_app = current_app.config.get('DB_CONNECTION')
+        if db_from_app is not None:
+            return db_from_app
+    except:
+        pass
+
+    # Fallback: usar db de extensions
+    return database_connection
 
 
 
 
 @bp.route('/')
 def index():
+    db = get_db()
     return render_template('index.html')
 
 @bp.route('/health')
 def health():
+    db = get_db()
     db_status = 'connected' if db is not None else 'disconnected'
     if db is not None:
         try:
@@ -72,6 +84,7 @@ def health():
 
 @bp.route('/api/login', methods=['POST'])
 def login():
+    db = get_db()
     data = request.json
     logger.info(f"🔐 Login attempt: {data.get('username')}")
     
@@ -112,9 +125,10 @@ def login():
 
 @bp.route('/api/register', methods=['POST'])
 def register():
+    db = get_db()
     data = request.json
     logger.info(f"👤 Register attempt: {data.get('username')}")
-    
+
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
@@ -145,6 +159,7 @@ def register():
 
 @bp.route('/api/logout', methods=['POST'])
 def logout():
+    db = get_db()
     username = session.get('username', 'Unknown')
     session.clear()
     logger.info(f"🚪 Logout: {username}")
@@ -152,6 +167,7 @@ def logout():
 
 @bp.route('/api/current-user')
 def current_user():
+    db = get_db()
     if 'user_id' in session and db is not None:
         try:
             user = db.users.find_one({'_id': ObjectId(session['user_id'])})
@@ -179,6 +195,7 @@ def current_user():
 @bp.route('/api/permissions')
 @login_required
 def get_permissions():
+    db = get_db()
     """Retorna as permissões do usuário atual"""
     permissions_data = get_user_permissions()
 
@@ -197,6 +214,7 @@ def get_permissions():
 @bp.route('/api/update-theme', methods=['POST'])
 @login_required
 def update_theme():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -212,6 +230,7 @@ def update_theme():
 @login_required
 @permission_required('Admin')
 def list_users():
+    db = get_db()
     """Listar todos os usuários do sistema (Admin only)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -229,6 +248,7 @@ def list_users():
 @login_required
 @permission_required('Admin')
 def update_user_tipo_acesso(id):
+    db = get_db()
     """Atualizar tipo de acesso de um usuário (Admin only)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -262,6 +282,7 @@ def update_user_tipo_acesso(id):
 @bp.route('/api/users/<id>', methods=['GET'])
 @login_required
 def get_user(id):
+    db = get_db()
     """Obter detalhes de um usuário específico"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -281,6 +302,7 @@ def get_user(id):
 @bp.route('/api/system/status')
 @login_required
 def system_status():
+    db = get_db()
     mongo_ok = False
     mongo_msg = 'Desconectado'
     try:
@@ -303,6 +325,7 @@ def system_status():
 @bp.route('/api/dashboard/stats')
 @login_required
 def dashboard_stats():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     
@@ -329,6 +352,7 @@ def dashboard_stats():
 @bp.route('/api/dashboard/stats/realtime')
 @login_required
 def dashboard_stats_realtime():
+    db = get_db()
     """Estatísticas em tempo real com métricas avançadas"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -490,6 +514,7 @@ def dashboard_stats_realtime():
 @bp.route('/api/clientes', methods=['GET', 'POST'])
 @login_required
 def clientes():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
 
@@ -595,6 +620,7 @@ def clientes():
 @bp.route('/api/clientes/<id>', methods=['DELETE'])
 @login_required
 def delete_cliente(id):
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -606,6 +632,7 @@ def delete_cliente(id):
 @bp.route('/api/clientes/<id>', methods=['GET'])
 @login_required
 def get_cliente(id):
+    db = get_db()
     """Visualizar um cliente específico"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -631,6 +658,7 @@ def get_cliente(id):
 @bp.route('/api/clientes/<id>', methods=['PUT'])
 @login_required
 def update_cliente(id):
+    db = get_db()
     """Editar um cliente existente"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -687,6 +715,7 @@ def update_cliente(id):
 @bp.route('/api/clientes/buscar')
 @login_required
 def buscar_clientes():
+    db = get_db()
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
@@ -723,6 +752,7 @@ def buscar_clientes():
 @bp.route('/api/busca/global', methods=['GET'])
 @login_required
 def busca_global():
+    db = get_db()
     """Busca global em múltiplas collections"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -830,6 +860,7 @@ def busca_global():
 @bp.route('/api/profissionais', methods=['GET', 'POST'])
 @login_required
 def profissionais():
+    db = get_db()
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
@@ -921,6 +952,7 @@ def profissionais():
 @bp.route('/api/profissionais/<id>', methods=['DELETE'])
 @login_required
 def delete_profissional(id):
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -932,6 +964,7 @@ def delete_profissional(id):
 @bp.route('/api/profissionais/<id>', methods=['GET'])
 @login_required
 def get_profissional(id):
+    db = get_db()
     """Visualizar um profissional especifico com estatisticas completas"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1074,6 +1107,7 @@ def get_profissional(id):
 @bp.route('/api/comissao/calcular', methods=['POST'])
 @login_required
 def calcular_comissao():
+    db = get_db()
     """Calcular comissoes de profissional e assistente para um orcamento"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1167,6 +1201,7 @@ def calcular_comissao():
 @bp.route('/api/profissionais/<id>/avaliacoes', methods=['GET', 'POST'])
 @login_required
 def profissional_avaliacoes(id):
+    db = get_db()
     """Registrar e listar avaliacoes de profissionais."""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1208,6 +1243,7 @@ def profissional_avaliacoes(id):
 @bp.route('/api/profissionais/<id>/upload-foto', methods=['POST'])
 @login_required
 def upload_foto_profissional(id):
+    db = get_db()
     """Upload de foto de perfil para profissionais (Diretriz #12)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -1277,6 +1313,7 @@ def upload_foto_profissional(id):
 @bp.route('/api/assistentes', methods=['GET', 'POST'])
 @login_required
 def assistentes():
+    db = get_db()
     """Gerenciar assistentes (que podem não ser profissionais ativos)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1307,6 +1344,7 @@ def assistentes():
 @bp.route('/api/assistentes/<id>', methods=['DELETE'])
 @login_required
 def delete_assistente(id):
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -1351,6 +1389,7 @@ class HRFlowable(Flowable):
         self.color = color
 
     def draw(self):
+        db = get_db()
         self.canv.saveState()
         self.canv.setStrokeColor(self.color)
         self.canv.setLineWidth(self.thickness)
@@ -1358,6 +1397,7 @@ class HRFlowable(Flowable):
         self.canv.restoreState()
 
 def format_date_pt_br(dt):
+    db = get_db()
     """Formata a data para Português-BR manualmente para evitar problemas de locale."""
     meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
     return f"{dt.day} de {meses[dt.month - 1]} de {dt.year}"
@@ -1365,6 +1405,7 @@ def format_date_pt_br(dt):
 @bp.route('/api/orcamento/<id>/pdf')
 @login_required
 def gerar_pdf_orcamento_singular(id):
+    db = get_db()
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     try:
@@ -1537,6 +1578,7 @@ def gerar_pdf_orcamento_singular(id):
 @bp.route('/api/contratos')
 @login_required
 def contratos():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -1548,6 +1590,7 @@ def contratos():
 @bp.route('/api/agendamentos', methods=['GET', 'POST'])
 @login_required
 def agendamentos():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     if request.method == 'GET':
@@ -1636,6 +1679,7 @@ def agendamentos():
 @bp.route('/api/agendamentos/horarios-disponiveis', methods=['GET'])
 @login_required
 def horarios_disponiveis():
+    db = get_db()
     """Verificar horários disponíveis para uma data específica"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1682,6 +1726,7 @@ def horarios_disponiveis():
 @bp.route('/api/agendamentos/mapa-calor', methods=['GET'])
 @login_required
 def mapa_calor_agendamentos():
+    db = get_db()
     """Gerar mapa de calor de agendamentos e orçamentos"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1740,6 +1785,7 @@ def mapa_calor_agendamentos():
 @login_required
 @permission_required('Admin', 'Gestão')
 def delete_agendamento(id):
+    db = get_db()
     """Deletar um agendamento (Apenas Admin e Gestão - Roadmap RBAC)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -1756,6 +1802,7 @@ def delete_agendamento(id):
 @bp.route('/api/agendamentos/hoje', methods=['GET'])
 @login_required
 def agendamentos_hoje():
+    db = get_db()
     """Buscar agendamentos de hoje com estatísticas"""
     if db is None:
         return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
@@ -1822,6 +1869,7 @@ def agendamentos_hoje():
 @bp.route('/api/agendamentos/semana', methods=['GET'])
 @login_required
 def agendamentos_semana():
+    db = get_db()
     """Buscar agendamentos da semana atual"""
     if db is None:
         return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
@@ -1868,6 +1916,7 @@ def agendamentos_semana():
 @bp.route('/api/agendamentos/mes', methods=['GET'])
 @login_required
 def agendamentos_mes():
+    db = get_db()
     """Buscar agendamentos do mês atual"""
     if db is None:
         return jsonify({'success': False, 'message': 'Banco de dados indisponível'}), 500
@@ -1920,6 +1969,7 @@ def agendamentos_mes():
 @bp.route('/api/fila', methods=['GET', 'POST'])
 @login_required
 def fila():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     if request.method == 'GET':
@@ -1939,6 +1989,7 @@ def fila():
 @bp.route('/api/fila/<id>', methods=['DELETE'])
 @login_required
 def delete_fila(id):
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -1953,6 +2004,7 @@ def delete_fila(id):
 @bp.route('/api/fila/<id>/notificar', methods=['POST'])
 @login_required
 def notificar_cliente_fila(id):
+    db = get_db()
     """Enviar notificação SMS/Email para cliente na fila"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -2045,6 +2097,7 @@ Equipe BIOMA"""
 @bp.route('/api/fila/notificar-todos', methods=['POST'])
 @login_required
 def notificar_todos_fila():
+    db = get_db()
     """Notificar todos os clientes na fila sobre sua posição"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -2102,6 +2155,7 @@ def notificar_todos_fila():
 @bp.route('/api/notificacoes', methods=['GET'])
 @login_required
 def listar_notificacoes():
+    db = get_db()
     """Listar histórico de notificações"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -2125,6 +2179,7 @@ def listar_notificacoes():
 @bp.route('/api/estoque/entrada', methods=['POST'])
 @login_required
 def registrar_entrada_estoque():
+    db = get_db()
     '''Registrar uma nova entrada de estoque que deve ser aprovada.'''
     if db is None:
         return jsonify({'success': False}), 500
@@ -2170,6 +2225,7 @@ def registrar_entrada_estoque():
 @bp.route('/api/estoque/entrada/pendentes', methods=['GET'])
 @login_required
 def estoque_entradas_pendentes():
+    db = get_db()
     '''Listar entradas de estoque pendentes de aprovacao.'''
     if db is None:
         return jsonify({'success': False}), 500
@@ -2189,6 +2245,7 @@ def estoque_entradas_pendentes():
 @bp.route('/api/estoque/entrada/<id>', methods=['PUT'])
 @login_required
 def atualizar_entrada_estoque(id):
+    db = get_db()
     '''Atualizar uma entrada pendente antes da aprovacao.'''
     if db is None:
         return jsonify({'success': False}), 500
@@ -2229,6 +2286,7 @@ def atualizar_entrada_estoque(id):
 @bp.route('/api/estoque/entrada/<id>/aprovar', methods=['POST'])
 @login_required
 def aprovar_entrada_estoque(id):
+    db = get_db()
     '''Aprovar uma entrada de estoque pendente.'''
     if db is None:
         return jsonify({'success': False}), 500
@@ -2271,6 +2329,7 @@ def aprovar_entrada_estoque(id):
 @bp.route('/api/estoque/entrada/<id>/rejeitar', methods=['POST'])
 @login_required
 def rejeitar_entrada_estoque(id):
+    db = get_db()
     '''Rejeitar uma entrada pendente de estoque.'''
     if db is None:
         return jsonify({'success': False}), 500
@@ -2299,6 +2358,7 @@ def rejeitar_entrada_estoque(id):
 @bp.route('/api/estoque/alerta')
 @login_required
 def estoque_alerta():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     try:
@@ -2310,6 +2370,7 @@ def estoque_alerta():
 @bp.route('/api/estoque/movimentacao', methods=['POST'])
 @login_required
 def estoque_movimentacao():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     data = request.json
@@ -2333,6 +2394,7 @@ def estoque_movimentacao():
 @bp.route('/api/estoque/movimentacoes', methods=['GET'])
 @login_required
 def listar_movimentacoes():
+    db = get_db()
     """Listar movimentações de estoque com paginação e filtros"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -2404,6 +2466,7 @@ def listar_movimentacoes():
 @bp.route('/api/estoque/saida', methods=['POST'])
 @login_required
 def registrar_saida_estoque():
+    db = get_db()
     """Registrar saída de estoque"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -2462,6 +2525,7 @@ def registrar_saida_estoque():
 @bp.route('/api/estoque/relatorio', methods=['GET'])
 @login_required
 def relatorio_estoque():
+    db = get_db()
     """Gerar relatório completo de estoque com filtros e opção de export"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -2594,6 +2658,7 @@ def relatorio_estoque():
 @bp.route('/api/importar', methods=['POST'])
 @login_required
 def importar():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     if 'file' not in request.files:
@@ -2846,6 +2911,7 @@ def download_template(tipo):
 @bp.route('/api/clientes/formularios', methods=['GET'])
 @login_required
 def clientes_formularios():
+    db = get_db()
     """Retorna a configuração dos formulários de Anamnese e Prontuário para renderização dinâmica no front."""
     try:
         return jsonify({
@@ -2859,6 +2925,7 @@ def clientes_formularios():
 @bp.route('/api/config', methods=['GET', 'POST'])
 @login_required
 def config():
+    db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
     if request.method == 'GET':
@@ -2895,6 +2962,7 @@ def config():
 @bp.route('/api/relatorios/completo', methods=['GET'])
 @login_required
 def relatorio_completo():
+    db = get_db()
     """Relatório completo com todas as estatísticas do sistema"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -3100,6 +3168,7 @@ def relatorio_completo():
 @login_required
 @permission_required('Admin', 'Gestão')
 def consultar_auditoria():
+    db = get_db()
     """Consultar logs de auditoria do sistema (Admin/Gestão only)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -3188,6 +3257,7 @@ def consultar_auditoria():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 def init_db():
+    db = get_db()
     if db is None:
         logger.warning("⚠️ DB não disponível para inicialização")
         return
@@ -3333,12 +3403,14 @@ def upload_logo():
 @bp.route('/api/upload/imagem', methods=['POST'])
 @login_required
 def upload_imagem():
+    db = get_db()
     """Alias para compatibilidade com frontend"""
     return upload_logo()
 
 # 2. Obter Logo Configurado
 @bp.route('/api/config/logo', methods=['GET'])
 def get_logo():
+    db = get_db()
     """Obter Data URI do logo configurado (sem arquivos externos)"""
     try:
         tipo = request.args.get('tipo', 'principal')
@@ -3355,6 +3427,7 @@ def get_logo():
 # 3. Servir Arquivos Uploaded (DEPRECATED - Sistema usa Data URI agora)
 @bp.route('/uploads/<filename>')
 def uploaded_file(filename):
+    db = get_db()
     """
     DEPRECATED: Sistema agora usa Data URI (base64) armazenado diretamente no MongoDB.
     Arquivos não são mais salvos no filesystem.
@@ -3453,6 +3526,7 @@ def upload_foto_profissional_form():
 @bp.route('/api/comissoes/calcular-orcamento', methods=['POST'])
 @login_required
 def calcular_comissoes_orcamento():
+    db = get_db()
     """Calcula comissões em cascata: profissional + assistente"""
     try:
         data = request.get_json()
@@ -3529,6 +3603,7 @@ def calcular_comissoes_orcamento():
 @bp.route('/api/comissoes/historico', methods=['GET'])
 @login_required
 def historico_comissoes():
+    db = get_db()
     """Lista histórico de comissões calculadas"""
     try:
         historico = list(db.comissoes_historico.find().sort('data_calculo', DESCENDING).limit(50))
@@ -3559,6 +3634,7 @@ def historico_comissoes():
 @bp.route('/api/assistentes/cadastrar-independente', methods=['POST'])
 @login_required
 def cadastrar_assistente_independente():
+    db = get_db()
     """Cadastra assistente sem vínculo obrigatório com profissional"""
     try:
         data = request.get_json()
@@ -3585,6 +3661,7 @@ def cadastrar_assistente_independente():
 @bp.route('/api/estoque/produtos/entrada', methods=['POST'])
 @login_required
 def registrar_entrada_produto():
+    db = get_db()
     """Registra entrada de produto que precisa ser aprovada"""
     try:
         data = request.get_json()
@@ -3617,6 +3694,7 @@ def registrar_entrada_produto():
 @bp.route('/api/estoque/produtos/aprovar/<id>', methods=['POST'])
 @login_required
 def aprovar_entrada_produto(id):
+    db = get_db()
     """Aprova entrada de produto e atualiza estoque"""
     try:
         entrada = db.estoque_pendencias.find_one({'_id': ObjectId(id)})
@@ -3655,6 +3733,7 @@ def aprovar_entrada_produto(id):
 @bp.route('/api/estoque/produtos/rejeitar/<id>', methods=['POST'])
 @login_required
 def rejeitar_entrada_produto(id):
+    db = get_db()
     """Rejeita entrada de produto"""
     try:
         db.estoque_pendencias.update_one(
@@ -3671,6 +3750,7 @@ def rejeitar_entrada_produto(id):
 @bp.route('/api/estoque/produtos/pendentes', methods=['GET'])
 @login_required
 def listar_entradas_pendentes():
+    db = get_db()
     """Lista entradas de produtos pendentes de aprovação"""
     try:
         pendentes = list(db.estoque_pendencias.find({'status': 'pendente'}).sort('data_solicitacao', DESCENDING))
@@ -3688,6 +3768,7 @@ def listar_entradas_pendentes():
 @bp.route('/api/relatorios/mapa-calor', methods=['GET'])
 @login_required
 def mapa_calor():
+    db = get_db()
     """Retorna dados melhorados para mapa de calor de movimentação (Diretriz #5)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -3841,6 +3922,7 @@ def mapa_calor():
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_vendas_por_mes():
+    db = get_db()
     """Vendas e faturamento agregados por mês para Chart.js (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -3927,6 +4009,7 @@ def relatorio_vendas_por_mes():
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_servicos_top():
+    db = get_db()
     """Top serviços por faturamento e quantidade (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -3998,6 +4081,7 @@ def relatorio_servicos_top():
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_profissionais_desempenho():
+    db = get_db()
     """Desempenho de profissionais por comissões e serviços (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4069,6 +4153,7 @@ def relatorio_profissionais_desempenho():
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_produtos_top():
+    db = get_db()
     """Top produtos por faturamento e quantidade vendida (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4140,6 +4225,7 @@ def relatorio_produtos_top():
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_taxa_conversao():
+    db = get_db()
     """Taxa de conversão de orçamentos (Pendente → Aprovado) por período (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4205,6 +4291,7 @@ def relatorio_taxa_conversao():
 @bp.route('/api/servicos/<id>/editar', methods=['PUT'])
 @login_required
 def editar_servico(id):
+    db = get_db()
     """Edita informações de um serviço"""
     try:
         data = request.get_json()
@@ -4240,6 +4327,7 @@ def editar_servico(id):
 @bp.route('/api/produtos/<id>/editar', methods=['PUT'])
 @login_required
 def editar_produto(id):
+    db = get_db()
     """Edita informações de um produto"""
     try:
         data = request.get_json()
@@ -4275,6 +4363,7 @@ def editar_produto(id):
 @bp.route('/api/clientes/<id>/faturamento', methods=['GET'])
 @login_required
 def faturamento_cliente(id):
+    db = get_db()
     """Retorna faturamento total de um cliente"""
     try:
         pipeline = [
@@ -4294,6 +4383,7 @@ def faturamento_cliente(id):
 @bp.route('/api/clientes/<id>/anamnese', methods=['GET', 'PUT'])
 @login_required
 def anamnese_cliente(id):
+    db = get_db()
     """Gerencia anamnese do cliente"""
     try:
         if request.method == 'GET':
@@ -4321,6 +4411,7 @@ def anamnese_cliente(id):
 @bp.route('/api/clientes/<id>/prontuario', methods=['GET', 'PUT'])
 @login_required
 def prontuario_cliente(id):
+    db = get_db()
     """Gerencia prontuário do cliente"""
     try:
         if request.method == 'GET':
@@ -4354,6 +4445,7 @@ def prontuario_cliente(id):
 @bp.route('/api/clientes/<id>/resumo-pdf', methods=['GET'])
 @login_required
 def resumo_pdf_cliente(id):
+    db = get_db()
     """Gera PDF completo com todos os dados do cliente"""
     try:
         cliente = db.clientes.find_one({'_id': ObjectId(id)})
@@ -4438,6 +4530,7 @@ def resumo_pdf_cliente(id):
 @bp.route('/api/clientes/<cpf>/anamnese', methods=['GET', 'POST'])
 @login_required
 def handle_anamnese(cpf):
+    db = get_db()
     """Gerenciar histórico de anamneses de um cliente"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4502,6 +4595,7 @@ def handle_anamnese(cpf):
 @bp.route('/api/clientes/<cpf>/anamnese/<id>', methods=['GET', 'DELETE'])
 @login_required
 def handle_anamnese_by_id(cpf, id):
+    db = get_db()
     """Gerenciar anamnese específica"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4533,6 +4627,7 @@ def handle_anamnese_by_id(cpf, id):
 @bp.route('/api/clientes/<cpf>/prontuario', methods=['GET', 'POST'])
 @login_required
 def handle_prontuario(cpf):
+    db = get_db()
     """Gerenciar histórico de prontuários de um cliente"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4605,6 +4700,7 @@ def handle_prontuario(cpf):
 @bp.route('/api/clientes/<cpf>/prontuario/<id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def handle_prontuario_by_id(cpf, id):
+    db = get_db()
     """Gerenciar prontuário específico"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -4669,6 +4765,7 @@ def handle_prontuario_by_id(cpf, id):
 @bp.route('/api/clientes/<cpf>/historico-completo', methods=['GET'])
 @login_required
 def historico_completo_cliente(cpf):
+    db = get_db()
     """Obter histórico completo de anamnese e prontuários de um cliente (COM PAGINAÇÃO - Roadmap #11)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -4754,6 +4851,7 @@ def historico_completo_cliente(cpf):
 @bp.route('/api/clientes/<cpf>/prontuario/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_prontuario(cpf, id):
+    db = get_db()
     """Gerar PDF de prontuário para impressão (Diretriz #21)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -4857,6 +4955,7 @@ def gerar_pdf_prontuario(cpf, id):
 @bp.route('/api/clientes/<cpf>/historico-completo/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_historico_completo(cpf):
+    db = get_db()
     """Gerar PDF do histórico completo do cliente (Diretriz #21)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -4932,6 +5031,7 @@ def gerar_pdf_historico_completo(cpf):
 @bp.route('/api/clientes/<cpf>/historico-completo/whatsapp', methods=['GET'])
 @login_required
 def enviar_whatsapp_historico(cpf):
+    db = get_db()
     """Gerar link WhatsApp com resumo do histórico (Diretriz #21)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -4984,6 +5084,7 @@ def enviar_whatsapp_historico(cpf):
 @bp.route('/api/orcamentos', methods=['GET', 'POST'])
 @login_required
 def handle_orcamentos():
+    db = get_db()
     """Gerenciar orçamentos com suporte a múltiplos profissionais"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -5077,6 +5178,7 @@ def handle_orcamentos():
 @bp.route('/api/orcamentos/<id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def handle_orcamento_by_id(id):
+    db = get_db()
     """Gerenciar orçamento específico"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -5175,6 +5277,7 @@ def handle_orcamento_by_id(id):
 @bp.route('/api/orcamentos/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_orcamento(id):
+    db = get_db()
     """Gerar PDF de orçamento para impressão (Diretriz #3)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5298,6 +5401,7 @@ def gerar_pdf_orcamento(id):
 @bp.route('/api/orcamentos/<id>/whatsapp', methods=['GET'])
 @login_required
 def enviar_whatsapp_orcamento(id):
+    db = get_db()
     """Gerar link do WhatsApp com orçamento (Diretriz #3)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5361,6 +5465,7 @@ Desconto: R$ {orcamento.get('desconto_valor', 0):.2f}
 @bp.route('/api/contratos/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_contrato(id):
+    db = get_db()
     """Gerar PDF de contrato para impressão (Diretriz #4)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5500,6 +5605,7 @@ def gerar_pdf_contrato(id):
 @bp.route('/api/contratos/<id>/whatsapp', methods=['GET'])
 @login_required
 def enviar_whatsapp_contrato(id):
+    db = get_db()
     """Gerar link do WhatsApp com contrato (Diretriz #4)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5574,6 +5680,7 @@ Obrigado por escolher a BIOMA! 🌿
 @login_required
 @permission_required('Admin', 'Gestão')
 def financeiro_dashboard():
+    db = get_db()
     """Dashboard financeiro com comissões, despesas e lucro (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5654,6 +5761,7 @@ def financeiro_dashboard():
 @bp.route('/api/financeiro/despesas', methods=['GET', 'POST'])
 @login_required
 def financeiro_despesas():
+    db = get_db()
     """Gerenciar despesas (GET: Admin/Gestão, POST: Admin only)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5717,6 +5825,7 @@ def financeiro_despesas():
 @login_required
 @permission_required('Admin')
 def handle_despesa(id):
+    db = get_db()
     """Atualizar ou deletar despesa (Admin only)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5756,6 +5865,7 @@ def handle_despesa(id):
 @login_required
 @permission_required('Admin', 'Gestão')
 def financeiro_relatorio():
+    db = get_db()
     """Gerar relatório financeiro detalhado (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -5816,6 +5926,7 @@ def financeiro_relatorio():
 @login_required
 @permission_required('Admin', 'Gestão')
 def financeiro_receitas():
+    db = get_db()
     """Listar receitas - orçamentos aprovados (Admin/Gestão)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -5876,6 +5987,7 @@ def financeiro_receitas():
 @bp.route('/api/financeiro/comissoes', methods=['GET'])
 @login_required
 def financeiro_comissoes():
+    db = get_db()
     """Listar comissões (Admin/Gestão: todas | Profissional: próprias)"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -5985,6 +6097,7 @@ def financeiro_comissoes():
 @bp.route('/api/profissionais/<id>/comissoes', methods=['GET'])
 @login_required
 def get_comissoes_profissional(id):
+    db = get_db()
     """Obter estatísticas de comissões de um profissional"""
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
@@ -6071,6 +6184,7 @@ def get_comissoes_profissional(id):
 @bp.route('/api/produtos', methods=['GET'])
 @login_required
 def listar_produtos():
+    db = get_db()
     """Lista produtos com filtro opcional por status"""
     try:
         status = request.args.get('status')
@@ -6107,6 +6221,7 @@ def listar_produtos():
 @bp.route('/api/produtos/baixo-estoque', methods=['GET'])
 @login_required
 def produtos_baixo_estoque():
+    db = get_db()
     """Retorna produtos com estoque baixo e estatísticas"""
     try:
         # Buscar todos os produtos ativos
@@ -6163,6 +6278,7 @@ def produtos_baixo_estoque():
 @bp.route('/api/produtos/<id>', methods=['PUT'])
 @login_required
 def atualizar_produto(id):
+    db = get_db()
     """Atualiza produto (incluindo toggle de status)"""
     try:
         data = request.get_json()
@@ -6209,6 +6325,7 @@ def atualizar_produto(id):
 @bp.route('/api/servicos', methods=['GET'])
 @login_required
 def listar_servicos():
+    db = get_db()
     """Lista serviços com filtro opcional por status"""
     try:
         status = request.args.get('status')
@@ -6246,6 +6363,7 @@ def listar_servicos():
 @bp.route('/api/servicos/<id>', methods=['PUT'])
 @login_required
 def atualizar_servico(id):
+    db = get_db()
     """Atualiza serviço (incluindo toggle de status)"""
     try:
         data = request.get_json()
@@ -6288,6 +6406,7 @@ def atualizar_servico(id):
 @bp.route('/api/estoque/visao-geral', methods=['GET'])
 @login_required
 def estoque_visao_geral():
+    db = get_db()
     """Retorna visão geral do estoque com estatísticas"""
     try:
         # Buscar todos os produtos ativos
@@ -6357,6 +6476,7 @@ def estoque_visao_geral():
 @bp.route('/api/estoque/alertas', methods=['GET'])
 @login_required
 def estoque_alertas():
+    db = get_db()
     """Retorna alertas de estoque e últimas movimentações"""
     try:
         # Buscar produtos ativos
@@ -6620,6 +6740,7 @@ def gerar_relatorio_estoque():
 @bp.route('/api/admin/reset-database', methods=['POST'])
 @login_required
 def admin_reset_database():
+    db = get_db()
     """
     LIMPAR TODO O BANCO DE DADOS (apenas Admin)
     ATENÇÃO: Esta operação é IRREVERSÍVEL!
@@ -6684,6 +6805,7 @@ def admin_reset_database():
 @bp.route('/api/admin/database-stats', methods=['GET'])
 @login_required
 def admin_database_stats():
+    db = get_db()
     """Estatísticas do banco de dados (apenas Admin)"""
     try:
         # Verificar se o usuário é Admin
@@ -6722,8 +6844,10 @@ def admin_database_stats():
 @bp.route('/api/stream')
 @login_required
 def stream_updates():
+    db = get_db()
     """Route for Server-Sent Events (SSE) for real-time updates"""
     def generate():
+        db = get_db()
         """Generator function for SSE"""
         try:
             # Enviar heartbeat inicial
