@@ -178,6 +178,30 @@
             pointer-events: auto !important;
         }
 
+        /* PROTEÇÃO ESPECÍFICA PARA SEÇÃO DE ESTOQUE */
+        #section-estoque:not(.active),
+        #section-estoque:not(.active) *,
+        #estoqueBaixoBodyResumo:not(.active),
+        #estoqueBaixoBodyResumo:not(.active) * {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            opacity: 0 !important;
+        }
+
+        /* Garantir que apenas seção ativa de estoque seja visível */
+        #section-estoque.active {
+            display: block !important;
+            visibility: visible !important;
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
+            opacity: 1 !important;
+        }
+
         /* Responsive Sub-tabs */
         @media (max-width:768px){
             .sub-tabs{flex-direction:column}
@@ -249,28 +273,27 @@
     <nav class="sidebar">
         <div class="sidebar-logo"><h1>BIOMA</h1><p>Uberaba v3.7</p></div>
         <ul class="sidebar-menu">
-            <li><a href="#" onclick="goTo('dashboard')" class="active" id="menu-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-            <li><a href="#" onclick="goTo('orcamento')" id="menu-orcamento"><i class="bi bi-file-earmark-plus"></i> Novo Orçamento</a></li>
-            <li><a href="#" onclick="goTo('consultar')" id="menu-consultar"><i class="bi bi-search"></i> Consultar</a></li>
-            <li><a href="#" onclick="goTo('contratos')" id="menu-contratos"><i class="bi bi-file-earmark-check"></i> Contratos</a></li>
-            <li><a href="#" onclick="goTo('relatorios')" id="menu-relatorios"><i class="bi bi-bar-chart-line"></i> Relatórios</a></li>
-            <li><a href="#" onclick="goTo('perfil')" id="menu-perfil"><i class="bi bi-person-circle"></i> Perfil</a></li>
-            <li><a href="#" onclick="goTo('comissoes')" id="menu-comissoes"><i class="bi bi-cash-stack"></i> Comissões</a></li>
-            <li><a href="#" onclick="goTo('financeiro')" id="menu-financeiro"><i class="bi bi-currency-dollar"></i> Financeiro</a></li>
-            <li><a href="#" onclick="goTo('estoque')" id="menu-estoque"><i class="bi bi-box-seam"></i> Estoque</a></li>
-            <li><a href="#" onclick="goTo('agendamentos')" id="menu-agendamentos"><i class="bi bi-calendar-check"></i> Agendamentos</a></li>
-            <li><a href="#" onclick="goTo('fila')" id="menu-fila"><i class="bi bi-people-fill"></i> Fila</a></li>
-            <li><a href="#" onclick="goTo('clientes')" id="menu-clientes"><i class="bi bi-people"></i> Clientes</a></li>
-            <li><a href="#" onclick="goTo('profissionais')" id="menu-profissionais"><i class="bi bi-person-workspace"></i> Profissionais</a></li>
-            <li><a href="#" onclick="goTo('servicos')" id="menu-servicos"><i class="bi bi-scissors"></i> Serviços</a></li>
-            <li><a href="#" onclick="goTo('produtos')" id="menu-produtos"><i class="bi bi-box-seam"></i> Produtos</a></li>
-            <li><a href="#" onclick="goTo('estoque')" id="menu-estoque"><i class="bi bi-box-seam-fill"></i> Estoque</a></li>
-            <li><a href="#" onclick="goTo('clube')" id="menu-clube"><i class="bi bi-award"></i> Comunidade</a></li>
-            <li><a href="#" onclick="goTo('importar')" id="menu-importar"><i class="bi bi-cloud-upload"></i> Importar</a></li>
-            <li><a href="#" onclick="goTo('sistema')" id="menu-sistema"><i class="bi bi-activity"></i> Sistema</a></li>
-            <li><a href="#" onclick="goTo('auditoria')" id="menu-auditoria"><i class="bi bi-shield-check"></i> Auditoria</a></li>
-            <li><a href="#" onclick="goTo('configuracoes')" id="menu-configuracoes"><i class="bi bi-gear"></i> Configurações</a></li>
-            <li><a href="#" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('dashboard'); return false;" class="active" id="menu-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('orcamento'); return false;" id="menu-orcamento"><i class="bi bi-file-earmark-plus"></i> Novo Orçamento</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('consultar'); return false;" id="menu-consultar"><i class="bi bi-search"></i> Consultar</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('contratos'); return false;" id="menu-contratos"><i class="bi bi-file-earmark-check"></i> Contratos</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('relatorios'); return false;" id="menu-relatorios"><i class="bi bi-bar-chart-line"></i> Relatórios</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('perfil'); return false;" id="menu-perfil"><i class="bi bi-person-circle"></i> Perfil</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('comissoes'); return false;" id="menu-comissoes"><i class="bi bi-cash-stack"></i> Comissões</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('financeiro'); return false;" id="menu-financeiro"><i class="bi bi-currency-dollar"></i> Financeiro</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('estoque'); return false;" id="menu-estoque"><i class="bi bi-box-seam"></i> Estoque</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('agendamentos'); return false;" id="menu-agendamentos"><i class="bi bi-calendar-check"></i> Agendamentos</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('fila'); return false;" id="menu-fila"><i class="bi bi-people-fill"></i> Fila</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('clientes'); return false;" id="menu-clientes"><i class="bi bi-people"></i> Clientes</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('profissionais'); return false;" id="menu-profissionais"><i class="bi bi-person-workspace"></i> Profissionais</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('servicos'); return false;" id="menu-servicos"><i class="bi bi-scissors"></i> Serviços</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('produtos'); return false;" id="menu-produtos"><i class="bi bi-box-seam"></i> Produtos</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('clube'); return false;" id="menu-clube"><i class="bi bi-award"></i> Comunidade</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('importar'); return false;" id="menu-importar"><i class="bi bi-cloud-upload"></i> Importar</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('sistema'); return false;" id="menu-sistema"><i class="bi bi-activity"></i> Sistema</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('auditoria'); return false;" id="menu-auditoria"><i class="bi bi-shield-check"></i> Auditoria</a></li>
+            <li><a href="javascript:void(0)" onclick="goTo('configuracoes'); return false;" id="menu-configuracoes"><i class="bi bi-gear"></i> Configurações</a></li>
+            <li><a href="javascript:void(0)" onclick="doLogout(); return false;"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
         </ul>
         <div class="theme-toggle"><button onclick="toggleTheme()"><i class="bi bi-moon-stars-fill" id="themeIcon"></i><span id="themeText">Modo Escuro</span></button></div>
     </nav>
@@ -2785,6 +2808,9 @@ function goTo(section){
             s.classList.add('d-none');
             s.style.display = 'none';
             s.style.visibility = 'hidden';
+            s.style.position = 'absolute';
+            s.style.left = '-9999px';
+            s.style.zIndex = '-1';
         });
 
         // 2. MOSTRAR apenas a selecionada
@@ -2794,6 +2820,9 @@ function goTo(section){
             sectionElement.classList.remove('d-none');
             sectionElement.style.display = 'block';
             sectionElement.style.visibility = 'visible';
+            sectionElement.style.position = 'relative';
+            sectionElement.style.left = '0';
+            sectionElement.style.zIndex = '1';
         } else {
             console.error('❌ Seção não encontrada:', section);
         }
