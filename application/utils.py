@@ -40,7 +40,7 @@ def allowed_file(filename):
 
 def registrar_auditoria(acao, detalhes, usuario_id=None, colecao=None):
     """Registrar ação de auditoria no banco de dados"""
-    from app.extensions import db
+    from application.extensions import db
     from flask import session
 
     if db is None:
@@ -151,7 +151,7 @@ def update_cliente_denormalized_fields(cliente_cpf):
 
     This prevents N+1 query problem when loading cliente lists.
     """
-    from app.extensions import db
+    from application.extensions import db
     from pymongo import DESCENDING
 
     if db is None or not cliente_cpf:
@@ -201,7 +201,7 @@ def get_assistente_details(assistente_id, assistente_tipo=None):
     prioridade de busca e garante compatibilidade com registros antigos que
     armazenavam apenas o ID do profissional.
     """
-    from app.extensions import db
+    from application.extensions import db
 
     if db is None or not assistente_id:
         return None

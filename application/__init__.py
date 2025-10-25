@@ -63,7 +63,7 @@ def create_app(config_name=None):
         CORS(app, supports_credentials=True)
 
     # Inicializar MongoDB
-    from app.extensions import init_db
+    from application.extensions import init_db
     db = init_db(app)
 
     if db is None:
@@ -78,7 +78,7 @@ def create_app(config_name=None):
 
     # Blueprint consolidado com TODAS as rotas do sistema
     # (Migrado do app.py monolítico - futura modularização gradual)
-    from app.api import bp as api_bp
+    from application.api import bp as api_bp
     app.register_blueprint(api_bp)
 
     logger.info("✅ Blueprint API registrado (todas as rotas consolidadas)")

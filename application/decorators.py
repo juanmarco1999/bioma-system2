@@ -67,7 +67,7 @@ def permission_required(*allowed_roles):
 
 def get_user_permissions():
     """Retorna as permissões do usuário atual"""
-    from app.extensions import db
+    from application.extensions import db
 
     if 'user_id' not in session or db is None:
         return {

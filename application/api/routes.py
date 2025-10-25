@@ -38,11 +38,11 @@ from reportlab.lib.units import cm
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-from app.api import bp
-from app.decorators import login_required, permission_required, get_user_permissions
-from app.utils import convert_objectid, allowed_file, registrar_auditoria, update_cliente_denormalized_fields, get_assistente_details
-from app.constants import ANAMNESE_FORM, PRONTUARIO_FORM, default_form_state
-from app.extensions import get_from_cache, set_in_cache
+from application.api import bp
+from application.decorators import login_required, permission_required, get_user_permissions
+from application.utils import convert_objectid, allowed_file, registrar_auditoria, update_cliente_denormalized_fields, get_assistente_details
+from application.constants import ANAMNESE_FORM, PRONTUARIO_FORM, default_form_state
+from application.extensions import get_from_cache, set_in_cache
 
 logger = logging.getLogger(__name__)
 

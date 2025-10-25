@@ -10,7 +10,7 @@ Entry point para a aplicação Flask com Application Factory pattern
 """
 
 import os
-from app import create_app
+from application import create_app
 
 # Criar aplicação usando Application Factory
 app = create_app()
