@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BIOMA UBERABA v3.7 COMPLETO - Sistema Ultra Profissional
-Desenvolvedor: Juan Marco (@juanmarco1999)
-Email: 180147064@aluno.unb.br
-Data: 2025-10-05 21:57:49 UTC
+BIOMA v3.7 - Todas as Rotas (Consolidado)
+Migrado automaticamente do app.py monolítico
 """
 
-from flask import Flask, render_template, request, jsonify, session, send_file
+from flask import request, jsonify, session, current_app, send_file, render_template
 from flask_cors import CORS
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from bson import ObjectId
-from functools import wraps
+from functools import wraps, lru_cache
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import urllib.parse
@@ -26,28 +24,9 @@ import re
 import requests
 import logging
 import random
-from functools import lru_cache
 from time import time
 
-# Cache simples para requisições GET
-request_cache = {}
-CACHE_TTL = 60  # segundos
-
-def get_from_cache(key):
-    """Buscar do cache se ainda válido"""
-    if key in request_cache:
-        data, timestamp = request_cache[key]
-        if time() - timestamp < CACHE_TTL:
-            return data
-        else:
-            del request_cache[key]
-    return None
-
-def set_in_cache(key, data):
-    """Salvar no cache"""
-    request_cache[key] = (data, time())
-
-# Importações para o novo gerador de PDF
+# ReportLab para PDFs
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -55,516 +34,33 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
 from reportlab.lib.colors import HexColor, black, white
 from reportlab.lib.units import cm
 
+# OpenPyXL para Excel
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+from app.api import bp
+from app.decorators import login_required, permission_required, get_user_permissions
+from app.utils import convert_objectid, allowed_file, registrar_auditoria, update_cliente_denormalized_fields, get_assistente_details
+from app.constants import ANAMNESE_FORM, PRONTUARIO_FORM, default_form_state
+from app.extensions import get_from_cache, set_in_cache
+
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
-app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'bioma-2025-v3-7-ultra-secure-key-final-definitivo-completo')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['UPLOAD_FOLDER'] = '/tmp'
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-CORS(app, supports_credentials=True)
-# ---- Cookie/CORS robustez para desenvolvimento cross-origin ----
-FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN')  # ex: http://127.0.0.1:5500 ou http://localhost:5173
-if os.getenv('CROSS_SITE_DEV','0') == '1':
-    # Para permitir cookies em requisições XHR cross-site durante desenvolvimento
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-    app.config['SESSION_COOKIE_SECURE'] = False  # Em produção use True (HTTPS)
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    try:
-        # Ajusta CORS para refletir a origem do front
-        from flask_cors import CORS
-        if FRONTEND_ORIGIN:
-            CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": FRONTEND_ORIGIN}})
-        else:
-            CORS(app, supports_credentials=True)
-    except Exception as _e:
-        pass
-
-# Blueprints serão registrados após a inicialização do banco de dados
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
-ANAMNESE_FORM = [
-    {
-        'ordem': 1,
-        'campo': 'QUAIS SÃO AS COISAS QUE INCOMODAM NO SEU COURO CABELUDO?',
-        'tipo': 'select',
-        'opcoes': ['Coceira', 'Descamação', 'Oleosidade', 'Sensibilidade', 'Feridas', 'Ardor', 'Outro']
-    },
-    {
-        'ordem': 2,
-        'campo': 'QUAIS SÃO AS COISAS QUE INCOMODAM NO COURO CABELUDO?',
-        'tipo': 'select',
-        'opcoes': ['Ressecamento', 'Queda', 'Quebra', 'Frizz', 'Pontas Duplas', 'Outro']
-    },
-    {
-        'ordem': 3,
-        'campo': 'QUAIS PROCESSOS QUÍMICOS VOCÊ JÁ FEZ NO CABELO?',
-        'tipo': 'select',
-        'opcoes': ['Coloração', 'Descoloração', 'Alisamento', 'Relaxamento', 'Progressiva', 'Botox', 'Nenhum']
-    },
-    {
-        'ordem': 4,
-        'campo': 'COM QUE FREQUÊNCIA VOCÊ LAVA O CABELO?',
-        'tipo': 'select',
-        'opcoes': ['Todos os dias', '3x por semana', '2x por semana', '1x por semana', 'Menos de 1x por semana']
-    },
-    {
-        'ordem': 5,
-        'campo': 'JÁ TEVE ANEMIA?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 6,
-        'campo': 'ESTÁ COM QUEDA DE CABELO?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 7,
-        'campo': 'SE SIM HÁ QUANTO TEMPO?',
-        'tipo': 'textarea'
-    },
-    {
-        'ordem': 8,
-        'campo': 'TEM ALERGIA A ALGUMA SUBSTÂNCIA?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 9,
-        'campo': 'SE SIM, QUAL (SUBSTÂNCIA)?',
-        'tipo': 'text'
-    },
-    {
-        'ordem': 10,
-        'campo': 'JÁ FOI DIAGNOSTICADO ALGUM TIPO DE ALOPECIA OU CALVÍCIE?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 11,
-        'campo': 'TEVE ALGUMA ALTERAÇÃO HORMONAL A MENOS DE UM ANO?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 12,
-        'campo': 'JÁ FEZ TRATAMENTO PARA QUEDA?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 14,
-        'campo': 'QUAL MARCA DE SHAMPOO E CONDICIONADOR VOCÊ COSTUMA USAR?',
-        'tipo': 'text'
-    },
-    {
-        'ordem': 15,
-        'campo': 'FAZ USO DE PRODUTOS SEM ENXÁGUE?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 16,
-        'campo': 'SE SIM QUAL SEM ENXÁGUE?',
-        'tipo': 'text'
-    },
-    {
-        'ordem': 17,
-        'campo': 'QUANDO LAVA TEM COSTUME DE SECAR O CABELO?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 18,
-        'campo': 'VOCÊ É VEGANO?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 19,
-        'campo': 'VOCÊ É CELÍACO?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 20,
-        'campo': 'VOCÊ É VEGETARIANO?',
-        'tipo': 'radio',
-        'opcoes': ['Sim', 'Não']
-    },
-    {
-        'ordem': 21,
-        'campo': 'COMO VOCÊ CONHECEU O BIOMA UBERABA?',
-        'tipo': 'checkbox',
-        'opcoes': ['Redes sociais', 'Indicação', 'Busca no Google', 'Eventos', 'Passagem em frente', 'Outro']
-    }
-]
-
-PRONTUARIO_FORM = [
-    {'ordem': 1, 'campo': 'Alquimia', 'tipo': 'text'},
-    {'ordem': 2, 'campo': 'Protocolo Adotado', 'tipo': 'textarea'},
-    {'ordem': 3, 'campo': 'Técnicas Complementares', 'tipo': 'textarea'},
-    {'ordem': 4, 'campo': 'Produtos Utilizados', 'tipo': 'textarea'},
-    {'ordem': 5, 'campo': 'Valor Cobrado', 'tipo': 'text'},
-    {'ordem': 6, 'campo': 'Observações Durante o Atendimento', 'tipo': 'textarea'},
-    {'ordem': 7, 'campo': 'Vendas', 'tipo': 'text'}
-]
-
-def default_form_state(definition):
-    return {item['campo']: '' for item in definition}
-
+# Helper para obter DB do current_app
 def get_db():
-    try:
-        username = urllib.parse.quote_plus(os.getenv('MONGO_USERNAME', ''))
-        password = urllib.parse.quote_plus(os.getenv('MONGO_PASSWORD', ''))
-        cluster = os.getenv('MONGO_CLUSTER', '')
-        
-        if not all([username, password, cluster]):
-            logger.error("❌ MongoDB credentials missing")
-            return None
-        
-        uri = f"mongodb+srv://{username}:{password}@{cluster}/bioma_db?retryWrites=true&w=majority&appName=Juan-Analytics-DBServer"
-        # Melhorado: timeouts mais curtos para evitar travamentos
-        client = MongoClient(
-            uri, 
-            serverSelectionTimeoutMS=3000,
-            connectTimeoutMS=3000,
-            socketTimeoutMS=3000,
-            maxPoolSize=10,
-            minPoolSize=1,
-            maxIdleTimeMS=30000
-        )
-        # Ping para testar conexão
-        client.admin.command('ping')
-        db_instance = client.bioma_db
-        logger.info("✅ MongoDB Connected")
-        return db_instance
-    except Exception as e:
-        logger.error(f"❌ MongoDB Failed: {e}")
-        return None
+    return current_app.config.get('DB_CONNECTION')
 
-db = get_db()
-# Adicionar DB ao app.config para acesso do blueprint
-app.config['DB_CONNECTION'] = db
+# Alias para compatibilidade com código existente
+db = None  # Será definido em cada função usando get_db()
 
-# ==================== SISTEMA AUTO-CONTIDO ====================
-# TODAS as rotas estão definidas diretamente neste arquivo (app.py)
-# NÃO há dependências de arquivos externos backend_routes ou backend_routes_complete
-logger.info("✅ Sistema auto-contido - Todas as rotas definidas em app.py")
 
-def convert_objectid(obj):
-    if isinstance(obj, list):
-        return [convert_objectid(item) for item in obj]
-    elif isinstance(obj, dict):
-        result = {}
-        for key, value in obj.items():
-            if isinstance(value, ObjectId):
-                result[key] = str(value)
-            elif isinstance(value, datetime):
-                result[key] = value.isoformat()
-            elif isinstance(value, (dict, list)):
-                result[key] = convert_objectid(value)
-            else:
-                result[key] = value
-        return result
-    elif isinstance(obj, ObjectId):
-        return str(obj)
-    elif isinstance(obj, datetime):
-        return obj.isoformat()
-    else:
-        return obj
 
-def update_cliente_denormalized_fields(cliente_cpf):
-    """
-    Update denormalized fields on cliente document for performance.
 
-    This function calculates and stores:
-    - total_faturado: Sum of all approved orcamentos
-    - ultima_visita: Date of last orcamento
-    - total_visitas: Count of all orcamentos
-
-    This prevents N+1 query problem when loading cliente lists.
-    """
-    if db is None or not cliente_cpf:
-        return
-
-    try:
-        # Calculate aggregated values
-        total_faturado = sum(
-            o.get('total_final', 0)
-            for o in db.orcamentos.find(
-                {'cliente_cpf': cliente_cpf, 'status': 'Aprovado'},
-                {'total_final': 1}
-            )
-        )
-
-        ultimo_orc = db.orcamentos.find_one(
-            {'cliente_cpf': cliente_cpf},
-            sort=[('created_at', DESCENDING)],
-            projection={'created_at': 1}
-        )
-
-        ultima_visita = ultimo_orc['created_at'] if ultimo_orc else None
-        total_visitas = db.orcamentos.count_documents({'cliente_cpf': cliente_cpf})
-
-        # Update cliente document with denormalized values
-        db.clientes.update_one(
-            {'cpf': cliente_cpf},
-            {'$set': {
-                'total_faturado': total_faturado,
-                'ultima_visita': ultima_visita,
-                'total_visitas': total_visitas,
-                'updated_at': datetime.now()
-            }}
-        )
-
-        logger.debug(f"✅ Updated denormalized fields for cliente CPF: {cliente_cpf}")
-
-    except Exception as e:
-        logger.error(f"❌ Error updating denormalized fields for cliente {cliente_cpf}: {e}")
-
-def get_assistente_details(assistente_id, assistente_tipo=None):
-    """Recupera os dados do assistente a partir do ID informado.
-
-    O assistente pode estar na coleção de profissionais ou na coleção dedicada
-    de assistentes. O campo assistente_tipo permite definir explicitamente a
-    prioridade de busca e garante compatibilidade com registros antigos que
-    armazenavam apenas o ID do profissional.
-    """
-    if not assistente_id or db is None:
-        return None
-
-    def _find_in_profissionais(doc_id):
-        try:
-            return db.profissionais.find_one({'_id': ObjectId(doc_id)})
-        except Exception:
-            return None
-
-    def _find_in_assistentes(doc_id):
-        try:
-            return db.assistentes.find_one({'_id': ObjectId(doc_id)})
-        except Exception:
-            return None
-
-    lookup_order = []
-    if assistente_tipo == 'assistente':
-        lookup_order = [_find_in_assistentes, _find_in_profissionais]
-    elif assistente_tipo == 'profissional':
-        lookup_order = [_find_in_profissionais, _find_in_assistentes]
-    else:
-        lookup_order = [_find_in_profissionais, _find_in_assistentes]
-
-    for finder in lookup_order:
-        registro = finder(assistente_id)
-        if registro:
-            dados = convert_objectid(registro)
-            dados['tipo_origem'] = 'assistente' if finder is _find_in_assistentes else 'profissional'
-            return dados
-    return None
-
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            logger.warning(f"🚫 Unauthorized: {request.endpoint}")
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 401
-        return f(*args, **kwargs)
-    return decorated
-
-def permission_required(*allowed_roles):
-    """
-    Decorator para verificar permissões do usuário
-
-    Uso:
-        @permission_required('Admin')
-        @permission_required('Admin', 'Gestor')
-
-    Tipos de acesso disponíveis:
-        - Admin: Acesso total ao sistema
-        - Gestor: Acesso gerencial (sem configurações críticas)
-        - Profissional: Acesso limitado (agenda, atendimentos, prontuários)
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
-                logger.warning(f"🚫 Unauthorized access attempt: {request.endpoint}")
-                return jsonify({
-                    'success': False,
-                    'message': 'Acesso não autorizado. Faça login.'
-                }), 401
-
-            # Buscar tipo de acesso do usuário
-            user_tipo_acesso = session.get('tipo_acesso', 'Profissional')
-
-            # Verificar se o tipo de acesso do usuário está entre os permitidos
-            if user_tipo_acesso not in allowed_roles:
-                logger.warning(f"🚫 Forbidden: {session.get('username')} ({user_tipo_acesso}) tried to access {request.endpoint}")
-                return jsonify({
-                    'success': False,
-                    'message': f'Acesso negado. Esta funcionalidade requer permissão de: {", ".join(allowed_roles)}'
-                }), 403
-
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def get_user_permissions():
-    """Retorna as permissões do usuário atual"""
-    if 'user_id' not in session or db is None:
-        return None
-
-    try:
-        user = db.users.find_one({'_id': ObjectId(session['user_id'])})
-        if not user:
-            return None
-
-        tipo_acesso = user.get('tipo_acesso', 'Profissional')
-
-        # Definir permissões por tipo de acesso
-        permissions = {
-            'Admin': {
-                'can_manage_users': True,
-                'can_manage_products': True,
-                'can_manage_services': True,
-                'can_view_financial': True,
-                'can_manage_settings': True,
-                'can_view_audit': True,
-                'can_manage_contracts': True,
-                'can_view_reports': True,
-                'can_manage_employees': True
-            },
-            'Gestor': {
-                'can_manage_users': False,
-                'can_manage_products': True,
-                'can_manage_services': True,
-                'can_view_financial': True,
-                'can_manage_settings': False,
-                'can_view_audit': True,
-                'can_manage_contracts': True,
-                'can_view_reports': True,
-                'can_manage_employees': True
-            },
-            'Profissional': {
-                'can_manage_users': False,
-                'can_manage_products': False,
-                'can_manage_services': False,
-                'can_view_financial': False,
-                'can_manage_settings': False,
-                'can_view_audit': False,
-                'can_manage_contracts': False,
-                'can_view_reports': False,
-                'can_manage_employees': False
-            }
-        }
-
-        return {
-            'tipo_acesso': tipo_acesso,
-            'permissions': permissions.get(tipo_acesso, permissions['Profissional'])
-        }
-    except Exception as e:
-        logger.error(f"Erro ao obter permissões: {e}")
-        return None
-
-def send_email(to, name, subject, html_content, pdf=None):
-    api_key = os.getenv('MAILERSEND_API_KEY')
-    from_email = os.getenv('MAILERSEND_FROM_EMAIL')
-    from_name = os.getenv('MAILERSEND_FROM_NAME', 'BIOMA Uberaba')
-    
-    if not api_key or not from_email:
-        logger.warning("⚠️ MailerSend não configurado")
-        return {'success': False, 'message': 'Email não configurado'}
-    
-    data = {"from": {"email": from_email, "name": from_name}, "to": [{"email": to, "name": name}], "subject": subject, "html": html_content}
-    
-    if pdf:
-        import base64
-        data['attachments'] = [{"filename": pdf['filename'], "content": base64.b64encode(pdf['content']).decode(), "disposition": "attachment"}]
-    
-    try:
-        logger.info(f"📧 Enviando para: {to}")
-        r = requests.post("https://api.mailersend.com/v1/email", headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}, json=data, timeout=10)
-        if r.status_code == 202:
-            logger.info(f"✅ Email enviado: {to}")
-            return {'success': True}
-        else:
-            logger.error(f"❌ Email falhou: {r.status_code}")
-            return {'success': False}
-    except Exception as e:
-        logger.error(f"❌ Email exception: {e}")
-        return {'success': False}
-
-def clear_cache(prefix=None):
-    """Limpar cache completo ou apenas prefixos específicos"""
-    global request_cache
-    if prefix:
-        keys_to_delete = [k for k in request_cache.keys() if k.startswith(prefix)]
-        for k in keys_to_delete:
-            del request_cache[k]
-    else:
-        request_cache.clear()
-
-def registrar_auditoria(acao, entidade, entidade_id, dados_antes=None, dados_depois=None):
-    """Registrar ação de auditoria no sistema"""
-    if db is None:
-        return
-    
-    try:
-        usuario_id = session.get('user_id')
-        username = session.get('username', 'sistema')
-        
-        registro = {
-            'usuario_id': usuario_id,
-            'username': username,
-            'acao': acao,  # 'criar', 'editar', 'deletar', 'aprovar', 'rejeitar'
-            'entidade': entidade,  # 'cliente', 'produto', 'orcamento', etc
-            'entidade_id': entidade_id,
-            'dados_antes': dados_antes,
-            'dados_depois': dados_depois,
-            'timestamp': datetime.now(),
-            'ip': request.remote_addr,
-            'user_agent': request.headers.get('User-Agent', '')
-        }
-        
-        db.auditoria.insert_one(registro)
-        logger.info(f"Auditoria: {username} - {acao} {entidade} {entidade_id}")
-    except Exception as e:
-        logger.error(f"Erro ao registrar auditoria: {e}")
-
-@app.before_request
-def before_request_handler():
-    """Limpar cache relevante antes de operações de escrita"""
-    if request.method in ['POST', 'PUT', 'DELETE']:
-        # Limpar cache relacionado ao endpoint
-        if 'servicos' in request.path:
-            clear_cache('servicos_')
-        elif 'produtos' in request.path:
-            clear_cache('produtos_')
-        elif 'profissionais' in request.path:
-            clear_cache('profissionais_')
-        elif 'clientes' in request.path:
-            clear_cache('clientes_')
-
-@app.route('/')
+@bp.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/health')
+@bp.route('/health')
 def health():
     db_status = 'connected' if db is not None else 'disconnected'
     if db is not None:
@@ -574,7 +70,7 @@ def health():
             db_status = 'error'
     return jsonify({'status': 'healthy', 'time': datetime.now().isoformat(), 'database': db_status, 'version': '3.7.0'}), 200
 
-@app.route('/api/login', methods=['POST'])
+@bp.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     logger.info(f"🔐 Login attempt: {data.get('username')}")
@@ -614,7 +110,7 @@ def login():
         logger.error(f"❌ Login ERROR: {e}")
         return jsonify({'success': False, 'message': 'Erro no servidor'}), 500
 
-@app.route('/api/register', methods=['POST'])
+@bp.route('/api/register', methods=['POST'])
 def register():
     data = request.json
     logger.info(f"👤 Register attempt: {data.get('username')}")
@@ -647,14 +143,14 @@ def register():
         logger.error(f"❌ Register ERROR: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/logout', methods=['POST'])
+@bp.route('/api/logout', methods=['POST'])
 def logout():
     username = session.get('username', 'Unknown')
     session.clear()
     logger.info(f"🚪 Logout: {username}")
     return jsonify({'success': True})
 
-@app.route('/api/current-user')
+@bp.route('/api/current-user')
 def current_user():
     if 'user_id' in session and db is not None:
         try:
@@ -680,7 +176,7 @@ def current_user():
             logger.error(f"❌ Current user error: {e}")
     return jsonify({'success': False})
 
-@app.route('/api/permissions')
+@bp.route('/api/permissions')
 @login_required
 def get_permissions():
     """Retorna as permissões do usuário atual"""
@@ -698,7 +194,7 @@ def get_permissions():
             'message': 'Não foi possível obter permissões'
         }), 500
 
-@app.route('/api/update-theme', methods=['POST'])
+@bp.route('/api/update-theme', methods=['POST'])
 @login_required
 def update_theme():
     if db is None:
@@ -712,7 +208,7 @@ def update_theme():
 
 # ==================== GESTÃO DE USUÁRIOS E TIPOS DE ACESSO (Diretriz #6) ====================
 
-@app.route('/api/users', methods=['GET'])
+@bp.route('/api/users', methods=['GET'])
 @login_required
 @permission_required('Admin')
 def list_users():
@@ -729,7 +225,7 @@ def list_users():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/users/<id>/tipo-acesso', methods=['PUT'])
+@bp.route('/api/users/<id>/tipo-acesso', methods=['PUT'])
 @login_required
 @permission_required('Admin')
 def update_user_tipo_acesso(id):
@@ -763,7 +259,7 @@ def update_user_tipo_acesso(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/users/<id>', methods=['GET'])
+@bp.route('/api/users/<id>', methods=['GET'])
 @login_required
 def get_user(id):
     """Obter detalhes de um usuário específico"""
@@ -782,7 +278,7 @@ def get_user(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/system/status')
+@bp.route('/api/system/status')
 @login_required
 def system_status():
     mongo_ok = False
@@ -804,7 +300,7 @@ def system_status():
         }
     })
 
-@app.route('/api/dashboard/stats')
+@bp.route('/api/dashboard/stats')
 @login_required
 def dashboard_stats():
     if db is None:
@@ -830,7 +326,7 @@ def dashboard_stats():
         logger.error(f"Erro ao buscar stats: {e}")
         return jsonify({'success': False}), 500
 
-@app.route('/api/dashboard/stats/realtime')
+@bp.route('/api/dashboard/stats/realtime')
 @login_required
 def dashboard_stats_realtime():
     """Estatísticas em tempo real com métricas avançadas"""
@@ -991,7 +487,7 @@ def dashboard_stats_realtime():
         logger.error(f"❌ Dashboard stats error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes', methods=['GET', 'POST'])
+@bp.route('/api/clientes', methods=['GET', 'POST'])
 @login_required
 def clientes():
     if db is None:
@@ -1096,7 +592,7 @@ def clientes():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes/<id>', methods=['DELETE'])
+@bp.route('/api/clientes/<id>', methods=['DELETE'])
 @login_required
 def delete_cliente(id):
     if db is None:
@@ -1107,7 +603,7 @@ def delete_cliente(id):
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/clientes/<id>', methods=['GET'])
+@bp.route('/api/clientes/<id>', methods=['GET'])
 @login_required
 def get_cliente(id):
     """Visualizar um cliente específico"""
@@ -1132,7 +628,7 @@ def get_cliente(id):
         logger.error(f"Erro ao buscar cliente: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes/<id>', methods=['PUT'])
+@bp.route('/api/clientes/<id>', methods=['PUT'])
 @login_required
 def update_cliente(id):
     """Editar um cliente existente"""
@@ -1188,7 +684,7 @@ def update_cliente(id):
         logger.error(f"Erro ao atualizar cliente: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes/buscar')
+@bp.route('/api/clientes/buscar')
 @login_required
 def buscar_clientes():
     if db is None:
@@ -1224,7 +720,7 @@ def buscar_clientes():
         logger.error(f"Erro ao buscar clientes: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/busca/global', methods=['GET'])
+@bp.route('/api/busca/global', methods=['GET'])
 @login_required
 def busca_global():
     """Busca global em múltiplas collections"""
@@ -1331,7 +827,7 @@ def busca_global():
         logger.error(f"Erro na busca global: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/profissionais', methods=['GET', 'POST'])
+@bp.route('/api/profissionais', methods=['GET', 'POST'])
 @login_required
 def profissionais():
     if db is None:
@@ -1422,7 +918,7 @@ def profissionais():
         logger.error(f"Erro ao cadastrar profissional: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/profissionais/<id>', methods=['DELETE'])
+@bp.route('/api/profissionais/<id>', methods=['DELETE'])
 @login_required
 def delete_profissional(id):
     if db is None:
@@ -1433,7 +929,7 @@ def delete_profissional(id):
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/profissionais/<id>', methods=['GET'])
+@bp.route('/api/profissionais/<id>', methods=['GET'])
 @login_required
 def get_profissional(id):
     """Visualizar um profissional especifico com estatisticas completas"""
@@ -1575,7 +1071,7 @@ def get_profissional(id):
         logger.error(f"Erro ao buscar profissional: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/comissao/calcular', methods=['POST'])
+@bp.route('/api/comissao/calcular', methods=['POST'])
 @login_required
 def calcular_comissao():
     """Calcular comissoes de profissional e assistente para um orcamento"""
@@ -1668,7 +1164,7 @@ def calcular_comissao():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/profissionais/<id>/avaliacoes', methods=['GET', 'POST'])
+@bp.route('/api/profissionais/<id>/avaliacoes', methods=['GET', 'POST'])
 @login_required
 def profissional_avaliacoes(id):
     """Registrar e listar avaliacoes de profissionais."""
@@ -1709,7 +1205,7 @@ def profissional_avaliacoes(id):
         return jsonify({'success': False, 'message': 'Erro ao registrar avaliacao'}), 500
 
 
-@app.route('/api/profissionais/<id>/upload-foto', methods=['POST'])
+@bp.route('/api/profissionais/<id>/upload-foto', methods=['POST'])
 @login_required
 def upload_foto_profissional(id):
     """Upload de foto de perfil para profissionais (Diretriz #12)"""
@@ -1778,7 +1274,7 @@ def upload_foto_profissional(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/assistentes', methods=['GET', 'POST'])
+@bp.route('/api/assistentes', methods=['GET', 'POST'])
 @login_required
 def assistentes():
     """Gerenciar assistentes (que podem não ser profissionais ativos)"""
@@ -1808,7 +1304,7 @@ def assistentes():
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/assistentes/<id>', methods=['DELETE'])
+@bp.route('/api/assistentes/<id>', methods=['DELETE'])
 @login_required
 def delete_assistente(id):
     if db is None:
@@ -1866,7 +1362,7 @@ def format_date_pt_br(dt):
     meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
     return f"{dt.day} de {meses[dt.month - 1]} de {dt.year}"
 
-@app.route('/api/orcamento/<id>/pdf')
+@bp.route('/api/orcamento/<id>/pdf')
 @login_required
 def gerar_pdf_orcamento_singular(id):
     if db is None:
@@ -2038,7 +1534,7 @@ def gerar_pdf_orcamento_singular(id):
 # --- FIM DA SEÇÃO MODIFICADA ---
 
 
-@app.route('/api/contratos')
+@bp.route('/api/contratos')
 @login_required
 def contratos():
     if db is None:
@@ -2049,7 +1545,7 @@ def contratos():
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/agendamentos', methods=['GET', 'POST'])
+@bp.route('/api/agendamentos', methods=['GET', 'POST'])
 @login_required
 def agendamentos():
     if db is None:
@@ -2137,7 +1633,7 @@ def agendamentos():
             'message': 'Erro interno ao criar agendamento'
         }), 500
 
-@app.route('/api/agendamentos/horarios-disponiveis', methods=['GET'])
+@bp.route('/api/agendamentos/horarios-disponiveis', methods=['GET'])
 @login_required
 def horarios_disponiveis():
     """Verificar horários disponíveis para uma data específica"""
@@ -2183,7 +1679,7 @@ def horarios_disponiveis():
         logger.error(f"Erro ao buscar horários disponíveis: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/agendamentos/mapa-calor', methods=['GET'])
+@bp.route('/api/agendamentos/mapa-calor', methods=['GET'])
 @login_required
 def mapa_calor_agendamentos():
     """Gerar mapa de calor de agendamentos e orçamentos"""
@@ -2240,7 +1736,7 @@ def mapa_calor_agendamentos():
         logger.error(f"Erro ao gerar mapa de calor: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/agendamentos/<id>', methods=['DELETE'])
+@bp.route('/api/agendamentos/<id>', methods=['DELETE'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def delete_agendamento(id):
@@ -2257,7 +1753,7 @@ def delete_agendamento(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # ========== NOVOS ENDPOINTS AGENDAMENTOS - SUB-TABS ==========
-@app.route('/api/agendamentos/hoje', methods=['GET'])
+@bp.route('/api/agendamentos/hoje', methods=['GET'])
 @login_required
 def agendamentos_hoje():
     """Buscar agendamentos de hoje com estatísticas"""
@@ -2323,7 +1819,7 @@ def agendamentos_hoje():
         logger.error(f"Erro em agendamentos_hoje: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/agendamentos/semana', methods=['GET'])
+@bp.route('/api/agendamentos/semana', methods=['GET'])
 @login_required
 def agendamentos_semana():
     """Buscar agendamentos da semana atual"""
@@ -2369,7 +1865,7 @@ def agendamentos_semana():
         logger.error(f"Erro em agendamentos_semana: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/agendamentos/mes', methods=['GET'])
+@bp.route('/api/agendamentos/mes', methods=['GET'])
 @login_required
 def agendamentos_mes():
     """Buscar agendamentos do mês atual"""
@@ -2421,7 +1917,7 @@ def agendamentos_mes():
         logger.error(f"Erro em agendamentos_mes: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/fila', methods=['GET', 'POST'])
+@bp.route('/api/fila', methods=['GET', 'POST'])
 @login_required
 def fila():
     if db is None:
@@ -2440,7 +1936,7 @@ def fila():
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/fila/<id>', methods=['DELETE'])
+@bp.route('/api/fila/<id>', methods=['DELETE'])
 @login_required
 def delete_fila(id):
     if db is None:
@@ -2454,7 +1950,7 @@ def delete_fila(id):
 
 # ==================== NOTIFICAÇÕES INTELIGENTES PARA FILA (Diretriz #10) ====================
 
-@app.route('/api/fila/<id>/notificar', methods=['POST'])
+@bp.route('/api/fila/<id>/notificar', methods=['POST'])
 @login_required
 def notificar_cliente_fila(id):
     """Enviar notificação SMS/Email para cliente na fila"""
@@ -2546,7 +2042,7 @@ Equipe BIOMA"""
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/fila/notificar-todos', methods=['POST'])
+@bp.route('/api/fila/notificar-todos', methods=['POST'])
 @login_required
 def notificar_todos_fila():
     """Notificar todos os clientes na fila sobre sua posição"""
@@ -2603,7 +2099,7 @@ def notificar_todos_fila():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/notificacoes', methods=['GET'])
+@bp.route('/api/notificacoes', methods=['GET'])
 @login_required
 def listar_notificacoes():
     """Listar histórico de notificações"""
@@ -2626,7 +2122,7 @@ def listar_notificacoes():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/estoque/entrada', methods=['POST'])
+@bp.route('/api/estoque/entrada', methods=['POST'])
 @login_required
 def registrar_entrada_estoque():
     '''Registrar uma nova entrada de estoque que deve ser aprovada.'''
@@ -2671,7 +2167,7 @@ def registrar_entrada_estoque():
         return jsonify({'success': False, 'message': 'Erro interno ao registrar entrada'}), 500
 
 
-@app.route('/api/estoque/entrada/pendentes', methods=['GET'])
+@bp.route('/api/estoque/entrada/pendentes', methods=['GET'])
 @login_required
 def estoque_entradas_pendentes():
     '''Listar entradas de estoque pendentes de aprovacao.'''
@@ -2690,7 +2186,7 @@ def estoque_entradas_pendentes():
         return jsonify({'success': False, 'message': 'Erro ao listar entradas pendentes'}), 500
 
 
-@app.route('/api/estoque/entrada/<id>', methods=['PUT'])
+@bp.route('/api/estoque/entrada/<id>', methods=['PUT'])
 @login_required
 def atualizar_entrada_estoque(id):
     '''Atualizar uma entrada pendente antes da aprovacao.'''
@@ -2730,7 +2226,7 @@ def atualizar_entrada_estoque(id):
         return jsonify({'success': False, 'message': 'Erro ao atualizar entrada'}), 500
 
 
-@app.route('/api/estoque/entrada/<id>/aprovar', methods=['POST'])
+@bp.route('/api/estoque/entrada/<id>/aprovar', methods=['POST'])
 @login_required
 def aprovar_entrada_estoque(id):
     '''Aprovar uma entrada de estoque pendente.'''
@@ -2772,7 +2268,7 @@ def aprovar_entrada_estoque(id):
         return jsonify({'success': False, 'message': 'Erro ao aprovar entrada'}), 500
 
 
-@app.route('/api/estoque/entrada/<id>/rejeitar', methods=['POST'])
+@bp.route('/api/estoque/entrada/<id>/rejeitar', methods=['POST'])
 @login_required
 def rejeitar_entrada_estoque(id):
     '''Rejeitar uma entrada pendente de estoque.'''
@@ -2800,7 +2296,7 @@ def rejeitar_entrada_estoque(id):
         return jsonify({'success': False, 'message': 'Erro ao rejeitar entrada'}), 500
 
 
-@app.route('/api/estoque/alerta')
+@bp.route('/api/estoque/alerta')
 @login_required
 def estoque_alerta():
     if db is None:
@@ -2811,7 +2307,7 @@ def estoque_alerta():
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/estoque/movimentacao', methods=['POST'])
+@bp.route('/api/estoque/movimentacao', methods=['POST'])
 @login_required
 def estoque_movimentacao():
     if db is None:
@@ -2834,7 +2330,7 @@ def estoque_movimentacao():
     except:
         return jsonify({'success': False}), 500
 
-@app.route('/api/estoque/movimentacoes', methods=['GET'])
+@bp.route('/api/estoque/movimentacoes', methods=['GET'])
 @login_required
 def listar_movimentacoes():
     """Listar movimentações de estoque com paginação e filtros"""
@@ -2905,7 +2401,7 @@ def listar_movimentacoes():
         logger.error(f"Erro ao listar movimentações: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/estoque/saida', methods=['POST'])
+@bp.route('/api/estoque/saida', methods=['POST'])
 @login_required
 def registrar_saida_estoque():
     """Registrar saída de estoque"""
@@ -2963,7 +2459,7 @@ def registrar_saida_estoque():
         logger.error(f"Erro ao registrar saída: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/estoque/relatorio', methods=['GET'])
+@bp.route('/api/estoque/relatorio', methods=['GET'])
 @login_required
 def relatorio_estoque():
     """Gerar relatório completo de estoque com filtros e opção de export"""
@@ -3095,7 +2591,7 @@ def relatorio_estoque():
         logger.error(f"Erro ao gerar relatório: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/importar', methods=['POST'])
+@bp.route('/api/importar', methods=['POST'])
 @login_required
 def importar():
     if db is None:
@@ -3301,13 +2797,13 @@ def importar():
         return jsonify({'success': False}), 500
 
 
-@app.route('/api/estoque/importar', methods=['POST'])
+@bp.route('/api/estoque/importar', methods=['POST'])
 @login_required
 def estoque_importar_alias():
     """Alias para importação de planilhas do estoque; reutiliza a rota /api/importar existente."""
     return importar()
 
-@app.route('/api/template/download/<tipo>')
+@bp.route('/api/template/download/<tipo>')
 @login_required
 def download_template(tipo):
     wb = Workbook()
@@ -3347,7 +2843,7 @@ def download_template(tipo):
 
 
 
-@app.route('/api/clientes/formularios', methods=['GET'])
+@bp.route('/api/clientes/formularios', methods=['GET'])
 @login_required
 def clientes_formularios():
     """Retorna a configuração dos formulários de Anamnese e Prontuário para renderização dinâmica no front."""
@@ -3360,7 +2856,7 @@ def clientes_formularios():
     except Exception as e:
         logger.exception("Erro ao carregar formulários")
         return jsonify({'success': False, 'message': str(e)}), 500
-@app.route('/api/config', methods=['GET', 'POST'])
+@bp.route('/api/config', methods=['GET', 'POST'])
 @login_required
 def config():
     if db is None:
@@ -3396,7 +2892,7 @@ def config():
         return jsonify({'success': False, 'message': str(e)}), 500
         return jsonify({'success': False}), 500
 
-@app.route('/api/relatorios/completo', methods=['GET'])
+@bp.route('/api/relatorios/completo', methods=['GET'])
 @login_required
 def relatorio_completo():
     """Relatório completo com todas as estatísticas do sistema"""
@@ -3600,7 +3096,7 @@ def relatorio_completo():
         logger.error(f"Erro ao gerar relatório: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/auditoria', methods=['GET'])
+@bp.route('/api/auditoria', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def consultar_auditoria():
@@ -3764,11 +3260,11 @@ def init_db():
         logger.warning(f"⚠️ Index creation warning: {e}")
     logger.info("🎉 DB initialization complete!")
 
-@app.errorhandler(404)
+@bp.errorhandler(404)
 def not_found(e):
     return jsonify({'success': False, 'message': 'Not found'}), 404
 
-@app.errorhandler(500)
+@bp.errorhandler(500)
 def internal_error(e):
     logger.error(f"❌ 500 Internal Error: {e}")
     return jsonify({'success': False, 'message': 'Internal server error'}), 500
@@ -3776,7 +3272,7 @@ def internal_error(e):
 # ==================== NOVAS FUNCIONALIDADES v3.7 ====================
 
 # 1. Upload de Logo da Empresa
-@app.route('/api/upload/logo', methods=['POST'])
+@bp.route('/api/upload/logo', methods=['POST'])
 @login_required
 def upload_logo():
     """Upload de logo da empresa (armazenado como base64, SEM arquivos externos)"""
@@ -3834,14 +3330,14 @@ def upload_logo():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 1.1. Upload de Imagem (Alias para compatibilidade)
-@app.route('/api/upload/imagem', methods=['POST'])
+@bp.route('/api/upload/imagem', methods=['POST'])
 @login_required
 def upload_imagem():
     """Alias para compatibilidade com frontend"""
     return upload_logo()
 
 # 2. Obter Logo Configurado
-@app.route('/api/config/logo', methods=['GET'])
+@bp.route('/api/config/logo', methods=['GET'])
 def get_logo():
     """Obter Data URI do logo configurado (sem arquivos externos)"""
     try:
@@ -3857,7 +3353,7 @@ def get_logo():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 3. Servir Arquivos Uploaded (DEPRECATED - Sistema usa Data URI agora)
-@app.route('/uploads/<filename>')
+@bp.route('/uploads/<filename>')
 def uploaded_file(filename):
     """
     DEPRECATED: Sistema agora usa Data URI (base64) armazenado diretamente no MongoDB.
@@ -3882,7 +3378,7 @@ def uploaded_file(filename):
         return jsonify({'success': False, 'message': 'Arquivo não encontrado'}), 404
 
 # 4. Upload de Foto de Profissional (via form data)
-@app.route('/api/upload/foto-profissional', methods=['POST'])
+@bp.route('/api/upload/foto-profissional', methods=['POST'])
 @login_required
 def upload_foto_profissional_form():
     """Upload de foto de perfil de profissional via form data (armazenado como base64, SEM arquivos externos)"""
@@ -3954,7 +3450,7 @@ def upload_foto_profissional_form():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 5. Calcular Comissões Multiníveis
-@app.route('/api/comissoes/calcular-orcamento', methods=['POST'])
+@bp.route('/api/comissoes/calcular-orcamento', methods=['POST'])
 @login_required
 def calcular_comissoes_orcamento():
     """Calcula comissões em cascata: profissional + assistente"""
@@ -4030,7 +3526,7 @@ def calcular_comissoes_orcamento():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 6. Histórico de Comissões
-@app.route('/api/comissoes/historico', methods=['GET'])
+@bp.route('/api/comissoes/historico', methods=['GET'])
 @login_required
 def historico_comissoes():
     """Lista histórico de comissões calculadas"""
@@ -4060,7 +3556,7 @@ def historico_comissoes():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 7. Cadastrar Assistente Independente
-@app.route('/api/assistentes/cadastrar-independente', methods=['POST'])
+@bp.route('/api/assistentes/cadastrar-independente', methods=['POST'])
 @login_required
 def cadastrar_assistente_independente():
     """Cadastra assistente sem vínculo obrigatório com profissional"""
@@ -4086,7 +3582,7 @@ def cadastrar_assistente_independente():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 8. Registrar Entrada de Produto (com aprovação)
-@app.route('/api/estoque/produtos/entrada', methods=['POST'])
+@bp.route('/api/estoque/produtos/entrada', methods=['POST'])
 @login_required
 def registrar_entrada_produto():
     """Registra entrada de produto que precisa ser aprovada"""
@@ -4118,7 +3614,7 @@ def registrar_entrada_produto():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 9. Aprovar Entrada de Produto
-@app.route('/api/estoque/produtos/aprovar/<id>', methods=['POST'])
+@bp.route('/api/estoque/produtos/aprovar/<id>', methods=['POST'])
 @login_required
 def aprovar_entrada_produto(id):
     """Aprova entrada de produto e atualiza estoque"""
@@ -4156,7 +3652,7 @@ def aprovar_entrada_produto(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 10. Rejeitar Entrada de Produto
-@app.route('/api/estoque/produtos/rejeitar/<id>', methods=['POST'])
+@bp.route('/api/estoque/produtos/rejeitar/<id>', methods=['POST'])
 @login_required
 def rejeitar_entrada_produto(id):
     """Rejeita entrada de produto"""
@@ -4172,7 +3668,7 @@ def rejeitar_entrada_produto(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 11. Listar Entradas Pendentes
-@app.route('/api/estoque/produtos/pendentes', methods=['GET'])
+@bp.route('/api/estoque/produtos/pendentes', methods=['GET'])
 @login_required
 def listar_entradas_pendentes():
     """Lista entradas de produtos pendentes de aprovação"""
@@ -4189,7 +3685,7 @@ def listar_entradas_pendentes():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 12. Mapa de Calor
-@app.route('/api/relatorios/mapa-calor', methods=['GET'])
+@bp.route('/api/relatorios/mapa-calor', methods=['GET'])
 @login_required
 def mapa_calor():
     """Retorna dados melhorados para mapa de calor de movimentação (Diretriz #5)"""
@@ -4341,7 +3837,7 @@ def mapa_calor():
 # NOVOS ENDPOINTS PARA GRÁFICOS AVANÇADOS (Roadmap Section V - Relatórios)
 # ============================================================================
 
-@app.route('/api/relatorios/vendas-por-mes', methods=['GET'])
+@bp.route('/api/relatorios/vendas-por-mes', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_vendas_por_mes():
@@ -4427,7 +3923,7 @@ def relatorio_vendas_por_mes():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/relatorios/servicos-top', methods=['GET'])
+@bp.route('/api/relatorios/servicos-top', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_servicos_top():
@@ -4498,7 +3994,7 @@ def relatorio_servicos_top():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/relatorios/profissionais-desempenho', methods=['GET'])
+@bp.route('/api/relatorios/profissionais-desempenho', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_profissionais_desempenho():
@@ -4569,7 +4065,7 @@ def relatorio_profissionais_desempenho():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/relatorios/produtos-top', methods=['GET'])
+@bp.route('/api/relatorios/produtos-top', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_produtos_top():
@@ -4640,7 +4136,7 @@ def relatorio_produtos_top():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/relatorios/taxa-conversao', methods=['GET'])
+@bp.route('/api/relatorios/taxa-conversao', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def relatorio_taxa_conversao():
@@ -4706,7 +4202,7 @@ def relatorio_taxa_conversao():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 13. Editar Serviço
-@app.route('/api/servicos/<id>/editar', methods=['PUT'])
+@bp.route('/api/servicos/<id>/editar', methods=['PUT'])
 @login_required
 def editar_servico(id):
     """Edita informações de um serviço"""
@@ -4741,7 +4237,7 @@ def editar_servico(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 14. Editar Produto
-@app.route('/api/produtos/<id>/editar', methods=['PUT'])
+@bp.route('/api/produtos/<id>/editar', methods=['PUT'])
 @login_required
 def editar_produto(id):
     """Edita informações de um produto"""
@@ -4776,7 +4272,7 @@ def editar_produto(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 15. Faturamento Total do Cliente
-@app.route('/api/clientes/<id>/faturamento', methods=['GET'])
+@bp.route('/api/clientes/<id>/faturamento', methods=['GET'])
 @login_required
 def faturamento_cliente(id):
     """Retorna faturamento total de um cliente"""
@@ -4795,7 +4291,7 @@ def faturamento_cliente(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 16. Anamnese do Cliente (GET/PUT)
-@app.route('/api/clientes/<id>/anamnese', methods=['GET', 'PUT'])
+@bp.route('/api/clientes/<id>/anamnese', methods=['GET', 'PUT'])
 @login_required
 def anamnese_cliente(id):
     """Gerencia anamnese do cliente"""
@@ -4822,7 +4318,7 @@ def anamnese_cliente(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 17. Prontuário do Cliente (GET/PUT)
-@app.route('/api/clientes/<id>/prontuario', methods=['GET', 'PUT'])
+@bp.route('/api/clientes/<id>/prontuario', methods=['GET', 'PUT'])
 @login_required
 def prontuario_cliente(id):
     """Gerencia prontuário do cliente"""
@@ -4855,7 +4351,7 @@ def prontuario_cliente(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 18. Gerar PDF Resumo do Cliente
-@app.route('/api/clientes/<id>/resumo-pdf', methods=['GET'])
+@bp.route('/api/clientes/<id>/resumo-pdf', methods=['GET'])
 @login_required
 def resumo_pdf_cliente(id):
     """Gera PDF completo com todos os dados do cliente"""
@@ -4939,7 +4435,7 @@ def resumo_pdf_cliente(id):
 
 # ==================== SISTEMA DE ANAMNESE E PRONTUÁRIO ====================
 
-@app.route('/api/clientes/<cpf>/anamnese', methods=['GET', 'POST'])
+@bp.route('/api/clientes/<cpf>/anamnese', methods=['GET', 'POST'])
 @login_required
 def handle_anamnese(cpf):
     """Gerenciar histórico de anamneses de um cliente"""
@@ -5003,7 +4499,7 @@ def handle_anamnese(cpf):
         logger.error(f"❌ Erro em handle_anamnese: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes/<cpf>/anamnese/<id>', methods=['GET', 'DELETE'])
+@bp.route('/api/clientes/<cpf>/anamnese/<id>', methods=['GET', 'DELETE'])
 @login_required
 def handle_anamnese_by_id(cpf, id):
     """Gerenciar anamnese específica"""
@@ -5034,7 +4530,7 @@ def handle_anamnese_by_id(cpf, id):
         logger.error(f"❌ Erro em handle_anamnese_by_id: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes/<cpf>/prontuario', methods=['GET', 'POST'])
+@bp.route('/api/clientes/<cpf>/prontuario', methods=['GET', 'POST'])
 @login_required
 def handle_prontuario(cpf):
     """Gerenciar histórico de prontuários de um cliente"""
@@ -5106,7 +4602,7 @@ def handle_prontuario(cpf):
         logger.error(f"❌ Erro em handle_prontuario: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/clientes/<cpf>/prontuario/<id>', methods=['GET', 'PUT', 'DELETE'])
+@bp.route('/api/clientes/<cpf>/prontuario/<id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def handle_prontuario_by_id(cpf, id):
     """Gerenciar prontuário específico"""
@@ -5170,7 +4666,7 @@ def handle_prontuario_by_id(cpf, id):
 
 # ==================== HISTÓRICO COMPLETO ANAMNESE/PRONTUÁRIO (Diretriz #21) ====================
 
-@app.route('/api/clientes/<cpf>/historico-completo', methods=['GET'])
+@bp.route('/api/clientes/<cpf>/historico-completo', methods=['GET'])
 @login_required
 def historico_completo_cliente(cpf):
     """Obter histórico completo de anamnese e prontuários de um cliente (COM PAGINAÇÃO - Roadmap #11)"""
@@ -5255,7 +4751,7 @@ def historico_completo_cliente(cpf):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/clientes/<cpf>/prontuario/<id>/pdf', methods=['GET'])
+@bp.route('/api/clientes/<cpf>/prontuario/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_prontuario(cpf, id):
     """Gerar PDF de prontuário para impressão (Diretriz #21)"""
@@ -5358,7 +4854,7 @@ def gerar_pdf_prontuario(cpf, id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/clientes/<cpf>/historico-completo/pdf', methods=['GET'])
+@bp.route('/api/clientes/<cpf>/historico-completo/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_historico_completo(cpf):
     """Gerar PDF do histórico completo do cliente (Diretriz #21)"""
@@ -5433,7 +4929,7 @@ def gerar_pdf_historico_completo(cpf):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/clientes/<cpf>/historico-completo/whatsapp', methods=['GET'])
+@bp.route('/api/clientes/<cpf>/historico-completo/whatsapp', methods=['GET'])
 @login_required
 def enviar_whatsapp_historico(cpf):
     """Gerar link WhatsApp com resumo do histórico (Diretriz #21)"""
@@ -5485,7 +4981,7 @@ def enviar_whatsapp_historico(cpf):
 
 # ==================== SISTEMA DE MULTICOMISSÕES ====================
 
-@app.route('/api/orcamentos', methods=['GET', 'POST'])
+@bp.route('/api/orcamentos', methods=['GET', 'POST'])
 @login_required
 def handle_orcamentos():
     """Gerenciar orçamentos com suporte a múltiplos profissionais"""
@@ -5578,7 +5074,7 @@ def handle_orcamentos():
         logger.error(f"❌ Erro em handle_orcamentos: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/api/orcamentos/<id>', methods=['GET', 'PUT', 'DELETE'])
+@bp.route('/api/orcamentos/<id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def handle_orcamento_by_id(id):
     """Gerenciar orçamento específico"""
@@ -5676,7 +5172,7 @@ def handle_orcamento_by_id(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/orcamentos/<id>/pdf', methods=['GET'])
+@bp.route('/api/orcamentos/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_orcamento(id):
     """Gerar PDF de orçamento para impressão (Diretriz #3)"""
@@ -5799,7 +5295,7 @@ def gerar_pdf_orcamento(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/orcamentos/<id>/whatsapp', methods=['GET'])
+@bp.route('/api/orcamentos/<id>/whatsapp', methods=['GET'])
 @login_required
 def enviar_whatsapp_orcamento(id):
     """Gerar link do WhatsApp com orçamento (Diretriz #3)"""
@@ -5862,7 +5358,7 @@ Desconto: R$ {orcamento.get('desconto_valor', 0):.2f}
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/contratos/<id>/pdf', methods=['GET'])
+@bp.route('/api/contratos/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_contrato(id):
     """Gerar PDF de contrato para impressão (Diretriz #4)"""
@@ -6001,7 +5497,7 @@ def gerar_pdf_contrato(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/contratos/<id>/whatsapp', methods=['GET'])
+@bp.route('/api/contratos/<id>/whatsapp', methods=['GET'])
 @login_required
 def enviar_whatsapp_contrato(id):
     """Gerar link do WhatsApp com contrato (Diretriz #4)"""
@@ -6074,7 +5570,7 @@ Obrigado por escolher a BIOMA! 🌿
 
 # ==================== MÓDULO FINANCEIRO (Diretriz #7) ====================
 
-@app.route('/api/financeiro/dashboard', methods=['GET'])
+@bp.route('/api/financeiro/dashboard', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def financeiro_dashboard():
@@ -6155,7 +5651,7 @@ def financeiro_dashboard():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/financeiro/despesas', methods=['GET', 'POST'])
+@bp.route('/api/financeiro/despesas', methods=['GET', 'POST'])
 @login_required
 def financeiro_despesas():
     """Gerenciar despesas (GET: Admin/Gestão, POST: Admin only)"""
@@ -6217,7 +5713,7 @@ def financeiro_despesas():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/financeiro/despesas/<id>', methods=['PUT', 'DELETE'])
+@bp.route('/api/financeiro/despesas/<id>', methods=['PUT', 'DELETE'])
 @login_required
 @permission_required('Admin')
 def handle_despesa(id):
@@ -6256,7 +5752,7 @@ def handle_despesa(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/financeiro/relatorio', methods=['GET'])
+@bp.route('/api/financeiro/relatorio', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def financeiro_relatorio():
@@ -6316,7 +5812,7 @@ def financeiro_relatorio():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/financeiro/receitas', methods=['GET'])
+@bp.route('/api/financeiro/receitas', methods=['GET'])
 @login_required
 @permission_required('Admin', 'Gestão')
 def financeiro_receitas():
@@ -6377,7 +5873,7 @@ def financeiro_receitas():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/financeiro/comissoes', methods=['GET'])
+@bp.route('/api/financeiro/comissoes', methods=['GET'])
 @login_required
 def financeiro_comissoes():
     """Listar comissões (Admin/Gestão: todas | Profissional: próprias)"""
@@ -6486,7 +5982,7 @@ def financeiro_comissoes():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/profissionais/<id>/comissoes', methods=['GET'])
+@bp.route('/api/profissionais/<id>/comissoes', methods=['GET'])
 @login_required
 def get_comissoes_profissional(id):
     """Obter estatísticas de comissões de um profissional"""
@@ -6572,7 +6068,7 @@ def get_comissoes_profissional(id):
 
 # ==================== ENDPOINTS PARA SUB-TABS - PRODUTOS ====================
 
-@app.route('/api/produtos', methods=['GET'])
+@bp.route('/api/produtos', methods=['GET'])
 @login_required
 def listar_produtos():
     """Lista produtos com filtro opcional por status"""
@@ -6608,7 +6104,7 @@ def listar_produtos():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/produtos/baixo-estoque', methods=['GET'])
+@bp.route('/api/produtos/baixo-estoque', methods=['GET'])
 @login_required
 def produtos_baixo_estoque():
     """Retorna produtos com estoque baixo e estatísticas"""
@@ -6664,7 +6160,7 @@ def produtos_baixo_estoque():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/produtos/<id>', methods=['PUT'])
+@bp.route('/api/produtos/<id>', methods=['PUT'])
 @login_required
 def atualizar_produto(id):
     """Atualiza produto (incluindo toggle de status)"""
@@ -6710,7 +6206,7 @@ def atualizar_produto(id):
 
 # ==================== ENDPOINTS PARA SUB-TABS - SERVIÇOS ====================
 
-@app.route('/api/servicos', methods=['GET'])
+@bp.route('/api/servicos', methods=['GET'])
 @login_required
 def listar_servicos():
     """Lista serviços com filtro opcional por status"""
@@ -6747,7 +6243,7 @@ def listar_servicos():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/servicos/<id>', methods=['PUT'])
+@bp.route('/api/servicos/<id>', methods=['PUT'])
 @login_required
 def atualizar_servico(id):
     """Atualiza serviço (incluindo toggle de status)"""
@@ -6789,7 +6285,7 @@ def atualizar_servico(id):
 
 # ==================== ENDPOINTS PARA SUB-TABS - ESTOQUE ====================
 
-@app.route('/api/estoque/visao-geral', methods=['GET'])
+@bp.route('/api/estoque/visao-geral', methods=['GET'])
 @login_required
 def estoque_visao_geral():
     """Retorna visão geral do estoque com estatísticas"""
@@ -6858,7 +6354,7 @@ def estoque_visao_geral():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/estoque/alertas', methods=['GET'])
+@bp.route('/api/estoque/alertas', methods=['GET'])
 @login_required
 def estoque_alertas():
     """Retorna alertas de estoque e últimas movimentações"""
@@ -6939,7 +6435,7 @@ def estoque_alertas():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/estoque/relatorio', methods=['GET'])
+@bp.route('/api/estoque/relatorio', methods=['GET'])
 @login_required
 def gerar_relatorio_estoque():
     """Gera relatório de estoque personalizado"""
@@ -7121,7 +6617,7 @@ def gerar_relatorio_estoque():
 
 # ==================== ROTAS ADMINISTRATIVAS ====================
 
-@app.route('/api/admin/reset-database', methods=['POST'])
+@bp.route('/api/admin/reset-database', methods=['POST'])
 @login_required
 def admin_reset_database():
     """
@@ -7185,7 +6681,7 @@ def admin_reset_database():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@app.route('/api/admin/database-stats', methods=['GET'])
+@bp.route('/api/admin/database-stats', methods=['GET'])
 @login_required
 def admin_database_stats():
     """Estatísticas do banco de dados (apenas Admin)"""
@@ -7223,7 +6719,7 @@ def admin_database_stats():
 
 # ==================== ROTAS ADICIONAIS ====================
 
-@app.route('/api/stream')
+@bp.route('/api/stream')
 @login_required
 def stream_updates():
     """Route for Server-Sent Events (SSE) for real-time updates"""
@@ -7281,7 +6777,7 @@ def stream_updates():
     return Response(generate(), mimetype='text/event-stream')
 
 
-@app.route('/api/agendamentos/heatmap', methods=['GET'])
+@bp.route('/api/agendamentos/heatmap', methods=['GET'])
 @login_required
 def heatmap_agendamentos_alias():
     """Alias route for heatmap - redirects to the actual route"""
@@ -7292,32 +6788,3 @@ def heatmap_agendamentos_alias():
 
 # ==================== FIM ROTAS ADICIONAIS ====================
 
-if __name__ == '__main__':
-    print("\n" + "=" * 80)
-    print("🌳 BIOMA UBERABA v3.7 COMPLETO E DEFINITIVO")
-    print("=" * 80)
-    init_db()
-    is_production = os.getenv('FLASK_ENV') == 'production'
-    base_url = 'https://bioma-system2.onrender.com' if is_production else 'http://localhost:5000'
-    print(f"\n🚀 Servidor: {base_url}")
-    print(f"👤 Login Padrão: admin / admin123")
-    print(f"🔑 TODOS os novos usuários têm privilégios de ADMIN automaticamente")
-    if db is not None:
-        try:
-            db.command('ping')
-            print(f"💾 MongoDB: ✅ CONECTADO")
-        except:
-            print(f"💾 MongoDB: ❌ ERRO DE CONEXÃO")
-    else:
-        print(f"💾 MongoDB: ❌ NÃO CONECTADO")
-    if os.getenv('MAILERSEND_API_KEY'):
-        print(f"📧 MailerSend: ✅ CONFIGURADO")
-    else:
-        print(f"📧 MailerSend: ⚠️  NÃO CONFIGURADO")
-    print("\n" + "=" * 80)
-    print(f"🕐 Iniciado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
-    print(f"👨‍💻 Desenvolvedor: @juanmarco1999")
-    print(f"📧 Contato: 180147064@aluno.unb.br")
-    print("=" * 80 + "\n")
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
