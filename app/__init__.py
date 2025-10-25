@@ -35,7 +35,12 @@ def create_app(config_name=None):
     """
 
     # Criar instância do Flask
-    app = Flask(__name__, template_folder='../templates')
+    app = Flask(
+        __name__,
+        template_folder='../templates',
+        static_folder='../static',
+        static_url_path='/static'
+    )
 
     # Carregar configuração
     if config_name is None:
