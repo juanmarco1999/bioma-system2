@@ -180,9 +180,7 @@
 
         /* PROTEÇÃO ESPECÍFICA PARA SEÇÃO DE ESTOQUE */
         #section-estoque:not(.active),
-        #section-estoque:not(.active) *,
-        #estoqueBaixoBodyResumo:not(.active),
-        #estoqueBaixoBodyResumo:not(.active) * {
+        #section-estoque:not(.active) * {
             display: none !important;
             visibility: hidden !important;
             pointer-events: none !important;
@@ -2271,61 +2269,6 @@
             </div>
         </div>
     </div>
-</div>`
-        <div class="row g-4">
-            <div class="col-xl-4">
-                <div class="stock-summary-card">
-                    <div>
-                        <p class="text-muted mb-1">Valor estimado de venda</p>
-                        <h3 id="estoqueResumoValorVenda">R$ 0,00</h3>
-                    </div>
-                    <div class="badge neutral" id="estoqueResumoTotalProdutos">0 itens</div>
-                    <div class="stock-summary-grid mt-3">
-                        <div class="stock-summary-metric">
-                            <strong>Valor de custo</strong>
-                            <span id="estoqueResumoValorCusto">R$ 0,00</span>
-                        </div>
-                        <div class="stock-summary-metric">
-                            <strong>Margem potencial</strong>
-                            <span id="estoqueResumoMargem">R$ 0,00</span>
-                        </div>
-                        <div class="stock-summary-metric">
-                            <strong>Produtos críticos</strong>
-                            <span id="estoqueResumoCriticos">0</span>
-                        </div>
-                        <div class="stock-summary-metric">
-                            <strong>Abaixo do mínimo</strong>
-                            <span id="estoqueResumoBaixo">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-xl-8">
-                <div class="card">
-                    <div class="card-header"><i class="bi bi-info-circle"></i> Produtos Abaixo do Mínimo</div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table>
-                                <thead><tr><th>Produto</th><th>SKU</th><th>Estoque</th><th>Mínimo</th><th>Status</th></tr></thead>
-                                <tbody id="estoqueBaixoBodyResumo"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card mt-4">
-            <div class="card-header"><i class="bi bi-clock-history"></i> Últimas Movimentações</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table>
-                        <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Quantidade</th><th>Responsável</th><th>Detalhes</th></tr></thead>
-                        <tbody id="estoqueMovimentosBody"><tr><td colspan="6" class="text-center text-muted">Nenhuma movimentação registrada</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 <!-- Fim seção estoque -->
 
@@ -3097,12 +3040,13 @@ async function loadEstoqueResumo(){
         const data = await res.json();
         if(data.success && data.relatorio){
             const rel = data.relatorio;
-            document.getElementById('estoqueResumoValorVenda').textContent = formatarMoeda(rel.valor_total_venda || 0);
-            document.getElementById('estoqueResumoValorCusto').textContent = formatarMoeda(rel.valor_total_custo || 0);
-            document.getElementById('estoqueResumoMargem').textContent = formatarMoeda(rel.margem_potencial || 0);
-            document.getElementById('estoqueResumoTotalProdutos').textContent = `${rel.total_produtos || 0} itens`;
-            document.getElementById('estoqueResumoCriticos').textContent = rel.produtos_zerados || 0;
-            document.getElementById('estoqueResumoBaixo').textContent = rel.produtos_baixo_estoque || 0;
+            // Elementos de resumo removidos (órfãos que apareciam em todas as abas)
+            // document.getElementById('estoqueResumoValorVenda')?.textContent = formatarMoeda(rel.valor_total_venda || 0);
+            // document.getElementById('estoqueResumoValorCusto')?.textContent = formatarMoeda(rel.valor_total_custo || 0);
+            // document.getElementById('estoqueResumoMargem')?.textContent = formatarMoeda(rel.margem_potencial || 0);
+            // document.getElementById('estoqueResumoTotalProdutos')?.textContent = `${rel.total_produtos || 0} itens`;
+            // document.getElementById('estoqueResumoCriticos')?.textContent = rel.produtos_zerados || 0;
+            // document.getElementById('estoqueResumoBaixo')?.textContent = rel.produtos_baixo_estoque || 0;
         }
     }catch(error){
         console.error('Erro ao carregar resumo de estoque', error);
