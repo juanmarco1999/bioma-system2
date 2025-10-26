@@ -5490,17 +5490,23 @@ async function salvarOrc(status){
 }
 
 async function visualizarOrcamento(id){
-    try{
-        const res=await fetch(`/api/orcamentos/${id}`,{credentials:'include'});
-        const data=await res.json();
-        if(data.success&&data.orcamento){
-            const orc=data.orcamento;
-            const servicosHtml=orc.servicos.map(s=>`<tr><td>${s.nome}</td><td>${s.tamanho}</td><td>${s.qtd}</td><td>R$ ${s.preco_unit.toFixed(2)}</td><td>${s.desconto}%</td><td><strong>R$ ${s.total.toFixed(2)}</strong></td></tr>`).join('');
-            const produtosHtml=orc.produtos.map(p=>`<tr><td>${p.nome}</td><td>${p.marca||'-'}</td><td>${p.qtd}</td><td>${p.preco_unit.toFixed(2)}</td><td>${p.desconto}%</td><td><strong>R$ ${p.total.toFixed(2)}</strong></td></tr>`).join('');
-            Swal.fire({title:`<strong>Orçamento #${orc.numero}</strong>`,html:`<div style="text-align:left;max-height:500px;overflow-y:auto"><div style="background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px"><h3 style="margin:0">👤 ${orc.cliente_nome}</h3><p style="margin:5px 0 0"><strong>CPF:</strong> ${orc.cliente_cpf}</p>${orc.cliente_email?`<p style="margin:5px 0 0"><strong>Email:</strong> ${orc.cliente_email}</p>`:''}${orc.cliente_telefone?`<p style="margin:5px 0 0"><strong>Telefone:</strong> ${orc.cliente_telefone}</p>`:''}</div><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">✂️ Serviços</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Serviço</th><th>Tamanho</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${servicosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">📦 Produtos</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Produto</th><th>Marca</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${produtosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><div style="background:#f3f4f6;padding:15px;border-radius:10px"><p><strong>Desconto Global:</strong> ${orc.desconto_global||0}%</p><p><strong>Cashback:</strong> ${orc.cashback_perc||0}% (R$ ${orc.cashback_valor.toFixed(2)})</p><p><strong>Pagamento:</strong> ${orc.pagamento?.tipo||'N/A'}</p><h3 style="color:#10B981;margin:10px 0 0">TOTAL: R$ ${orc.total_final.toFixed(2)}</h3></div><p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Criado em: ${new Date(orc.created_at).toLocaleString('pt-BR')}</p></div>`,width:'700px',confirmButtonText:'Fechar',confirmButtonColor:'#7C3AED'});
+    // CORREÇÃO 1.4: Usar modal completo e detalhado do melhorias-v37.js
+    if (typeof mostrarDetalhesOrcamentoCompleto === 'function') {
+        mostrarDetalhesOrcamentoCompleto(id);
+    } else {
+        // Fallback: versão simplificada
+        try{
+            const res=await fetch(`/api/orcamentos/${id}`,{credentials:'include'});
+            const data=await res.json();
+            if(data.success&&data.orcamento){
+                const orc=data.orcamento;
+                const servicosHtml=orc.servicos.map(s=>`<tr><td>${s.nome}</td><td>${s.tamanho}</td><td>${s.qtd}</td><td>R$ ${s.preco_unit.toFixed(2)}</td><td>${s.desconto}%</td><td><strong>R$ ${s.total.toFixed(2)}</strong></td></tr>`).join('');
+                const produtosHtml=orc.produtos.map(p=>`<tr><td>${p.nome}</td><td>${p.marca||'-'}</td><td>${p.qtd}</td><td>${p.preco_unit.toFixed(2)}</td><td>${p.desconto}%</td><td><strong>R$ ${p.total.toFixed(2)}</strong></td></tr>`).join('');
+                Swal.fire({title:`<strong>Orçamento #${orc.numero}</strong>`,html:`<div style="text-align:left;max-height:500px;overflow-y:auto"><div style="background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px"><h3 style="margin:0">👤 ${orc.cliente_nome}</h3><p style="margin:5px 0 0"><strong>CPF:</strong> ${orc.cliente_cpf}</p>${orc.cliente_email?`<p style="margin:5px 0 0"><strong>Email:</strong> ${orc.cliente_email}</p>`:''}${orc.cliente_telefone?`<p style="margin:5px 0 0"><strong>Telefone:</strong> ${orc.cliente_telefone}</p>`:''}</div><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">✂️ Serviços</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Serviço</th><th>Tamanho</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${servicosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">📦 Produtos</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Produto</th><th>Marca</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${produtosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><div style="background:#f3f4f6;padding:15px;border-radius:10px"><p><strong>Desconto Global:</strong> ${orc.desconto_global||0}%</p><p><strong>Cashback:</strong> ${orc.cashback_perc||0}% (R$ ${orc.cashback_valor.toFixed(2)})</p><p><strong>Pagamento:</strong> ${orc.pagamento?.tipo||'N/A'}</p><h3 style="color:#10B981;margin:10px 0 0">TOTAL: R$ ${orc.total_final.toFixed(2)}</h3></div><p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Criado em: ${new Date(orc.created_at).toLocaleString('pt-BR')}</p></div>`,width:'700px',confirmButtonText:'Fechar',confirmButtonColor:'#7C3AED'});
+            }
+        }catch(e){
+            Swal.fire('Erro','Não foi possível carregar os detalhes','error');
         }
-    }catch(e){
-        Swal.fire('Erro','Não foi possível carregar os detalhes','error');
     }
 }
 
@@ -5522,6 +5528,20 @@ async function editarOrcamento(id){
             atualizarTabelaProdutos();
             calcularTotais();
             goTo('orcamento');
+
+            // CORREÇÃO 2.1: Ir direto para sub-aba "novo" (formulário de edição)
+            setTimeout(() => {
+                const novoBtn = document.querySelector('[data-subtab="orcamento-novo"]');
+                if (novoBtn) {
+                    novoBtn.click();
+                } else {
+                    // Fallback: mostrar diretamente
+                    document.querySelectorAll('#section-orcamento .sub-tab-content').forEach(tab => tab.classList.remove('active'));
+                    const novoTab = document.getElementById('orcamento-subtab-novo');
+                    if (novoTab) novoTab.classList.add('active');
+                }
+            }, 100);
+
             const pageHeader=document.querySelector('#section-orcamento .page-header h1');
             if(pageHeader){pageHeader.innerHTML=`<i class="bi bi-pencil-square"></i> Editando Orçamento #${orc.numero}`;}
             Swal.fire({icon:'info',title:'✏️ Modo Edição',html:`<p>Orçamento <strong>#${orc.numero}</strong> carregado</p><p style="color:#7C3AED">Faça as alterações e clique em Salvar</p>`,timer:2500,showConfirmButton:false});
