@@ -46,22 +46,13 @@ from application.extensions import get_from_cache, set_in_cache
 
 logger = logging.getLogger(__name__)
 
-# Importar DB diretamente de extensions
-from application.extensions import db as database_connection
-
-# Helper para obter DB
+# Helper para obter DB do current_app
 def get_db():
-    """Retorna instância do MongoDB"""
-    # Tentar primeiro de current_app (produção)
-    try:
-        db_from_app = current_app.config.get('DB_CONNECTION')
-        if db_from_app is not None:
-            return db_from_app
-    except:
-        pass
+    db = get_db()
+    return current_app.config.get('DB_CONNECTION')
 
-    # Fallback: usar db de extensions
-    return database_connection
+# Alias para compatibilidade com código existente
+db = None  # Será definido em cada função usando get_db()
 
 
 
@@ -73,45 +64,14 @@ def index():
 
 @bp.route('/health')
 def health():
-    """Health check endpoint com diagnóstico detalhado"""
-    import sys
-    import os
-
     db = get_db()
-    db_status = 'disconnected'
-    db_error = None
-
+    db_status = 'connected' if db is not None else 'disconnected'
     if db is not None:
         try:
             db.command('ping')
-            db_status = 'connected'
-        except Exception as e:
+        except:
             db_status = 'error'
-            db_error = str(e)
-
-    # Verificar variáveis de ambiente (sem expor valores)
-    env_check = {
-        'MONGO_USERNAME': bool(os.getenv('MONGO_USERNAME')),
-        'MONGO_PASSWORD': bool(os.getenv('MONGO_PASSWORD')),
-        'MONGO_CLUSTER': bool(os.getenv('MONGO_CLUSTER')),
-        'FLASK_ENV': os.getenv('FLASK_ENV', 'not_set'),
-        'SECRET_KEY': bool(os.getenv('SECRET_KEY'))
-    }
-
-    response = {
-        'status': 'healthy' if db_status == 'connected' else 'degraded',
-        'version': '3.7.0',
-        'time': datetime.now().isoformat(),
-        'database': db_status,
-        'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-        'environment': env_check
-    }
-
-    if db_error:
-        response['database_error'] = db_error
-
-    # Retornar 200 mesmo se degraded (para Render não marcar como down)
-    return jsonify(response), 200
+    return jsonify({'status': 'healthy', 'time': datetime.now().isoformat(), 'database': db_status, 'version': '3.7.0'}), 200
 
 @bp.route('/api/login', methods=['POST'])
 def login():
@@ -159,7 +119,7 @@ def register():
     db = get_db()
     data = request.json
     logger.info(f"👤 Register attempt: {data.get('username')}")
-
+    
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
     
@@ -4322,7 +4282,6 @@ def relatorio_taxa_conversao():
 @bp.route('/api/servicos/<id>/editar', methods=['PUT'])
 @login_required
 def editar_servico(id):
-    db = get_db()
     """Edita informações de um serviço"""
     try:
         data = request.get_json()
@@ -4358,7 +4317,6 @@ def editar_servico(id):
 @bp.route('/api/produtos/<id>/editar', methods=['PUT'])
 @login_required
 def editar_produto(id):
-    db = get_db()
     """Edita informações de um produto"""
     try:
         data = request.get_json()
@@ -6309,7 +6267,6 @@ def produtos_baixo_estoque():
 @bp.route('/api/produtos/<id>', methods=['PUT'])
 @login_required
 def atualizar_produto(id):
-    db = get_db()
     """Atualiza produto (incluindo toggle de status)"""
     try:
         data = request.get_json()
@@ -6394,7 +6351,6 @@ def listar_servicos():
 @bp.route('/api/servicos/<id>', methods=['PUT'])
 @login_required
 def atualizar_servico(id):
-    db = get_db()
     """Atualiza serviço (incluindo toggle de status)"""
     try:
         data = request.get_json()
