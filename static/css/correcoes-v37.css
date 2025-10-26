@@ -1,0 +1,454 @@
+/**
+ * BIOMA v3.7 - Correções Visuais
+ * Logo, Layout e Melhorias de UX
+ */
+
+/* ============================================================================
+   CORREÇÃO DO LOGO DA EMPRESA
+   ============================================================================ */
+
+.sidebar-logo {
+    /* Reduzir altura para apenas o necessário */
+    min-height: auto !important;
+    max-height: 180px !important; /* Reduzido de 400px */
+    padding: 15px 12px !important;
+
+    /* Remover fundo roxo */
+    background: transparent !important;
+    background-image: none !important;
+
+    /* Centralizar conteúdo */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    /* Bordas */
+    border-bottom: 3px solid var(--accent);
+}
+
+/* Logo como imagem de fundo */
+.sidebar-logo[style*="background-image"] {
+    background-size: contain !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-color: transparent !important;
+}
+
+/* Logo como imagem dentro */
+.sidebar-logo img {
+    max-width: 100%;
+    max-height: 150px; /* Limitar altura da imagem */
+    height: auto;
+    object-fit: contain;
+    background: transparent;
+}
+
+/* Quando NÃO tem logo, mostrar texto */
+.sidebar-logo h1 {
+    font-size: 2rem; /* Reduzido de 2.5rem */
+    font-weight: 900;
+    letter-spacing: 3px; /* Reduzido de 5px */
+    margin: 0;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+    display: none; /* Esconder por padrão */
+}
+
+.sidebar-logo p {
+    font-size: 0.9rem; /* Reduzido de 1rem */
+    opacity: 0.95;
+    margin: 8px 0 0 0;
+    letter-spacing: 1px; /* Reduzido de 2px */
+    display: none; /* Esconder por padrão */
+}
+
+/* Se não tiver logo personalizado, mostrar texto */
+.sidebar-logo.no-custom-logo h1,
+.sidebar-logo.no-custom-logo p {
+    display: block !important;
+}
+
+/* Se tiver logo, esconder texto */
+.sidebar-logo.has-custom-logo h1,
+.sidebar-logo.has-custom-logo p {
+    display: none !important;
+}
+
+/* ============================================================================
+   MELHORIAS DE BOTÕES E BADGES
+   ============================================================================ */
+
+/* Badges mais vibrantes */
+.badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.badge.success {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: #fff;
+}
+
+.badge.warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: #fff;
+}
+
+.badge.danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: #fff;
+}
+
+.badge.info {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    color: #fff;
+}
+
+.badge.secondary {
+    background: linear-gradient(135deg, #6B7280, #4B5563);
+    color: #fff;
+}
+
+.badge.neutral {
+    background: rgba(107, 114, 128, 0.15);
+    color: #374151;
+    border: 2px solid #9CA3AF;
+}
+
+/* ============================================================================
+   MELHORIAS DOS MODAIS
+   ============================================================================ */
+
+.modal-detalhes-completo {
+    text-align: left;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.modal-detalhes-completo::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-detalhes-completo::-webkit-scrollbar-track {
+    background: var(--bg-main);
+    border-radius: 10px;
+}
+
+.modal-detalhes-completo::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+.secao-detalhes {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 15px;
+    border: 2px solid var(--border-color);
+    transition: all 0.3s;
+}
+
+.secao-detalhes:hover {
+    border-color: var(--primary);
+    box-shadow: 0 5px 15px rgba(124, 58, 237, 0.1);
+}
+
+.secao-detalhes h3 {
+    margin-top: 0;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+}
+
+.secao-detalhes h3 i {
+    font-size: 1.4rem;
+}
+
+/* ============================================================================
+   MELHORIAS DE TABELAS
+   ============================================================================ */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+table thead th {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    padding: 16px 14px;
+    text-align: left;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+table tbody tr {
+    border-bottom: 2px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+table tbody tr:hover {
+    background: var(--bg-main);
+    transform: scale(1.002);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+}
+
+table tbody td {
+    padding: 16px 14px;
+    vertical-align: middle;
+    color: var(--text-primary);
+}
+
+/* ============================================================================
+   BOTÕES DE AÇÃO
+   ============================================================================ */
+
+.btn {
+    border-radius: 12px;
+    padding: 12px 30px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn i {
+    font-size: 1.2rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff;
+    box-shadow: 0 5px 20px rgba(124, 58, 237, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.5);
+    color: #fff;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: #fff;
+    box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+    color: #fff;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: #fff;
+    box-shadow: 0 5px 20px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.5);
+    color: #fff;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+}
+
+/* ============================================================================
+   INDICADOR DE AUTO-REFRESH
+   ============================================================================ */
+
+.auto-refresh-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    box-shadow: 0 5px 15px rgba(124, 58, 237, 0.4);
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    animation: pulseRefresh 2s ease-in-out infinite;
+}
+
+@keyframes pulseRefresh {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.auto-refresh-indicator i {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================================================
+   RESPONSIVIDADE MELHORADA
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .sidebar-logo {
+        max-height: 120px !important;
+        padding: 10px !important;
+    }
+
+    .sidebar-logo h1 {
+        font-size: 1.5rem;
+        letter-spacing: 2px;
+    }
+
+    .sidebar-logo p {
+        font-size: 0.8rem;
+    }
+
+    .sidebar-logo img {
+        max-height: 100px;
+    }
+
+    .modal-detalhes-completo {
+        padding: 5px;
+    }
+
+    .secao-detalhes {
+        padding: 15px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+}
+
+/* ============================================================================
+   DARK MODE MELHORADO
+   ============================================================================ */
+
+[data-theme="dark"] .sidebar-logo {
+    border-bottom-color: var(--accent);
+}
+
+[data-theme="dark"] .secao-detalhes {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] table tbody tr:hover {
+    background: var(--bg-sidebar-hover);
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+
+.loading-spinner {
+    border: 8px solid rgba(255, 255, 255, 0.3);
+    border-top: 8px solid var(--primary);
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    animation: spin 1s linear infinite;
+}
+
+/* ============================================================================
+   CARDS E STAT-CARDS MELHORADOS
+   ============================================================================ */
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid var(--border-color);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+.stat-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--primary);
+}
+
+/* ============================================================================
+   ANIMAÇÕES SUAVES
+   ============================================================================ */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease;
+}

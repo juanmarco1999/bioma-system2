@@ -81,7 +81,12 @@ def create_app(config_name=None):
     from application.api import bp as api_bp
     app.register_blueprint(api_bp)
 
+    # Blueprint v3.7 - Melhorias e APIs faltantes
+    from application.api.routes_melhorias import bp as melhorias_bp
+    app.register_blueprint(melhorias_bp)
+
     logger.info("✅ Blueprint API registrado (todas as rotas consolidadas)")
+    logger.info("✅ Blueprint Melhorias v3.7 registrado (auto-refresh, comissões, finance)")
     logger.info("✅ Sistema auto-contido - Arquitetura modular com Application Factory")
 
     return app
