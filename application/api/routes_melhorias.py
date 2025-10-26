@@ -797,4 +797,329 @@ def toggle_todos_servicos():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ============================================================================
+# API DE REGRAS DE COMISSÃO
+# ============================================================================
+
+@bp.route('/api/comissoes/regra', methods=['POST'])
+def criar_regra_comissao():
+    """Criar regra de comissão"""
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        regra = {
+            'tipo': data.get('tipo'),
+            'percentual': float(data.get('percentual', 10)),
+            'descricao': data.get('descricao', ''),
+            'ativo': True,
+            'criado_em': datetime.now()
+        }
+
+        result = db.regras_comissao.insert_one(regra)
+
+        return jsonify({
+            'success': True,
+            'regra_id': str(result.inserted_id),
+            'message': 'Regra de comissão criada com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao criar regra de comissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API DE PRODUTOS/SERVIÇOS - GET INDIVIDUAL
+# ============================================================================
+
+@bp.route('/api/produtos/<produto_id>')
+def get_produto(produto_id):
+    """Buscar produto individual"""
+    try:
+        db = get_db()
+        produto = db.produtos.find_one({'_id': ObjectId(produto_id)})
+
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+        produto['_id'] = str(produto['_id'])
+
+        return jsonify({'success': True, 'produto': produto})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar produto: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/servicos/<servico_id>')
+def get_servico(servico_id):
+    """Buscar serviço individual"""
+    try:
+        db = get_db()
+        servico = db.servicos.find_one({'_id': ObjectId(servico_id)})
+
+        if not servico:
+            return jsonify({'success': False, 'message': 'Serviço não encontrado'}), 404
+
+        servico['_id'] = str(servico['_id'])
+
+        return jsonify({'success': True, 'servico': servico})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar serviço: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/produtos/<produto_id>', methods=['PUT'])
+def atualizar_produto(produto_id):
+    """Atualizar produto"""
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        update_data = {
+            'nome': data.get('nome'),
+            'sku': data.get('sku'),
+            'categoria': data.get('categoria'),
+            'preco_custo': float(data.get('preco_custo', 0)),
+            'preco_venda': float(data.get('preco_venda')),
+            'estoque_atual': int(data.get('estoque_atual', 0)),
+            'estoque_minimo': int(data.get('estoque_minimo', 0)),
+            'unidade': data.get('unidade', 'un'),
+            'descricao': data.get('descricao', ''),
+            'ativo': data.get('ativo', True),
+            'atualizado_em': datetime.now()
+        }
+
+        result = db.produtos.update_one(
+            {'_id': ObjectId(produto_id)},
+            {'$set': update_data}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'message': 'Produto atualizado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Produto não encontrado ou sem alterações'}), 404
+
+    except Exception as e:
+        logger.error(f"Erro ao atualizar produto: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/servicos/<servico_id>', methods=['PUT'])
+def atualizar_servico(servico_id):
+    """Atualizar serviço"""
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        update_data = {
+            'nome': data.get('nome'),
+            'categoria': data.get('categoria'),
+            'preco': float(data.get('preco')),
+            'duracao': int(data.get('duracao', 60)),
+            'descricao': data.get('descricao', ''),
+            'ativo': data.get('ativo', True),
+            'atualizado_em': datetime.now()
+        }
+
+        result = db.servicos.update_one(
+            {'_id': ObjectId(servico_id)},
+            {'$set': update_data}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'message': 'Serviço atualizado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Serviço não encontrado ou sem alterações'}), 404
+
+    except Exception as e:
+        logger.error(f"Erro ao atualizar serviço: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API DE MAPA DE CALOR (RELATÓRIOS)
+# ============================================================================
+
+@bp.route('/api/relatorios/mapa-calor')
+def get_mapa_calor():
+    """Gerar dados do mapa de calor de agendamentos"""
+    try:
+        db = get_db()
+
+        # Buscar agendamentos dos últimos 30 dias
+        data_inicio = datetime.now() - timedelta(days=30)
+
+        pipeline = [
+            {
+                '$match': {
+                    'data': {'$gte': data_inicio.strftime('%Y-%m-%d')}
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$data',
+                    'count': {'$sum': 1}
+                }
+            },
+            {'$sort': {'_id': 1}}
+        ]
+
+        resultado = list(db.agendamentos.aggregate(pipeline))
+
+        # Formatar para o formato do mapa de calor
+        mapa_dados = []
+        for item in resultado:
+            mapa_dados.append({
+                'date': item['_id'],
+                'count': item['count']
+            })
+
+        return jsonify({
+            'success': True,
+            'dados': mapa_dados,
+            'periodo': {
+                'inicio': data_inicio.strftime('%Y-%m-%d'),
+                'fim': datetime.now().strftime('%Y-%m-%d')
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar mapa de calor: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API DE AUDITORIA
+# ============================================================================
+
+@bp.route('/api/auditoria/logs')
+def get_audit_logs():
+    """Buscar logs de auditoria"""
+    try:
+        db = get_db()
+
+        limite = int(request.args.get('limite', 100))
+        tipo = request.args.get('tipo')  # create, update, delete, access
+
+        query = {}
+        if tipo:
+            query['tipo'] = tipo
+
+        logs = list(db.auditoria.find(query).sort('data_hora', -1).limit(limite))
+
+        for log in logs:
+            log['_id'] = str(log['_id'])
+            if 'usuario_id' in log and log['usuario_id']:
+                log['usuario_id'] = str(log['usuario_id'])
+
+        return jsonify({'success': True, 'logs': logs, 'total': len(logs)})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar logs de auditoria: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/auditoria/log', methods=['POST'])
+def criar_audit_log():
+    """Criar registro de auditoria"""
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        log = {
+            'tipo': data.get('tipo'),  # create, update, delete, access
+            'acao': data.get('acao'),
+            'entidade': data.get('entidade'),  # orcamento, cliente, etc
+            'entidade_id': data.get('entidade_id'),
+            'usuario_id': ObjectId(data.get('usuario_id')) if data.get('usuario_id') else None,
+            'usuario_nome': data.get('usuario_nome'),
+            'detalhes': data.get('detalhes', {}),
+            'ip': request.remote_addr,
+            'data_hora': datetime.now()
+        }
+
+        result = db.auditoria.insert_one(log)
+
+        return jsonify({'success': True, 'log_id': str(result.inserted_id)})
+
+    except Exception as e:
+        logger.error(f"Erro ao criar log de auditoria: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ============================================================================
+# API DE CONFIGURAÇÕES
+# ============================================================================
+
+@bp.route('/api/configuracoes')
+def get_configuracoes():
+    """Buscar configurações do sistema"""
+    try:
+        db = get_db()
+
+        config = db.configuracoes.find_one({'tipo': 'sistema'})
+
+        if not config:
+            # Criar configurações padrão
+            config = {
+                'tipo': 'sistema',
+                'empresa': {
+                    'nome': '',
+                    'cnpj': '',
+                    'endereco': '',
+                    'telefone': '',
+                    'email': '',
+                    'logo_url': ''
+                },
+                'notificacoes': {
+                    'email_ativo': False,
+                    'whatsapp_ativo': False,
+                    'mailersend_api_key': ''
+                },
+                'sistema': {
+                    'modo_manutencao': False,
+                    'auto_backup': False,
+                    'intervalo_backup_dias': 7
+                },
+                'atualizado_em': datetime.now()
+            }
+            db.configuracoes.insert_one(config)
+
+        config['_id'] = str(config['_id'])
+
+        return jsonify({'success': True, 'configuracoes': config})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar configurações: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/configuracoes', methods=['PUT'])
+def atualizar_configuracoes():
+    """Atualizar configurações do sistema"""
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        data['atualizado_em'] = datetime.now()
+
+        result = db.configuracoes.update_one(
+            {'tipo': 'sistema'},
+            {'$set': data},
+            upsert=True
+        )
+
+        return jsonify({
+            'success': True,
+            'message': 'Configurações atualizadas com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao atualizar configurações: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 logger.info("✅ Rotas de melhorias carregadas com sucesso")

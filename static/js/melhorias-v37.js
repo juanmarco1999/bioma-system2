@@ -371,4 +371,282 @@ if (typeof formatarData !== 'function') {
     };
 }
 
+// ============================================================================
+// FUNÇÕES FALTANTES - CORREÇÃO DE ERROS
+// ============================================================================
+
+// Função showModalComissao - Nova Regra de Comissão
+window.showModalComissao = function() {
+    Swal.fire({
+        title: 'Nova Regra de Comissão',
+        html: `
+            <div style="text-align: left;">
+                <div class="form-group">
+                    <label>Tipo de Regra</label>
+                    <select id="tipo_regra" class="form-control">
+                        <option value="profissional">Por Profissional</option>
+                        <option value="servico">Por Serviço</option>
+                        <option value="categoria">Por Categoria</option>
+                        <option value="global">Global (Todos)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Percentual de Comissão (%)</label>
+                    <input type="number" id="percentual_comissao" class="form-control" min="0" max="100" step="0.1" value="10">
+                </div>
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <textarea id="descricao_comissao" class="form-control" rows="3" placeholder="Descrição da regra..."></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar Regra',
+        cancelButtonText: 'Cancelar',
+        width: '500px',
+        preConfirm: () => {
+            const tipo = document.getElementById('tipo_regra').value;
+            const percentual = parseFloat(document.getElementById('percentual_comissao').value);
+            const descricao = document.getElementById('descricao_comissao').value;
+
+            if (!percentual || percentual < 0 || percentual > 100) {
+                Swal.showValidationMessage('Percentual inválido (0-100%)');
+                return false;
+            }
+
+            return { tipo, percentual, descricao };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Salvar regra de comissão
+            fetch('/api/comissoes/regra', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(result.value),
+                credentials: 'include'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Sucesso!', 'Regra de comissão criada', 'success');
+                    if (typeof loadComissoes === 'function') loadComissoes();
+                } else {
+                    Swal.fire('Erro!', data.message || 'Erro ao criar regra', 'error');
+                }
+            })
+            .catch(err => Swal.fire('Erro!', 'Erro ao salvar regra', 'error'));
+        }
+    });
+};
+
+// Função editarProduto - Editar Produto
+window.editarProduto = function(produtoId) {
+    fetch(`/api/produtos/${produtoId}`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                Swal.fire('Erro!', 'Produto não encontrado', 'error');
+                return;
+            }
+
+            const produto = data.produto;
+            Swal.fire({
+                title: 'Editar Produto',
+                html: `
+                    <div style="text-align: left; max-height: 500px; overflow-y: auto;">
+                        <div class="form-group">
+                            <label>Nome do Produto *</label>
+                            <input type="text" id="edit_nome" class="form-control" value="${produto.nome}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>SKU / Código</label>
+                            <input type="text" id="edit_sku" class="form-control" value="${produto.sku || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Categoria</label>
+                            <input type="text" id="edit_categoria" class="form-control" value="${produto.categoria || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Preço de Custo (R$)</label>
+                            <input type="number" id="edit_preco_custo" class="form-control" value="${produto.preco_custo || 0}" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Preço de Venda (R$) *</label>
+                            <input type="number" id="edit_preco_venda" class="form-control" value="${produto.preco_venda}" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Estoque Atual</label>
+                            <input type="number" id="edit_estoque_atual" class="form-control" value="${produto.estoque_atual || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label>Estoque Mínimo</label>
+                            <input type="number" id="edit_estoque_minimo" class="form-control" value="${produto.estoque_minimo || 0}">
+                        </div>
+                        <div class="form-group">
+                            <label>Unidade</label>
+                            <select id="edit_unidade" class="form-control">
+                                <option value="un" ${produto.unidade === 'un' ? 'selected' : ''}>Unidade</option>
+                                <option value="cx" ${produto.unidade === 'cx' ? 'selected' : ''}>Caixa</option>
+                                <option value="kg" ${produto.unidade === 'kg' ? 'selected' : ''}>Quilograma</option>
+                                <option value="l" ${produto.unidade === 'l' ? 'selected' : ''}>Litro</option>
+                                <option value="m" ${produto.unidade === 'm' ? 'selected' : ''}>Metro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Descrição</label>
+                            <textarea id="edit_descricao" class="form-control" rows="3">${produto.descricao || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="edit_ativo" ${produto.ativo !== false ? 'checked' : ''}> Produto Ativo
+                            </label>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Salvar Alterações',
+                cancelButtonText: 'Cancelar',
+                width: '600px',
+                preConfirm: () => {
+                    const nome = document.getElementById('edit_nome').value.trim();
+                    const preco_venda = parseFloat(document.getElementById('edit_preco_venda').value);
+
+                    if (!nome) {
+                        Swal.showValidationMessage('Nome do produto é obrigatório');
+                        return false;
+                    }
+                    if (!preco_venda || preco_venda <= 0) {
+                        Swal.showValidationMessage('Preço de venda inválido');
+                        return false;
+                    }
+
+                    return {
+                        nome,
+                        sku: document.getElementById('edit_sku').value.trim(),
+                        categoria: document.getElementById('edit_categoria').value.trim(),
+                        preco_custo: parseFloat(document.getElementById('edit_preco_custo').value) || 0,
+                        preco_venda,
+                        estoque_atual: parseInt(document.getElementById('edit_estoque_atual').value) || 0,
+                        estoque_minimo: parseInt(document.getElementById('edit_estoque_minimo').value) || 0,
+                        unidade: document.getElementById('edit_unidade').value,
+                        descricao: document.getElementById('edit_descricao').value.trim(),
+                        ativo: document.getElementById('edit_ativo').checked
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/api/produtos/${produtoId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(result.value),
+                        credentials: 'include'
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire('Sucesso!', 'Produto atualizado', 'success');
+                            if (typeof loadProdutos === 'function') loadProdutos();
+                        } else {
+                            Swal.fire('Erro!', data.message || 'Erro ao atualizar produto', 'error');
+                        }
+                    })
+                    .catch(err => Swal.fire('Erro!', 'Erro ao salvar produto', 'error'));
+                }
+            });
+        })
+        .catch(err => Swal.fire('Erro!', 'Erro ao carregar produto', 'error'));
+};
+
+// Função editarServico - Editar Serviço
+window.editarServico = function(servicoId) {
+    fetch(`/api/servicos/${servicoId}`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                Swal.fire('Erro!', 'Serviço não encontrado', 'error');
+                return;
+            }
+
+            const servico = data.servico;
+            Swal.fire({
+                title: 'Editar Serviço',
+                html: `
+                    <div style="text-align: left;">
+                        <div class="form-group">
+                            <label>Nome do Serviço *</label>
+                            <input type="text" id="edit_nome_servico" class="form-control" value="${servico.nome}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Categoria</label>
+                            <input type="text" id="edit_categoria_servico" class="form-control" value="${servico.categoria || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Preço (R$) *</label>
+                            <input type="number" id="edit_preco_servico" class="form-control" value="${servico.preco}" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Duração (minutos)</label>
+                            <input type="number" id="edit_duracao" class="form-control" value="${servico.duracao || 60}">
+                        </div>
+                        <div class="form-group">
+                            <label>Descrição</label>
+                            <textarea id="edit_descricao_servico" class="form-control" rows="3">${servico.descricao || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="edit_ativo_servico" ${servico.ativo !== false ? 'checked' : ''}> Serviço Ativo
+                            </label>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Salvar Alterações',
+                cancelButtonText: 'Cancelar',
+                width: '550px',
+                preConfirm: () => {
+                    const nome = document.getElementById('edit_nome_servico').value.trim();
+                    const preco = parseFloat(document.getElementById('edit_preco_servico').value);
+
+                    if (!nome) {
+                        Swal.showValidationMessage('Nome do serviço é obrigatório');
+                        return false;
+                    }
+                    if (!preco || preco <= 0) {
+                        Swal.showValidationMessage('Preço inválido');
+                        return false;
+                    }
+
+                    return {
+                        nome,
+                        categoria: document.getElementById('edit_categoria_servico').value.trim(),
+                        preco,
+                        duracao: parseInt(document.getElementById('edit_duracao').value) || 60,
+                        descricao: document.getElementById('edit_descricao_servico').value.trim(),
+                        ativo: document.getElementById('edit_ativo_servico').checked
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/api/servicos/${servicoId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(result.value),
+                        credentials: 'include'
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire('Sucesso!', 'Serviço atualizado', 'success');
+                            if (typeof loadServicos === 'function') loadServicos();
+                        } else {
+                            Swal.fire('Erro!', data.message || 'Erro ao atualizar serviço', 'error');
+                        }
+                    })
+                    .catch(err => Swal.fire('Erro!', 'Erro ao salvar serviço', 'error'));
+                }
+            });
+        })
+        .catch(err => Swal.fire('Erro!', 'Erro ao carregar serviço', 'error'));
+};
+
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
