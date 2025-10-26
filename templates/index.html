@@ -4636,12 +4636,18 @@ async function loadContratos(){
                     <td><strong style="color: var(--success); font-size: 1.1rem;">R$ ${c.total_final.toFixed(2)}</strong></td>
                     <td><span class="badge success">APROVADO</span></td>
                     <td>
-                        <button class="btn btn-sm" onclick="visualizarOrcamento('${c._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px" title="Visualizar">
+                        <button class="btn btn-sm" onclick="visualizarOrcamento('${c._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px" title="Visualizar Detalhes">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <a href="/api/orcamento/${c._id}/pdf" target="_blank" class="btn btn-sm btn-danger" title="Gerar PDF">
+                        <a href="/api/orcamento/${c._id}/pdf" target="_blank" class="btn btn-sm btn-danger" style="margin-right:5px" title="Gerar PDF">
                             <i class="bi bi-file-pdf"></i>
                         </a>
+                        <button class="btn btn-sm" onclick="enviarContratoEmail('${c._id}')" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;margin-right:5px" title="Enviar por Email">
+                            <i class="bi bi-envelope-fill"></i>
+                        </button>
+                        <button class="btn btn-sm" onclick="enviarContratoWhatsApp('${c._id}')" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff" title="Enviar por WhatsApp">
+                            <i class="bi bi-whatsapp"></i>
+                        </button>
                     </td>
                 </tr>`;
             }).join('');

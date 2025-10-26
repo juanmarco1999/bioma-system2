@@ -649,4 +649,179 @@ window.editarServico = function(servicoId) {
         .catch(err => Swal.fire('Erro!', 'Erro ao carregar serviço', 'error'));
 };
 
+// ============================================================================
+// FUNÇÕES DE NOTIFICAÇÃO PARA CONTRATOS (3.1)
+// ============================================================================
+
+// Enviar contrato por Email
+window.enviarContratoEmail = async function(contratoId) {
+    try {
+        // Buscar dados do contrato
+        const res = await fetch(`/api/orcamentos/${contratoId}`, { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.orcamento) {
+            Swal.fire('Erro', 'Contrato não encontrado', 'error');
+            return;
+        }
+
+        const contrato = data.orcamento;
+
+        // Confirmar envio de email
+        const result = await Swal.fire({
+            title: 'Enviar Contrato por Email',
+            html: `
+                <div style="text-align:left;">
+                    <p><strong>Cliente:</strong> ${contrato.cliente_nome}</p>
+                    <p><strong>Contrato:</strong> #${contrato.numero}</p>
+                    <p><strong>Valor:</strong> R$ ${contrato.total_final.toFixed(2)}</p>
+                    <br>
+                    <div class="form-group">
+                        <label>Email do cliente:</label>
+                        <input type="email" id="emailDestino" class="form-control" value="${contrato.cliente_email || ''}" placeholder="email@exemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Mensagem adicional (opcional):</label>
+                        <textarea id="mensagemEmail" class="form-control" rows="3" placeholder="Digite uma mensagem personalizada..."></textarea>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Enviar Email',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#10B981',
+            width: '550px',
+            preConfirm: () => {
+                const email = document.getElementById('emailDestino').value.trim();
+                const mensagem = document.getElementById('mensagemEmail').value.trim();
+
+                if (!email) {
+                    Swal.showValidationMessage('Email do cliente é obrigatório');
+                    return false;
+                }
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    Swal.showValidationMessage('Email inválido');
+                    return false;
+                }
+
+                return { email, mensagem };
+            }
+        });
+
+        if (result.isConfirmed) {
+            // Enviar email via API
+            const sendRes = await fetch(`/api/notificacoes/email/contrato/${contratoId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    destinatario: result.value.email,
+                    mensagem_adicional: result.value.mensagem
+                }),
+                credentials: 'include'
+            });
+
+            const sendData = await sendRes.json();
+
+            if (sendData.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Email Enviado!',
+                    text: 'O contrato foi enviado com sucesso para ' + result.value.email,
+                    confirmButtonColor: '#10B981'
+                });
+            } else {
+                Swal.fire('Erro', sendData.message || 'Erro ao enviar email', 'error');
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao enviar email:', err);
+        Swal.fire('Erro', 'Não foi possível enviar o email', 'error');
+    }
+};
+
+// Enviar contrato por WhatsApp
+window.enviarContratoWhatsApp = async function(contratoId) {
+    try {
+        // Buscar dados do contrato
+        const res = await fetch(`/api/orcamentos/${contratoId}`, { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.orcamento) {
+            Swal.fire('Erro', 'Contrato não encontrado', 'error');
+            return;
+        }
+
+        const contrato = data.orcamento;
+
+        // Confirmar envio de WhatsApp
+        const result = await Swal.fire({
+            title: 'Enviar Contrato por WhatsApp',
+            html: `
+                <div style="text-align:left;">
+                    <p><strong>Cliente:</strong> ${contrato.cliente_nome}</p>
+                    <p><strong>Contrato:</strong> #${contrato.numero}</p>
+                    <p><strong>Valor:</strong> R$ ${contrato.total_final.toFixed(2)}</p>
+                    <br>
+                    <div class="form-group">
+                        <label>Telefone do cliente (com DDD):</label>
+                        <input type="tel" id="telefoneDestino" class="form-control" value="${contrato.cliente_telefone || ''}" placeholder="(34) 99999-9999">
+                    </div>
+                    <div class="alert alert-info" style="font-size:0.9rem;margin-top:15px;">
+                        <i class="bi bi-info-circle"></i> Você será redirecionado para o WhatsApp Web com uma mensagem pré-preenchida.
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Abrir WhatsApp',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#25D366',
+            width: '550px',
+            preConfirm: () => {
+                const telefone = document.getElementById('telefoneDestino').value.trim();
+
+                if (!telefone) {
+                    Swal.showValidationMessage('Telefone do cliente é obrigatório');
+                    return false;
+                }
+
+                return { telefone };
+            }
+        });
+
+        if (result.isConfirmed) {
+            // Gerar link do WhatsApp via API
+            const whatsappRes = await fetch(`/api/notificacoes/whatsapp/contrato/${contratoId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    telefone: result.value.telefone
+                }),
+                credentials: 'include'
+            });
+
+            const whatsappData = await whatsappRes.json();
+
+            if (whatsappData.success && whatsappData.url) {
+                // Abrir WhatsApp em nova aba
+                window.open(whatsappData.url, '_blank');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'WhatsApp Aberto!',
+                    text: 'A mensagem foi pré-preenchida. Revise e envie.',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire('Erro', whatsappData.message || 'Erro ao gerar link do WhatsApp', 'error');
+            }
+        }
+    } catch (err) {
+        console.error('Erro ao enviar WhatsApp:', err);
+        Swal.fire('Erro', 'Não foi possível abrir o WhatsApp', 'error');
+    }
+};
+
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
