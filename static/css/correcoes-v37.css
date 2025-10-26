@@ -452,3 +452,269 @@ table tbody td {
 .fade-in-up {
     animation: fadeInUp 0.5s ease;
 }
+
+/* ============================================================================
+   MELHORIAS DE ESTOQUE (8.3) - Layout e Ícones Aprimorados
+   ============================================================================ */
+
+/* Stat Cards de Estoque - Animações e Sombras */
+#section-estoque .stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+#section-estoque .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+#section-estoque .stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+#section-estoque .stat-card:hover::before {
+    left: 100%;
+}
+
+/* Ícones de Estatísticas Maiores e Animados */
+#section-estoque .stat-icon {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    background: rgba(255,255,255,0.25);
+    border-radius: 50%;
+    animation: pulseIcon 2s ease-in-out infinite;
+}
+
+@keyframes pulseIcon {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Badges de Status Melhorados */
+#section-estoque .badge {
+    padding: 6px 14px;
+    font-weight: 600;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+#section-estoque .badge.success {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+}
+
+#section-estoque .badge.warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+}
+
+#section-estoque .badge.danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+}
+
+/* Botões de Ação de Estoque */
+#section-estoque .estoque-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+#section-estoque .estoque-actions .btn {
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#section-estoque .estoque-actions .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+#section-estoque .estoque-actions .btn i {
+    font-size: 1.1rem;
+    margin-right: 6px;
+}
+
+/* Tabelas de Estoque Melhoradas */
+#section-estoque table {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#section-estoque table thead {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+#section-estoque table thead th {
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+    padding: 16px 12px;
+}
+
+#section-estoque table tbody tr {
+    transition: all 0.2s ease;
+}
+
+#section-estoque table tbody tr:hover {
+    background: linear-gradient(90deg, rgba(124,58,237,0.05), transparent);
+    transform: scale(1.01);
+}
+
+/* Cards de Produtos com Gradientes */
+#section-estoque .product-card {
+    background: linear-gradient(135deg, var(--bg-card), var(--bg-main));
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+#section-estoque .product-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(124,58,237,0.2);
+    transform: translateY(-5px);
+}
+
+/* Filtros de Estoque */
+#section-estoque .form-control,
+#section-estoque .form-select {
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+#section-estoque .form-control:focus,
+#section-estoque .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(124,58,237,0.1);
+    outline: none;
+}
+
+/* Gráficos de Estoque - Container Melhorado */
+#section-estoque canvas {
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* Sub-tabs de Estoque Melhoradas */
+#section-estoque .sub-tabs {
+    background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(236,72,153,0.1));
+    padding: 8px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+}
+
+#section-estoque .sub-tab-btn {
+    padding: 14px 24px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#section-estoque .sub-tab-btn:hover {
+    background: rgba(124,58,237,0.15);
+    transform: translateY(-2px);
+}
+
+#section-estoque .sub-tab-btn.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    box-shadow: 0 6px 16px rgba(124,58,237,0.3);
+}
+
+#section-estoque .sub-tab-btn i {
+    font-size: 1.2rem;
+    margin-right: 8px;
+}
+
+/* Indicador de Estoque Baixo */
+.estoque-baixo-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #FEE2E2, #FCA5A5);
+    color: #DC2626;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    animation: blinkAlert 2s ease-in-out infinite;
+}
+
+@keyframes blinkAlert {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Relatórios - Botões de Exportação */
+#section-estoque .d-flex.gap-2 .btn {
+    min-width: 180px;
+    font-weight: 700;
+    padding: 14px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+#section-estoque .btn-primary {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+}
+
+#section-estoque .btn-success {
+    background: linear-gradient(135deg, #10B981, #059669);
+}
+
+#section-estoque .btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+}
+
+/* Empty State Melhorado */
+#section-estoque .text-center.text-muted {
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+#section-estoque .text-center.text-muted i {
+    font-size: 4rem;
+    opacity: 0.3;
+    margin-bottom: 20px;
+    display: block;
+}
+
+/* Loading Spinner para Estoque */
+#section-estoque .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(124,58,237,0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

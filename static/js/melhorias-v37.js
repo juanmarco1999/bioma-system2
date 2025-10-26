@@ -824,4 +824,150 @@ window.enviarContratoWhatsApp = async function(contratoId) {
     }
 };
 
+// ============================================================================
+// FUNÇÕES DE ESTOQUE - RELATÓRIOS (8.4)
+// ============================================================================
+
+// Exportar Relatório de Estoque em PDF
+window.exportarRelatorioPDF = async function() {
+    try {
+        const tipo = document.getElementById('relatorioTipo')?.value || 'estoque';
+        const dataInicio = document.getElementById('relatorioDataInicio')?.value;
+        const dataFim = document.getElementById('relatorioDataFim')?.value;
+
+        if (!dataInicio || !dataFim) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atenção',
+                text: 'Selecione o período do relatório (Data Início e Data Fim)',
+                confirmButtonColor: '#7C3AED'
+            });
+            return;
+        }
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Gerando PDF...',
+            html: 'Aguarde enquanto o relatório é gerado',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Chamar API do backend para gerar PDF
+        const params = new URLSearchParams({
+            tipo,
+            data_inicio: dataInicio,
+            data_fim: dataFim
+        });
+
+        const response = await fetch(`/api/estoque/relatorio/pdf?${params}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao gerar PDF');
+        }
+
+        // Baixar o PDF
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `estoque_${tipo}_${dataInicio}_${dataFim}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'PDF Gerado!',
+            text: 'O relatório foi baixado com sucesso',
+            timer: 2000,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error('Erro ao exportar PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Não foi possível gerar o PDF. Tente novamente.',
+            confirmButtonColor: '#EF4444'
+        });
+    }
+};
+
+// Melhorar função de gerar relatório
+window.gerarRelatorioEstoqueOriginal = window.gerarRelatorioEstoque; // Backup
+window.gerarRelatorioEstoque = async function() {
+    try {
+        const tipo = document.getElementById('relatorioTipo')?.value || 'estoque';
+        const dataInicio = document.getElementById('relatorioDataInicio')?.value;
+        const dataFim = document.getElementById('relatorioDataFim')?.value;
+
+        if (!dataInicio || !dataFim) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atenção',
+                text: 'Selecione o período do relatório',
+                confirmButtonColor: '#7C3AED'
+            });
+            return;
+        }
+
+        // Chamar função original se existir, senão fazer requisição
+        if (typeof window.gerarRelatorioEstoqueOriginal === 'function') {
+            await window.gerarRelatorioEstoqueOriginal();
+        } else {
+            // Implementação direta
+            const params = new URLSearchParams({
+                tipo,
+                data_inicio: dataInicio,
+                data_fim: dataFim
+            });
+
+            const response = await fetch(`/api/estoque/relatorio?${params}`, {
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const container = document.getElementById('relatorioEstoqueResultados');
+                if (container) {
+                    container.style.display = 'block';
+                    container.innerHTML = `
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="bi bi-clipboard-data"></i> Resultado do Relatório
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Período:</strong> ${dataInicio} até ${dataFim}</p>
+                                <p><strong>Tipo:</strong> ${tipo}</p>
+                                <p><strong>Total de registros:</strong> ${data.total || 0}</p>
+                                <div class="mt-3">
+                                    ${JSON.stringify(data, null, 2)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Relatório Gerado!',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        Swal.fire('Erro', 'Não foi possível gerar o relatório', 'error');
+    }
+};
+
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
