@@ -1296,4 +1296,614 @@ if (typeof window.showModalFila !== 'undefined') {
 window.showModalFila = window.showModalFilaInteligente;
 
 console.log('✅ Sistema de Fila Inteligente carregado (10.1, 10.2)');
+
+// ============================================================================
+// SISTEMA DE ANAMNESE/PRONTUÁRIO COMPLETO (Diretrizes 11.1, 11.3, 11.4)
+// ============================================================================
+
+/**
+ * Visualizar cliente com anamnese/prontuário integrado
+ * Diretriz 11.1: Associar ao visualizar cliente
+ */
+window.visualizarClienteCompleto = async function(clienteId) {
+    try {
+        Swal.fire({
+            title: 'Carregando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Carregar dados do cliente, anamneses e prontuários em paralelo
+        const [clienteRes, anamnesesRes, prontuariosRes] = await Promise.all([
+            fetch(`/api/clientes/${clienteId}`, { credentials: 'include' }),
+            fetch(`/api/clientes/${clienteId}/anamneses`, { credentials: 'include' }),
+            fetch(`/api/clientes/${clienteId}/prontuarios`, { credentials: 'include' })
+        ]);
+
+        const clienteData = await clienteRes.json();
+        const anamnesesData = await anamnesesRes.json();
+        const prontuariosData = await prontuariosRes.json();
+
+        if (!clienteData.success) {
+            Swal.fire('Erro', 'Cliente não encontrado', 'error');
+            return;
+        }
+
+        const cliente = clienteData.cliente;
+        const anamneses = anamnesesData.anamneses || [];
+        const prontuarios = prontuariosData.prontuarios || [];
+
+        // Criar tabs de anamneses
+        const anamnesesHTML = anamneses.length > 0 ? anamneses.map((a, idx) => {
+            const data = new Date(a.data_cadastro).toLocaleDateString('pt-BR');
+            return `
+                <div class="list-group-item" style="margin-bottom: 8px; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>Versão ${idx + 1}</strong> - ${data}
+                            ${a.imagens && a.imagens.length > 0 ? `<span class="badge bg-info ms-2">${a.imagens.length} imagens</span>` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="visualizarAnamnese('${a._id}', '${cliente.cpf}')">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('') : '<p class="text-muted text-center">Nenhuma anamnese cadastrada</p>';
+
+        // Criar tabs de prontuários
+        const prontuariosHTML = prontuarios.length > 0 ? prontuarios.map((p) => {
+            const data = new Date(p.data_atendimento).toLocaleDateString('pt-BR');
+            return `
+                <div class="list-group-item" style="margin-bottom: 8px; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${data}</strong> - ${p.procedimento || 'Procedimento não especificado'}
+                            <br><small class="text-muted">Prof: ${p.profissional || 'N/A'}</small>
+                            ${p.imagens && p.imagens.length > 0 ? `<span class="badge bg-info ms-2">${p.imagens.length} imagens</span>` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="visualizarProntuario('${p._id}', '${cliente.cpf}')">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('') : '<p class="text-muted text-center">Nenhum prontuário cadastrado</p>';
+
+        Swal.fire({
+            title: `<i class="bi bi-person-circle"></i> ${cliente.nome}`,
+            html: `
+                <div style="text-align: left; max-height: 600px; overflow-y: auto;">
+                    <!-- Informações Básicas -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <p style="margin: 5px 0;"><strong>CPF:</strong> ${cliente.cpf}</p>
+                        <p style="margin: 5px 0;"><strong>Telefone:</strong> ${cliente.telefone || 'Não informado'}</p>
+                        <p style="margin: 5px 0;"><strong>Email:</strong> ${cliente.email || 'Não informado'}</p>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs" role="tablist" style="margin-bottom: 15px;">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#tab-anamneses-${clienteId}">
+                                <i class="bi bi-file-medical"></i> Anamneses (${anamneses.length})
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#tab-prontuarios-${clienteId}">
+                                <i class="bi bi-clipboard2-pulse"></i> Prontuários (${prontuarios.length})
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <div id="tab-anamneses-${clienteId}" class="tab-pane fade show active">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 style="margin: 0;">Histórico de Anamneses</h6>
+                                <button class="btn btn-sm btn-success" onclick="novaAnamneseComNotificacao('${cliente.cpf}', '${cliente.nome}', '${cliente.email || ''}', '${cliente.telefone || ''}')">
+                                    <i class="bi bi-plus-circle"></i> Nova
+                                </button>
+                            </div>
+                            <div class="list-group">
+                                ${anamnesesHTML}
+                            </div>
+                        </div>
+                        <div id="tab-prontuarios-${clienteId}" class="tab-pane fade">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 style="margin: 0;">Histórico de Atendimentos</h6>
+                                <button class="btn btn-sm btn-success" onclick="novoProntuarioComNotificacao('${cliente.cpf}', '${cliente.nome}', '${cliente.email || ''}', '${cliente.telefone || ''}')">
+                                    <i class="bi bi-plus-circle"></i> Novo
+                                </button>
+                            </div>
+                            <div class="list-group">
+                                ${prontuariosHTML}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Notificação -->
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <button class="btn btn-primary w-100" onclick="notificarCliente('${cliente.cpf}', '${cliente.nome}', '${cliente.email || ''}', '${cliente.telefone || ''}')">
+                            <i class="bi bi-bell"></i> Enviar Notificação ao Cliente
+                        </button>
+                    </div>
+                </div>
+            `,
+            width: '800px',
+            showCloseButton: true,
+            showConfirmButton: false,
+            customClass: {
+                popup: 'cliente-completo-modal'
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar cliente:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os dados do cliente', 'error');
+    }
+};
+
+/**
+ * Nova anamnese com upload de imagens e notificações
+ * Diretriz 11.3: Anexar imagens físicas
+ * Diretriz 11.4: Notificações Email/WhatsApp
+ */
+window.novaAnamneseComNotificacao = async function(cpf, nomeCliente, email, telefone) {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong>📋 Nova Anamnese</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px; max-height: 600px; overflow-y: auto;">
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Observações Gerais
+                    </label>
+                    <textarea id="anamnese_observacoes" class="form-control" rows="4"
+                              placeholder="Digite as observações da anamnese..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-images"></i> Anexar Imagens/Documentos (Diretriz 11.3)
+                    </label>
+                    <input type="file" id="anamnese_imagens" class="form-control"
+                           accept="image/*,application/pdf" multiple>
+                    <small class="text-muted">Aceita imagens (JPG, PNG) e PDFs. Máximo 5 arquivos.</small>
+                </div>
+
+                <div class="mb-3" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">
+                        <i class="bi bi-bell"></i> Notificar Cliente (Diretriz 11.4)
+                    </label>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="anamnese_notif_whatsapp"
+                               ${telefone ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="anamnese_notif_whatsapp">
+                            <i class="bi bi-whatsapp" style="color: #25D366;"></i> WhatsApp
+                            ${!telefone ? '<span class="text-muted">(sem telefone cadastrado)</span>' : ''}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="anamnese_notif_email"
+                               ${email ? '' : 'disabled'}>
+                        <label class="form-check-label" for="anamnese_notif_email">
+                            <i class="bi bi-envelope-fill" style="color: #3B82F6;"></i> Email
+                            ${!email ? '<span class="text-muted">(sem email cadastrado)</span>' : ''}
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-check-circle"></i> Salvar Anamnese',
+        cancelButtonText: 'Cancelar',
+        width: '650px',
+        preConfirm: () => {
+            const observacoes = document.getElementById('anamnese_observacoes').value.trim();
+            const imagensInput = document.getElementById('anamnese_imagens');
+            const notifWhatsApp = document.getElementById('anamnese_notif_whatsapp').checked;
+            const notifEmail = document.getElementById('anamnese_notif_email').checked;
+
+            if (!observacoes) {
+                Swal.showValidationMessage('Observações são obrigatórias');
+                return false;
+            }
+
+            if (imagensInput.files.length > 5) {
+                Swal.showValidationMessage('Máximo de 5 arquivos permitido');
+                return false;
+            }
+
+            return {
+                observacoes,
+                imagens: imagensInput.files,
+                notificacoes: {
+                    whatsapp: notifWhatsApp,
+                    email: notifEmail
+                }
+            };
+        }
+    });
+
+    if (formValues) {
+        await salvarAnamneseComImagens(cpf, nomeCliente, email, telefone, formValues);
+    }
+};
+
+/**
+ * Salvar anamnese com upload de imagens
+ */
+async function salvarAnamneseComImagens(cpf, nomeCliente, email, telefone, dados) {
+    try {
+        Swal.fire({
+            title: 'Salvando...',
+            text: 'Processando anamnese e enviando notificações',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const formData = new FormData();
+        formData.append('observacoes', dados.observacoes);
+        formData.append('notificacoes', JSON.stringify(dados.notificacoes));
+        formData.append('cliente_nome', nomeCliente);
+        formData.append('cliente_email', email);
+        formData.append('cliente_telefone', telefone);
+
+        // Adicionar imagens
+        if (dados.imagens && dados.imagens.length > 0) {
+            for (let i = 0; i < dados.imagens.length; i++) {
+                formData.append('imagens', dados.imagens[i]);
+            }
+        }
+
+        const response = await fetch(`/api/clientes/${cpf}/anamnese`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData  // Não incluir Content-Type, deixar o browser definir com boundary
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let mensagemSucesso = '<p><strong>Anamnese cadastrada com sucesso!</strong></p>';
+
+            if (result.imagens_salvas && result.imagens_salvas.length > 0) {
+                mensagemSucesso += `<p>✓ ${result.imagens_salvas.length} imagem(ns) anexada(s)</p>`;
+            }
+
+            if (result.notificacoes_enviadas) {
+                mensagemSucesso += '<div style="margin-top: 10px; padding: 10px; background: #f0fdf4; border-radius: 4px;">';
+                mensagemSucesso += '<strong style="color: #059669;">Notificações enviadas:</strong><br>';
+                if (result.notificacoes_enviadas.whatsapp) mensagemSucesso += '✓ WhatsApp<br>';
+                if (result.notificacoes_enviadas.email) mensagemSucesso += '✓ Email';
+                mensagemSucesso += '</div>';
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                html: mensagemSucesso,
+                timer: 3000
+            });
+
+            // Recarregar se estiver na tela de anamnese
+            if (typeof buscarAnamnesesCliente === 'function') {
+                buscarAnamnesesCliente();
+            }
+
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível salvar a anamnese', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao salvar anamnese:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+/**
+ * Novo prontuário com upload de imagens e notificações
+ */
+window.novoProntuarioComNotificacao = async function(cpf, nomeCliente, email, telefone) {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong>📋 Novo Prontuário</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px; max-height: 600px; overflow-y: auto;">
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Data do Atendimento
+                    </label>
+                    <input type="date" id="pront_data" class="form-control"
+                           value="${new Date().toISOString().split('T')[0]}">
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Profissional
+                    </label>
+                    <input type="text" id="pront_profissional" class="form-control"
+                           placeholder="Nome do profissional">
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Procedimento
+                    </label>
+                    <input type="text" id="pront_procedimento" class="form-control"
+                           placeholder="Tipo de procedimento realizado">
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Observações
+                    </label>
+                    <textarea id="pront_observacoes" class="form-control" rows="3"
+                              placeholder="Detalhes do atendimento..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-images"></i> Anexar Imagens/Documentos (Diretriz 11.3)
+                    </label>
+                    <input type="file" id="pront_imagens" class="form-control"
+                           accept="image/*,application/pdf" multiple>
+                    <small class="text-muted">Fotos do procedimento, documentos, etc. Máximo 5 arquivos.</small>
+                </div>
+
+                <div class="mb-3" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">
+                        <i class="bi bi-bell"></i> Notificar Cliente (Diretriz 11.4)
+                    </label>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="pront_notif_whatsapp"
+                               ${telefone ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="pront_notif_whatsapp">
+                            <i class="bi bi-whatsapp" style="color: #25D366;"></i> WhatsApp
+                            ${!telefone ? '<span class="text-muted">(sem telefone cadastrado)</span>' : ''}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="pront_notif_email"
+                               ${email ? '' : 'disabled'}>
+                        <label class="form-check-label" for="pront_notif_email">
+                            <i class="bi bi-envelope-fill" style="color: #3B82F6;"></i> Email
+                            ${!email ? '<span class="text-muted">(sem email cadastrado)</span>' : ''}
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-check-circle"></i> Salvar Prontuário',
+        cancelButtonText: 'Cancelar',
+        width: '650px',
+        preConfirm: () => {
+            const dataAtendimento = document.getElementById('pront_data').value;
+            const profissional = document.getElementById('pront_profissional').value.trim();
+            const procedimento = document.getElementById('pront_procedimento').value.trim();
+            const observacoes = document.getElementById('pront_observacoes').value.trim();
+            const imagensInput = document.getElementById('pront_imagens');
+            const notifWhatsApp = document.getElementById('pront_notif_whatsapp').checked;
+            const notifEmail = document.getElementById('pront_notif_email').checked;
+
+            if (!dataAtendimento || !profissional || !procedimento) {
+                Swal.showValidationMessage('Data, profissional e procedimento são obrigatórios');
+                return false;
+            }
+
+            if (imagensInput.files.length > 5) {
+                Swal.showValidationMessage('Máximo de 5 arquivos permitido');
+                return false;
+            }
+
+            return {
+                data_atendimento: dataAtendimento,
+                profissional,
+                procedimento,
+                observacoes,
+                imagens: imagensInput.files,
+                notificacoes: {
+                    whatsapp: notifWhatsApp,
+                    email: notifEmail
+                }
+            };
+        }
+    });
+
+    if (formValues) {
+        await salvarProntuarioComImagens(cpf, nomeCliente, email, telefone, formValues);
+    }
+};
+
+/**
+ * Salvar prontuário com upload de imagens
+ */
+async function salvarProntuarioComImagens(cpf, nomeCliente, email, telefone, dados) {
+    try {
+        Swal.fire({
+            title: 'Salvando...',
+            text: 'Processando prontuário e enviando notificações',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const formData = new FormData();
+        formData.append('data_atendimento', dados.data_atendimento);
+        formData.append('profissional', dados.profissional);
+        formData.append('procedimento', dados.procedimento);
+        formData.append('observacoes', dados.observacoes);
+        formData.append('notificacoes', JSON.stringify(dados.notificacoes));
+        formData.append('cliente_nome', nomeCliente);
+        formData.append('cliente_email', email);
+        formData.append('cliente_telefone', telefone);
+
+        // Adicionar imagens
+        if (dados.imagens && dados.imagens.length > 0) {
+            for (let i = 0; i < dados.imagens.length; i++) {
+                formData.append('imagens', dados.imagens[i]);
+            }
+        }
+
+        const response = await fetch(`/api/clientes/${cpf}/prontuario`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let mensagemSucesso = '<p><strong>Prontuário cadastrado com sucesso!</strong></p>';
+
+            if (result.imagens_salvas && result.imagens_salvas.length > 0) {
+                mensagemSucesso += `<p>✓ ${result.imagens_salvas.length} imagem(ns) anexada(s)</p>`;
+            }
+
+            if (result.notificacoes_enviadas) {
+                mensagemSucesso += '<div style="margin-top: 10px; padding: 10px; background: #f0fdf4; border-radius: 4px;">';
+                mensagemSucesso += '<strong style="color: #059669;">Notificações enviadas:</strong><br>';
+                if (result.notificacoes_enviadas.whatsapp) mensagemSucesso += '✓ WhatsApp<br>';
+                if (result.notificacoes_enviadas.email) mensagemSucesso += '✓ Email';
+                mensagemSucesso += '</div>';
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                html: mensagemSucesso,
+                timer: 3000
+            });
+
+            // Recarregar se estiver na tela de prontuário
+            if (typeof buscarProntuariosCliente === 'function') {
+                buscarProntuariosCliente();
+            }
+
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível salvar o prontuário', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao salvar prontuário:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+/**
+ * Notificar cliente diretamente (Diretriz 11.4)
+ */
+window.notificarCliente = async function(cpf, nomeCliente, email, telefone) {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong>📧 Notificar Cliente</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <p><strong>Cliente:</strong> ${nomeCliente}</p>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Tipo de Notificação
+                    </label>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="notif_whatsapp"
+                               ${telefone ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="notif_whatsapp">
+                            <i class="bi bi-whatsapp" style="color: #25D366;"></i> WhatsApp
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="notif_email"
+                               ${email ? '' : 'disabled'}>
+                        <label class="form-check-label" for="notif_email">
+                            <i class="bi bi-envelope-fill" style="color: #3B82F6;"></i> Email
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Mensagem
+                    </label>
+                    <textarea id="notif_mensagem" class="form-control" rows="4"
+                              placeholder="Digite a mensagem que deseja enviar..."></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-send"></i> Enviar',
+        cancelButtonText: 'Cancelar',
+        width: '550px',
+        preConfirm: () => {
+            const whatsapp = document.getElementById('notif_whatsapp').checked;
+            const emailNotif = document.getElementById('notif_email').checked;
+            const mensagem = document.getElementById('notif_mensagem').value.trim();
+
+            if (!whatsapp && !emailNotif) {
+                Swal.showValidationMessage('Selecione pelo menos um tipo de notificação');
+                return false;
+            }
+
+            if (!mensagem) {
+                Swal.showValidationMessage('A mensagem é obrigatória');
+                return false;
+            }
+
+            return { whatsapp, email: emailNotif, mensagem };
+        }
+    });
+
+    if (formValues) {
+        await enviarNotificacaoCliente(cpf, nomeCliente, email, telefone, formValues);
+    }
+};
+
+/**
+ * Enviar notificação ao cliente
+ */
+async function enviarNotificacaoCliente(cpf, nomeCliente, email, telefone, dados) {
+    try {
+        Swal.fire({
+            title: 'Enviando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch(`/api/clientes/${cpf}/notificar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                cliente_nome: nomeCliente,
+                cliente_email: email,
+                cliente_telefone: telefone,
+                mensagem: dados.mensagem,
+                notificacoes: {
+                    whatsapp: dados.whatsapp,
+                    email: dados.email
+                }
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let msg = '<strong>Notificação enviada com sucesso!</strong><br>';
+            if (result.notificacoes_enviadas.whatsapp) msg += '✓ WhatsApp<br>';
+            if (result.notificacoes_enviadas.email) msg += '✓ Email';
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Enviado!',
+                html: msg,
+                timer: 2500
+            });
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível enviar a notificação', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao enviar notificação:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+console.log('✅ Sistema de Anamnese/Prontuário completo carregado (11.1, 11.3, 11.4)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');

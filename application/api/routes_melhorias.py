@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash
 import logging
 import os
 import urllib.parse
+import json
 from io import BytesIO
 
 logger = logging.getLogger(__name__)
@@ -1454,5 +1455,478 @@ def sugerir_profissional_fila():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ==================== ANAMNESE/PRONTUÁRIO COMPLETO (Diretrizes 11.1, 11.3, 11.4) ====================
+
+@bp.route('/api/clientes/<cliente_id>/anamneses')
+def get_cliente_anamneses(cliente_id):
+    """
+    Buscar todas as anamneses de um cliente
+    Diretriz 11.1: Integração ao visualizar cliente
+    """
+    try:
+        db = get_db()
+
+        # Buscar cliente
+        cliente = db.clientes.find_one({'_id': ObjectId(cliente_id)})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Buscar todas as anamneses deste cliente
+        anamneses = list(db.anamnese.find({'cliente_cpf': cliente.get('cpf')}).sort('data_cadastro', -1))
+
+        return jsonify({
+            'success': True,
+            'anamneses': convert_objectid(anamneses)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar anamneses do cliente: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/clientes/<cliente_id>/prontuarios')
+def get_cliente_prontuarios(cliente_id):
+    """
+    Buscar todos os prontuários de um cliente
+    Diretriz 11.1: Integração ao visualizar cliente
+    """
+    try:
+        db = get_db()
+
+        # Buscar cliente
+        cliente = db.clientes.find_one({'_id': ObjectId(cliente_id)})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Buscar todos os prontuários deste cliente
+        prontuarios = list(db.prontuario.find({'cliente_cpf': cliente.get('cpf')}).sort('data_atendimento', -1))
+
+        return jsonify({
+            'success': True,
+            'prontuarios': convert_objectid(prontuarios)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar prontuários do cliente: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/clientes/<cpf>/anamnese', methods=['POST'])
+def criar_anamnese_com_imagens(cpf):
+    """
+    Criar anamnese com upload de imagens e notificações
+
+    Diretriz 11.3: Anexar imagens físicas de documentos
+    Diretriz 11.4: Notificações Email/WhatsApp
+    """
+    try:
+        db = get_db()
+
+        # Buscar cliente
+        cliente = db.clientes.find_one({'cpf': cpf})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Extrair dados do FormData
+        observacoes = request.form.get('observacoes')
+        notificacoes = request.form.get('notificacoes')
+        cliente_nome = request.form.get('cliente_nome')
+        cliente_email = request.form.get('cliente_email')
+        cliente_telefone = request.form.get('cliente_telefone')
+
+        # Parse notificacoes JSON
+        try:
+            notificacoes = json.loads(notificacoes) if notificacoes else {}
+        except:
+            notificacoes = {}
+
+        # Upload de imagens (Diretriz 11.3)
+        imagens_salvas = []
+        if 'imagens' in request.files:
+            files = request.files.getlist('imagens')
+
+            # Criar diretório de uploads se não existir
+            upload_dir = os.path.join('static', 'uploads', 'anamnese', cpf)
+            os.makedirs(upload_dir, exist_ok=True)
+
+            for file in files[:5]:  # Máximo 5 arquivos
+                if file and file.filename:
+                    # Gerar nome único para o arquivo
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"{timestamp}_{file.filename}"
+                    filepath = os.path.join(upload_dir, filename)
+
+                    # Salvar arquivo
+                    file.save(filepath)
+
+                    # Salvar caminho relativo
+                    relative_path = filepath.replace('\\', '/')
+                    imagens_salvas.append(relative_path)
+
+        # Criar documento de anamnese
+        documento_anamnese = {
+            'cliente_cpf': cpf,
+            'observacoes': observacoes,
+            'imagens': imagens_salvas,
+            'data_cadastro': datetime.now(),
+            'cadastrado_por': session.get('usuario', 'Sistema'),
+            'respostas': {}
+        }
+
+        result = db.anamnese.insert_one(documento_anamnese)
+        anamnese_id = str(result.inserted_id)
+
+        # NOTIFICAÇÕES (Diretriz 11.4)
+        notificacoes_enviadas = {}
+
+        # WhatsApp
+        if notificacoes.get('whatsapp') and cliente_telefone:
+            telefone_limpo = ''.join(filter(str.isdigit, cliente_telefone))
+            if not telefone_limpo.startswith('55'):
+                telefone_limpo = '55' + telefone_limpo
+
+            mensagem_whatsapp = f"""*BIOMA - Nova Anamnese Cadastrada*
+
+Olá, {cliente_nome}! 👋
+
+Sua anamnese foi cadastrada em nosso sistema.
+
+📋 *Observações:* {observacoes[:100]}{'...' if len(observacoes) > 100 else ''}
+📅 *Data:* {datetime.now().strftime('%d/%m/%Y %H:%M')}
+{f'📎 *Anexos:* {len(imagens_salvas)} arquivo(s)' if imagens_salvas else ''}
+
+Qualquer dúvida, estamos à disposição!
+
+Obrigado pela confiança! 😊"""
+
+            whatsapp_url = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(mensagem_whatsapp)}"
+
+            # Log de notificação
+            db.notificacoes_log.insert_one({
+                'tipo': 'whatsapp',
+                'destinatario': cliente_telefone,
+                'mensagem': mensagem_whatsapp,
+                'url': whatsapp_url,
+                'anamnese_id': anamnese_id,
+                'data_envio': datetime.now()
+            })
+
+            notificacoes_enviadas['whatsapp'] = True
+
+        # Email
+        if notificacoes.get('email') and cliente_email:
+            db.notificacoes_log.insert_one({
+                'tipo': 'email',
+                'destinatario': cliente_email,
+                'assunto': 'Nova Anamnese Cadastrada - BIOMA',
+                'corpo': f"""
+                    Olá, {cliente_nome}!
+
+                    Sua anamnese foi cadastrada em nosso sistema.
+
+                    Observações: {observacoes}
+                    Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+                    {f'Anexos: {len(imagens_salvas)} arquivo(s)' if imagens_salvas else ''}
+
+                    Obrigado pela confiança!
+
+                    Atenciosamente,
+                    Equipe BIOMA
+                """,
+                'anamnese_id': anamnese_id,
+                'data_envio': datetime.now(),
+                'status': 'simulado'
+            })
+
+            notificacoes_enviadas['email'] = True
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'anamnese_criada',
+            'usuario': session.get('usuario', 'Sistema'),
+            'descricao': f'Anamnese cadastrada para cliente {cliente_nome}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'cliente_cpf': cpf,
+                'imagens_anexadas': len(imagens_salvas),
+                'notificacoes': notificacoes_enviadas
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'anamnese_id': anamnese_id,
+            'imagens_salvas': imagens_salvas,
+            'notificacoes_enviadas': notificacoes_enviadas,
+            'message': 'Anamnese cadastrada com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao criar anamnese: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/clientes/<cpf>/prontuario', methods=['POST'])
+def criar_prontuario_com_imagens(cpf):
+    """
+    Criar prontuário com upload de imagens e notificações
+
+    Diretriz 11.3: Anexar imagens físicas de documentos
+    Diretriz 11.4: Notificações Email/WhatsApp
+    """
+    try:
+        db = get_db()
+
+        # Buscar cliente
+        cliente = db.clientes.find_one({'cpf': cpf})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Extrair dados do FormData
+        data_atendimento = request.form.get('data_atendimento')
+        profissional = request.form.get('profissional')
+        procedimento = request.form.get('procedimento')
+        observacoes = request.form.get('observacoes', '')
+        notificacoes = request.form.get('notificacoes')
+        cliente_nome = request.form.get('cliente_nome')
+        cliente_email = request.form.get('cliente_email')
+        cliente_telefone = request.form.get('cliente_telefone')
+
+        # Parse notificacoes JSON
+        try:
+            notificacoes = json.loads(notificacoes) if notificacoes else {}
+        except:
+            notificacoes = {}
+
+        # Upload de imagens (Diretriz 11.3)
+        imagens_salvas = []
+        if 'imagens' in request.files:
+            files = request.files.getlist('imagens')
+
+            # Criar diretório de uploads se não existir
+            upload_dir = os.path.join('static', 'uploads', 'prontuario', cpf)
+            os.makedirs(upload_dir, exist_ok=True)
+
+            for file in files[:5]:  # Máximo 5 arquivos
+                if file and file.filename:
+                    # Gerar nome único para o arquivo
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"{timestamp}_{file.filename}"
+                    filepath = os.path.join(upload_dir, filename)
+
+                    # Salvar arquivo
+                    file.save(filepath)
+
+                    # Salvar caminho relativo
+                    relative_path = filepath.replace('\\', '/')
+                    imagens_salvas.append(relative_path)
+
+        # Criar documento de prontuário
+        documento_prontuario = {
+            'cliente_cpf': cpf,
+            'data_atendimento': data_atendimento,
+            'profissional': profissional,
+            'procedimento': procedimento,
+            'observacoes': observacoes,
+            'imagens': imagens_salvas,
+            'proxima_sessao': None,
+            'created_at': datetime.now(),
+            'cadastrado_por': session.get('usuario', 'Sistema')
+        }
+
+        result = db.prontuario.insert_one(documento_prontuario)
+        prontuario_id = str(result.inserted_id)
+
+        # NOTIFICAÇÕES (Diretriz 11.4)
+        notificacoes_enviadas = {}
+
+        # WhatsApp
+        if notificacoes.get('whatsapp') and cliente_telefone:
+            telefone_limpo = ''.join(filter(str.isdigit, cliente_telefone))
+            if not telefone_limpo.startswith('55'):
+                telefone_limpo = '55' + telefone_limpo
+
+            mensagem_whatsapp = f"""*BIOMA - Prontuário Registrado*
+
+Olá, {cliente_nome}! 👋
+
+Seu atendimento foi registrado em nosso sistema.
+
+📋 *Procedimento:* {procedimento}
+👨‍⚕️ *Profissional:* {profissional}
+📅 *Data:* {data_atendimento}
+{f'📎 *Anexos:* {len(imagens_salvas)} arquivo(s)' if imagens_salvas else ''}
+
+{f'💬 *Observações:* {observacoes[:100]}{"..." if len(observacoes) > 100 else ""}' if observacoes else ''}
+
+Obrigado pela confiança! 😊"""
+
+            whatsapp_url = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(mensagem_whatsapp)}"
+
+            # Log de notificação
+            db.notificacoes_log.insert_one({
+                'tipo': 'whatsapp',
+                'destinatario': cliente_telefone,
+                'mensagem': mensagem_whatsapp,
+                'url': whatsapp_url,
+                'prontuario_id': prontuario_id,
+                'data_envio': datetime.now()
+            })
+
+            notificacoes_enviadas['whatsapp'] = True
+
+        # Email
+        if notificacoes.get('email') and cliente_email:
+            db.notificacoes_log.insert_one({
+                'tipo': 'email',
+                'destinatario': cliente_email,
+                'assunto': f'Prontuário Registrado - {procedimento}',
+                'corpo': f"""
+                    Olá, {cliente_nome}!
+
+                    Seu atendimento foi registrado em nosso sistema.
+
+                    Procedimento: {procedimento}
+                    Profissional: {profissional}
+                    Data: {data_atendimento}
+                    {f'Anexos: {len(imagens_salvas)} arquivo(s)' if imagens_salvas else ''}
+
+                    {f'Observações: {observacoes}' if observacoes else ''}
+
+                    Obrigado pela confiança!
+
+                    Atenciosamente,
+                    Equipe BIOMA
+                """,
+                'prontuario_id': prontuario_id,
+                'data_envio': datetime.now(),
+                'status': 'simulado'
+            })
+
+            notificacoes_enviadas['email'] = True
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'prontuario_criado',
+            'usuario': session.get('usuario', 'Sistema'),
+            'descricao': f'Prontuário cadastrado para cliente {cliente_nome}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'cliente_cpf': cpf,
+                'procedimento': procedimento,
+                'profissional': profissional,
+                'imagens_anexadas': len(imagens_salvas),
+                'notificacoes': notificacoes_enviadas
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'prontuario_id': prontuario_id,
+            'imagens_salvas': imagens_salvas,
+            'notificacoes_enviadas': notificacoes_enviadas,
+            'message': 'Prontuário cadastrado com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao criar prontuário: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/clientes/<cpf>/notificar', methods=['POST'])
+def notificar_cliente(cpf):
+    """
+    Enviar notificação direta ao cliente
+    Diretriz 11.4: Notificações Email/WhatsApp
+    """
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        cliente_nome = data.get('cliente_nome')
+        cliente_email = data.get('cliente_email')
+        cliente_telefone = data.get('cliente_telefone')
+        mensagem = data.get('mensagem')
+        notificacoes = data.get('notificacoes', {})
+
+        if not mensagem:
+            return jsonify({'success': False, 'message': 'Mensagem é obrigatória'}), 400
+
+        notificacoes_enviadas = {}
+
+        # WhatsApp
+        if notificacoes.get('whatsapp') and cliente_telefone:
+            telefone_limpo = ''.join(filter(str.isdigit, cliente_telefone))
+            if not telefone_limpo.startswith('55'):
+                telefone_limpo = '55' + telefone_limpo
+
+            mensagem_whatsapp = f"""*BIOMA - Mensagem*
+
+Olá, {cliente_nome}! 👋
+
+{mensagem}
+
+Atenciosamente,
+Equipe BIOMA"""
+
+            whatsapp_url = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(mensagem_whatsapp)}"
+
+            db.notificacoes_log.insert_one({
+                'tipo': 'whatsapp',
+                'destinatario': cliente_telefone,
+                'mensagem': mensagem_whatsapp,
+                'url': whatsapp_url,
+                'cliente_cpf': cpf,
+                'data_envio': datetime.now()
+            })
+
+            notificacoes_enviadas['whatsapp'] = True
+
+        # Email
+        if notificacoes.get('email') and cliente_email:
+            db.notificacoes_log.insert_one({
+                'tipo': 'email',
+                'destinatario': cliente_email,
+                'assunto': 'Mensagem da BIOMA',
+                'corpo': f"""
+                    Olá, {cliente_nome}!
+
+                    {mensagem}
+
+                    Atenciosamente,
+                    Equipe BIOMA
+                """,
+                'cliente_cpf': cpf,
+                'data_envio': datetime.now(),
+                'status': 'simulado'
+            })
+
+            notificacoes_enviadas['email'] = True
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'notificacao_cliente',
+            'usuario': session.get('usuario', 'Sistema'),
+            'descricao': f'Notificação enviada ao cliente {cliente_nome}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'cliente_cpf': cpf,
+                'mensagem_preview': mensagem[:100],
+                'notificacoes': notificacoes_enviadas
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'notificacoes_enviadas': notificacoes_enviadas,
+            'message': 'Notificação enviada com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao notificar cliente: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 logger.info("✅ Rotas de melhorias carregadas com sucesso")
 logger.info("✅ Sistema de Fila Inteligente carregado (Diretrizes 10.1 e 10.2)")
+logger.info("✅ Sistema de Anamnese/Prontuário carregado (Diretrizes 11.1, 11.3, 11.4)")
