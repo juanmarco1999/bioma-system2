@@ -970,4 +970,330 @@ window.gerarRelatorioEstoque = async function() {
     }
 };
 
+// ============================================================================
+// SISTEMA DE FILA INTELIGENTE (Diretrizes 10.1 e 10.2)
+// ============================================================================
+
+/**
+ * Modal inteligente de fila com integração ao calendário
+ * Diretriz 10.1: Sistema inteligente de automação ligado ao calendário
+ * Diretriz 10.2: Notificações Email/WhatsApp ao adicionar à fila
+ */
+window.showModalFilaInteligente = async function() {
+    try {
+        // Carregar dados necessários em paralelo
+        const [profissionaisRes, servicosRes] = await Promise.all([
+            fetch('/api/profissionais', { credentials: 'include' }),
+            fetch('/api/servicos', { credentials: 'include' })
+        ]);
+
+        const profissionaisData = await profissionaisRes.json();
+        const servicosData = await servicosRes.json();
+
+        const profissionais = profissionaisData.profissionais || [];
+        const servicos = servicosData.servicos || [];
+
+        // Criar options para selects
+        const profissionaisOptions = profissionais.map(p =>
+            `<option value="${p._id}">${p.nome} - ${p.especialidade || 'Geral'}</option>`
+        ).join('');
+
+        const servicosOptions = servicos.map(s =>
+            `<option value="${s._id}">${s.nome} - R$ ${(s.preco || 0).toFixed(2)}</option>`
+        ).join('');
+
+        const { value: formValues } = await Swal.fire({
+            title: '<strong>🎯 Fila Inteligente</strong>',
+            html: `
+                <div style="text-align: left; padding: 10px; max-height: 600px; overflow-y: auto;">
+
+                    <!-- Dados do Cliente -->
+                    <h6 style="color: #7C3AED; margin-top: 15px; margin-bottom: 10px;">
+                        <i class="bi bi-person-fill"></i> Dados do Cliente
+                    </h6>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-person"></i> Nome Completo *
+                        </label>
+                        <input type="text" id="fila_nome" class="form-control"
+                               placeholder="Digite o nome completo" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-telephone"></i> Telefone (WhatsApp) *
+                        </label>
+                        <input type="text" id="fila_telefone" class="form-control"
+                               placeholder="(00) 00000-0000" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-envelope"></i> Email (opcional)
+                        </label>
+                        <input type="email" id="fila_email" class="form-control"
+                               placeholder="cliente@exemplo.com">
+                    </div>
+
+                    <!-- Serviço e Profissional -->
+                    <h6 style="color: #7C3AED; margin-top: 20px; margin-bottom: 10px;">
+                        <i class="bi bi-briefcase-fill"></i> Serviço Desejado
+                    </h6>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-list-task"></i> Serviço *
+                        </label>
+                        <select id="fila_servico" class="form-control" required onchange="sugerirProfissionalDisponivel()">
+                            <option value="">-- Selecione o serviço --</option>
+                            ${servicosOptions}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-person-badge"></i> Profissional
+                        </label>
+                        <select id="fila_profissional" class="form-control">
+                            <option value="">-- Automático (próximo disponível) --</option>
+                            ${profissionaisOptions}
+                        </select>
+                        <small class="text-muted" id="fila_disponibilidade_info"></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-calendar-event"></i> Data/Hora Preferencial (opcional)
+                        </label>
+                        <input type="datetime-local" id="fila_data_preferencial" class="form-control">
+                        <small class="text-muted">Deixe em branco para atendimento imediato na fila</small>
+                    </div>
+
+                    <!-- Notificações -->
+                    <h6 style="color: #7C3AED; margin-top: 20px; margin-bottom: 10px;">
+                        <i class="bi bi-bell-fill"></i> Notificações (Diretriz 10.2)
+                    </h6>
+
+                    <div class="mb-3" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="fila_notif_whatsapp" checked>
+                            <label class="form-check-label" for="fila_notif_whatsapp">
+                                <i class="bi bi-whatsapp" style="color: #25D366;"></i>
+                                Enviar confirmação via WhatsApp
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="fila_notif_email">
+                            <label class="form-check-label" for="fila_notif_email">
+                                <i class="bi bi-envelope-fill" style="color: #3B82F6;"></i>
+                                Enviar confirmação via Email (MailSender)
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            <i class="bi bi-info-circle"></i> O cliente receberá sua posição na fila e tempo estimado
+                        </small>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-chat-left-text"></i> Observações (opcional)
+                        </label>
+                        <textarea id="fila_observacoes" class="form-control" rows="3"
+                                  placeholder="Alguma observação especial sobre o atendimento..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info" style="margin-top: 15px; font-size: 0.9rem;">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>Sistema Inteligente:</strong> O profissional será automaticamente sugerido
+                        baseado na disponibilidade do calendário e carga de trabalho atual.
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-plus-circle"></i> Adicionar à Fila',
+            cancelButtonText: 'Cancelar',
+            width: '650px',
+            customClass: {
+                popup: 'fila-inteligente-modal'
+            },
+            didOpen: () => {
+                // Sugerir horário automático
+                const agora = new Date();
+                agora.setMinutes(agora.getMinutes() + 30); // 30 min a partir de agora
+                const dataInput = document.getElementById('fila_data_preferencial');
+                if (dataInput) {
+                    const ano = agora.getFullYear();
+                    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+                    const dia = String(agora.getDate()).padStart(2, '0');
+                    const hora = String(agora.getHours()).padStart(2, '0');
+                    const min = String(agora.getMinutes()).padStart(2, '0');
+                    dataInput.value = `${ano}-${mes}-${dia}T${hora}:${min}`;
+                }
+            },
+            preConfirm: () => {
+                const nome = document.getElementById('fila_nome').value.trim();
+                const telefone = document.getElementById('fila_telefone').value.trim();
+                const email = document.getElementById('fila_email').value.trim();
+                const servicoId = document.getElementById('fila_servico').value;
+                const profissionalId = document.getElementById('fila_profissional').value;
+                const dataPreferencial = document.getElementById('fila_data_preferencial').value;
+                const notifWhatsApp = document.getElementById('fila_notif_whatsapp').checked;
+                const notifEmail = document.getElementById('fila_notif_email').checked;
+                const observacoes = document.getElementById('fila_observacoes').value.trim();
+
+                // Validações
+                if (!nome) {
+                    Swal.showValidationMessage('Nome do cliente é obrigatório');
+                    return false;
+                }
+                if (!telefone) {
+                    Swal.showValidationMessage('Telefone é obrigatório para notificações');
+                    return false;
+                }
+                if (!servicoId) {
+                    Swal.showValidationMessage('Selecione um serviço');
+                    return false;
+                }
+                if (notifEmail && !email) {
+                    Swal.showValidationMessage('Email é necessário para notificação por email');
+                    return false;
+                }
+
+                return {
+                    cliente_nome: nome,
+                    cliente_telefone: telefone,
+                    cliente_email: email || null,
+                    servico_id: servicoId,
+                    profissional_id: profissionalId || null,
+                    data_preferencial: dataPreferencial || null,
+                    notificacoes: {
+                        whatsapp: notifWhatsApp,
+                        email: notifEmail
+                    },
+                    observacoes: observacoes || null
+                };
+            }
+        });
+
+        if (formValues) {
+            // Enviar para API inteligente de fila
+            await adicionarFilaInteligente(formValues);
+        }
+
+    } catch (error) {
+        console.error('Erro ao abrir modal de fila:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os dados necessários', 'error');
+    }
+};
+
+/**
+ * Adiciona cliente à fila com sistema inteligente
+ */
+async function adicionarFilaInteligente(dados) {
+    try {
+        Swal.fire({
+            title: 'Processando...',
+            text: 'Adicionando à fila e verificando disponibilidade',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const response = await fetch('/api/fila/inteligente', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(dados)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let mensagemSucesso = `
+                <div style="text-align: left;">
+                    <p><strong>Posição na fila:</strong> ${result.posicao}º</p>
+                    <p><strong>Tempo estimado:</strong> ${result.tempo_estimado || '15-20 minutos'}</p>
+                    ${result.profissional_nome ? `<p><strong>Profissional:</strong> ${result.profissional_nome}</p>` : ''}
+                    ${result.horario_sugerido ? `<p><strong>Horário sugerido:</strong> ${result.horario_sugerido}</p>` : ''}
+                </div>
+            `;
+
+            if (result.notificacoes_enviadas) {
+                mensagemSucesso += `
+                    <div style="margin-top: 15px; padding: 10px; background: #f0fdf4; border-left: 4px solid #10B981; border-radius: 4px;">
+                        <strong style="color: #059669;">✓ Notificações enviadas:</strong><br>
+                        ${result.notificacoes_enviadas.whatsapp ? '✓ WhatsApp<br>' : ''}
+                        ${result.notificacoes_enviadas.email ? '✓ Email' : ''}
+                    </div>
+                `;
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: '✅ Adicionado à Fila!',
+                html: mensagemSucesso,
+                confirmButtonText: 'OK'
+            });
+
+            // Recarregar fila
+            if (typeof loadFila === 'function') {
+                loadFila();
+            }
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível adicionar à fila', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao adicionar à fila:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+/**
+ * Sugere profissional disponível baseado no serviço selecionado
+ */
+window.sugerirProfissionalDisponivel = async function() {
+    const servicoId = document.getElementById('fila_servico')?.value;
+    if (!servicoId) return;
+
+    try {
+        const response = await fetch(`/api/fila/sugerir-profissional?servico_id=${servicoId}`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.profissional_id) {
+            const selectProfissional = document.getElementById('fila_profissional');
+            if (selectProfissional) {
+                selectProfissional.value = data.profissional_id;
+
+                const infoDiv = document.getElementById('fila_disponibilidade_info');
+                if (infoDiv) {
+                    infoDiv.innerHTML = `
+                        <span style="color: #10B981;">
+                            ✓ ${data.profissional_nome} está disponível
+                            ${data.proxima_disponibilidade ? `(Próxima: ${data.proxima_disponibilidade})` : ''}
+                        </span>
+                    `;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao sugerir profissional:', error);
+    }
+};
+
+/**
+ * Override da função original showModalFila para usar a versão inteligente
+ */
+if (typeof window.showModalFila !== 'undefined') {
+    window.showModalFilaOriginal = window.showModalFila;
+}
+window.showModalFila = window.showModalFilaInteligente;
+
+console.log('✅ Sistema de Fila Inteligente carregado (10.1, 10.2)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
