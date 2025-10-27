@@ -939,7 +939,17 @@
         </div>
 
         <div id="section-consultar" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-search"></i> Consultar Orçamentos</h1></div>
+            <div class="page-header">
+                <h1><i class="bi bi-search"></i> Consultar Orçamentos</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success btn-sm" onclick="exportarOrcamentosExcel()" title="Exportar para Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="exportarOrcamentosCSV()" title="Exportar para CSV">
+                        <i class="bi bi-file-earmark-text"></i> CSV
+                    </button>
+                </div>
+            </div>
             <div class="card"><div class="card-header"><i class="bi bi-list-ul"></i> Todos os Orçamentos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody id="consultaBody"><tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
         </div>
 
@@ -1279,7 +1289,15 @@
         <div id="section-clientes" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-people"></i> Clientes</h1>
-                <button class="btn btn-primary" onclick="showModalCliente()"><i class="bi bi-person-plus"></i> Novo</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-success btn-sm" onclick="exportarClientes('excel')" title="Exportar para Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="exportarClientes('csv')" title="Exportar para CSV">
+                        <i class="bi bi-file-earmark-text"></i> CSV
+                    </button>
+                    <button class="btn btn-primary" onclick="showModalCliente()"><i class="bi bi-person-plus"></i> Novo</button>
+                </div>
             </div>
 
             <!-- Sub-tabs para Clientes -->
@@ -1471,7 +1489,15 @@
         <div id="section-profissionais" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-person-workspace"></i> Profissionais</h1>
-                <button class="btn btn-primary" onclick="showModalProfissional()"><i class="bi bi-person-plus"></i> Novo</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-success btn-sm" onclick="exportarProfissionais('excel')" title="Exportar para Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="exportarProfissionais('csv')" title="Exportar para CSV">
+                        <i class="bi bi-file-earmark-text"></i> CSV
+                    </button>
+                    <button class="btn btn-primary" onclick="showModalProfissional()"><i class="bi bi-person-plus"></i> Novo</button>
+                </div>
             </div>
             
             <!-- Sub-tabs para Profissionais -->
@@ -1724,12 +1750,18 @@
         <div id="section-servicos" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-scissors"></i> Serviços</h1>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn btn-success btn-sm" onclick="ativarTodosServicos()" title="Ativar todos os serviços">
                         <i class="bi bi-check-circle-fill"></i> Ativar Todos
                     </button>
                     <button class="btn btn-danger btn-sm" onclick="desativarTodosServicos()" title="Desativar todos os serviços">
                         <i class="bi bi-x-circle-fill"></i> Desativar Todos
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="exportarServicos('excel')" title="Exportar para Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="exportarServicos('csv')" title="Exportar para CSV">
+                        <i class="bi bi-file-earmark-text"></i> CSV
                     </button>
                     <button class="btn btn-primary" onclick="showModalServico()"><i class="bi bi-plus-circle"></i> Novo</button>
                 </div>
@@ -1849,12 +1881,18 @@
         <div id="section-produtos" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-box-seam"></i> Produtos</h1>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn btn-success btn-sm" onclick="ativarTodosProdutos()" title="Ativar todos os produtos">
                         <i class="bi bi-check-circle-fill"></i> Ativar Todos
                     </button>
                     <button class="btn btn-danger btn-sm" onclick="desativarTodosProdutos()" title="Desativar todos os produtos">
                         <i class="bi bi-x-circle-fill"></i> Desativar Todos
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="exportarProdutos('excel')" title="Exportar para Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="exportarProdutos('csv')" title="Exportar para CSV">
+                        <i class="bi bi-file-earmark-text"></i> CSV
                     </button>
                     <button class="btn btn-primary" onclick="showModalProduto()"><i class="bi bi-plus-circle"></i> Novo</button>
                 </div>
