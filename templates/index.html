@@ -13406,6 +13406,75 @@ async function carregarEstoqueVisaoGeral() {
                 movimentacoesEl.textContent = movData.movimentacoes.length;
             }
 
+            // Popula tabela de Últimas Movimentações
+            const ultimasMovBody = document.getElementById('estoqueUltimasMovimentacoesVisaoGeral');
+            if (ultimasMovBody && movData.movimentacoes.length > 0) {
+                // Ordenar por data (mais recentes primeiro) e pegar só as 10 primeiras
+                const movimentacoesRecentes = [...movData.movimentacoes]
+                    .sort((a, b) => {
+                        const dateA = new Date(a.data || a.data_movimentacao || a.created_at);
+                        const dateB = new Date(b.data || b.data_movimentacao || b.created_at);
+                        return dateB - dateA; // Descendente
+                    })
+                    .slice(0, 10);
+
+                ultimasMovBody.innerHTML = movimentacoesRecentes.map(mov => {
+                    try {
+                        // Extrair informações com fallbacks
+                        const data = mov.data || mov.data_movimentacao || mov.created_at || 'N/A';
+                        const produtoNome = mov.produto_nome || mov.produto?.nome || mov.descricao || 'Produto desconhecido';
+                        const tipo = mov.tipo || 'N/A';
+                        const quantidade = mov.quantidade ?? mov.qtd ?? 0;
+                        const responsavel = mov.responsavel || mov.usuario || mov.profissional || 'Sistema';
+
+                        // Formatar data
+                        let dataFormatada = 'N/A';
+                        try {
+                            if (data !== 'N/A') {
+                                const dt = new Date(data);
+                                if (!isNaN(dt.getTime())) {
+                                    dataFormatada = dt.toLocaleDateString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Erro ao formatar data:', e);
+                        }
+
+                        // Badge de tipo com cor
+                        const tipoLower = String(tipo).toLowerCase();
+                        let tipoBadgeClass = 'secondary';
+                        if (tipoLower.includes('entrada')) {
+                            tipoBadgeClass = 'success';
+                        } else if (tipoLower.includes('saida') || tipoLower.includes('saída')) {
+                            tipoBadgeClass = 'danger';
+                        }
+
+                        return `
+                            <tr>
+                                <td>${dataFormatada}</td>
+                                <td>${produtoNome}</td>
+                                <td><span class="badge ${tipoBadgeClass}">${tipo}</span></td>
+                                <td>${quantidade}</td>
+                                <td>${responsavel}</td>
+                            </tr>
+                        `;
+                    } catch (err) {
+                        console.error('Erro ao renderizar movimentação:', err, mov);
+                        return '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar movimentação</td></tr>';
+                    }
+                }).join('');
+
+                console.log(`✅ Tabela de Últimas Movimentações populada com ${movimentacoesRecentes.length} registros`);
+            } else if (ultimasMovBody) {
+                ultimasMovBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhuma movimentação recente</td></tr>';
+            }
+
             console.log('📊 Preparando gráficos do estoque...');
 
             // IMPORTANTE: setTimeout para garantir que canvas está visível
