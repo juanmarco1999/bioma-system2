@@ -6633,6 +6633,58 @@ def atualizar_servico(id):
         logger.error(f"❌ Erro ao atualizar serviço: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@bp.route('/api/servicos/toggle-todos', methods=['POST'])
+@login_required
+@permission_required('Admin', 'Gestão')
+def toggle_todos_servicos():
+    db = get_db()
+    """Ativa ou desativa todos os serviços"""
+    try:
+        data = request.get_json()
+        ativo = data.get('ativo', True)
+
+        result = db.servicos.update_many(
+            {},
+            {'$set': {'status': 'ativo' if ativo else 'inativo'}}
+        )
+
+        logger.info(f"✅ {result.modified_count} serviços {'ativados' if ativo else 'desativados'}")
+        return jsonify({
+            'success': True,
+            'count': result.modified_count,
+            'message': f'{result.modified_count} serviços foram {"ativados" if ativo else "desativados"} com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao toggle servicos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/api/produtos/toggle-todos', methods=['POST'])
+@login_required
+@permission_required('Admin', 'Gestão')
+def toggle_todos_produtos():
+    db = get_db()
+    """Ativa ou desativa todos os produtos"""
+    try:
+        data = request.get_json()
+        ativo = data.get('ativo', True)
+
+        result = db.produtos.update_many(
+            {},
+            {'$set': {'ativo': ativo}}
+        )
+
+        logger.info(f"✅ {result.modified_count} produtos {'ativados' if ativo else 'desativados'}")
+        return jsonify({
+            'success': True,
+            'count': result.modified_count,
+            'message': f'{result.modified_count} produtos foram {"ativados" if ativo else "desativados"} com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao toggle produtos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 # ==================== ENDPOINTS PARA SUB-TABS - ESTOQUE ====================
 
