@@ -1,5 +1,35 @@
+# Python
 __pycache__/
-*.pyc
-app_original_backup.py
-app.py
-nul
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs/Archive
+docs/archive/
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
