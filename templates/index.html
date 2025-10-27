@@ -9457,6 +9457,173 @@ window.carregarDadosSecao = function(section) {
         }, 500);
     }
 };
+
+// ========== SISTEMA DE AUTO-ATUALIZAÇÃO (DIRETRIZ 0.1) ==========
+
+/**
+ * Sistema de atualização automática de dados
+ * Atualiza o dashboard e seção atual a cada 30 segundos
+ */
+
+let autoUpdateInterval = null;
+let autoUpdateEnabled = true;
+
+// Última seção ativa
+let lastActiveSection = 'dashboard';
+
+function enableAutoUpdate() {
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+    }
+
+    console.log('🔄 Auto-atualização ATIVADA (intervalo: 30s)');
+
+    // Atualizar imediatamente ao ativar
+    performAutoUpdate();
+
+    // Configurar intervalo de 30 segundos
+    autoUpdateInterval = setInterval(() => {
+        if (autoUpdateEnabled) {
+            performAutoUpdate();
+        }
+    }, 30000); // 30 segundos
+}
+
+function disableAutoUpdate() {
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+        autoUpdateInterval = null;
+        console.log('⏸️ Auto-atualização DESATIVADA');
+    }
+    autoUpdateEnabled = false;
+}
+
+async function performAutoUpdate() {
+    try {
+        // Detectar seção ativa
+        const activeSection = document.querySelector('.content-section.active');
+        if (!activeSection) return;
+
+        const sectionId = activeSection.id.replace('section-', '');
+        lastActiveSection = sectionId;
+
+        console.log(`🔄 Auto-atualizando: ${sectionId}`);
+
+        // Atualizar apenas a seção ativa para economizar recursos
+        switch(sectionId) {
+            case 'dashboard':
+                await loadDashboard();
+                console.log('✅ Dashboard atualizado');
+                break;
+
+            case 'clientes':
+                await loadClientes();
+                console.log('✅ Clientes atualizados');
+                break;
+
+            case 'profissionais':
+                await loadProfissionais();
+                console.log('✅ Profissionais atualizados');
+                break;
+
+            case 'fila':
+                await loadFila();
+                console.log('✅ Fila atualizada');
+                break;
+
+            case 'agendamentos':
+                await loadAgendamentos();
+                console.log('✅ Agendamentos atualizados');
+                break;
+
+            case 'financeiro':
+                // Atualizar apenas os cards de resumo (não recarregar tudo)
+                await carregarFinanceiroResumo();
+                console.log('✅ Financeiro atualizado');
+                break;
+
+            case 'estoque':
+                // Atualizar apenas visão geral
+                await loadEstoque();
+                console.log('✅ Estoque atualizado');
+                break;
+
+            case 'sistema':
+                await verificarStatus();
+                console.log('✅ Sistema atualizado');
+                break;
+
+            default:
+                // Para outras seções, apenas log
+                console.log(`ℹ️ Seção "${sectionId}" não requer auto-atualização`);
+        }
+
+        // Atualizar timestamp na interface (se existir)
+        updateLastRefreshTimestamp();
+
+    } catch (err) {
+        console.error('❌ Erro na auto-atualização:', err);
+    }
+}
+
+function updateLastRefreshTimestamp() {
+    // Criar ou atualizar badge de última atualização
+    let badge = document.getElementById('lastRefreshBadge');
+
+    if (!badge) {
+        // Criar badge se não existir
+        const pageHeader = document.querySelector('.page-header h1');
+        if (pageHeader) {
+            badge = document.createElement('span');
+            badge.id = 'lastRefreshBadge';
+            badge.style.cssText = `
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #10B981;
+                background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+                padding: 4px 12px;
+                border-radius: 12px;
+                margin-left: 15px;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            `;
+            pageHeader.appendChild(badge);
+        }
+    }
+
+    if (badge) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        badge.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Atualizado às ${timeStr}`;
+    }
+}
+
+// Iniciar auto-atualização quando o app carregar
+document.addEventListener('DOMContentLoaded', () => {
+    // Aguardar 5 segundos após o load inicial antes de ativar auto-update
+    setTimeout(() => {
+        enableAutoUpdate();
+    }, 5000);
+});
+
+// Pausar auto-atualização quando a aba do navegador não estiver visível
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        console.log('👁️ Página oculta, pausando auto-atualização');
+        autoUpdateEnabled = false;
+    } else {
+        console.log('👁️ Página visível, retomando auto-atualização');
+        autoUpdateEnabled = true;
+        // Atualizar imediatamente ao voltar
+        performAutoUpdate();
+    }
+});
+
+console.log('✅ Sistema de auto-atualização inicializado (Diretriz 0.1)');
+
+// ========== FIM AUTO-ATUALIZAÇÃO ==========
+
 </script>
 
 <!-- BIOMA v4.0 - Melhorias e Correções JavaScript -->

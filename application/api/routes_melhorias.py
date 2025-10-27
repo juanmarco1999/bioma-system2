@@ -3621,37 +3621,60 @@ def gerar_pdf_contrato_com_assinatura(id):
             local_data_style
         ))
 
-        # Tabela com as duas assinaturas lado a lado
+        # ====================================================================
+        # ASSINATURAS NO MESMO CAMPO (DIRETRIZ 3.2 - CORRIGIDA)
+        # ====================================================================
+
+        # Campo unificado de assinatura com borda
+        assinatura_campo_style = ParagraphStyle(
+            'AssinaturaCampo',
+            parent=styles['Normal'],
+            fontSize=10,
+            alignment=TA_CENTER,
+            leading=14
+        )
+
+        # Criar tabela com campo único de assinatura
         assinatura_data = [
-            [
-                # Cliente (esquerda)
-                Paragraph('<br/><br/><br/>_________________________________<br/><br/>'
-                         '<b>CLIENTE</b><br/>'
-                         f'{contrato.get("cliente_nome", "")}<br/>'
-                         f'CPF: {contrato.get("cliente_cpf", "")}',
-                         ParagraphStyle('AssinaturaCampo', parent=styles['Normal'],
-                                      fontSize=9, alignment=TA_CENTER)),
-
-                # Espaço
-                '',
-
-                # Empresa (direita)
-                Paragraph('<br/><br/><br/>_________________________________<br/><br/>'
-                         '<b>BIOMA UBERABA</b><br/>'
-                         'Representante Legal<br/>'
-                         'CNPJ: 00.000.000/0001-00',
-                         ParagraphStyle('AssinaturaCampo', parent=styles['Normal'],
-                                      fontSize=9, alignment=TA_CENTER))
-            ]
+            # Cabeçalho do campo de assinatura
+            [Paragraph('<b>CAMPO DE ASSINATURAS</b>', assinatura_campo_style)],
+            # Espaço para assinatura do cliente
+            [Paragraph('<br/><br/><br/>_________________________________<br/>', assinatura_campo_style)],
+            [Paragraph('<b>ASSINATURA DO CLIENTE</b><br/>'
+                      f'{contrato.get("cliente_nome", "N/A")}<br/>'
+                      f'CPF: {contrato.get("cliente_cpf", "N/A")}',
+                      assinatura_campo_style)],
+            # Separador
+            [Paragraph('<br/>', assinatura_campo_style)],
+            # Espaço para assinatura da empresa (mesmo campo)
+            [Paragraph('<br/><br/>_________________________________<br/>', assinatura_campo_style)],
+            [Paragraph('<b>ASSINATURA DA EMPRESA</b><br/>'
+                      '<b>BIOMA UBERABA</b><br/>'
+                      'Representante Legal<br/>'
+                      'CNPJ: 00.000.000/0001-00',
+                      assinatura_campo_style)]
         ]
 
-        assinatura_table = Table(assinatura_data, colWidths=[7*cm, 3*cm, 7*cm])
+        assinatura_table = Table(assinatura_data, colWidths=[17*cm])
         assinatura_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-            ('ALIGN', (2, 0), (2, 0), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            # Cabeçalho
+            ('BACKGROUND', (0, 0), (0, 0), HexColor('#7C3AED')),
+            ('TEXTCOLOR', (0, 0), (0, 0), white),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (0, 0), 12),
+            ('TOPPADDING', (0, 0), (0, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (0, 0), 10),
+
+            # Corpo do campo de assinatura
+            ('BACKGROUND', (0, 1), (0, -1), HexColor('#F9FAFB')),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (0, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 1), (0, -1), 5),
+            ('BOTTOMPADDING', (0, 1), (0, -1), 5),
+
+            # Borda externa
+            ('BOX', (0, 0), (-1, -1), 2, HexColor('#7C3AED')),
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#D1D5DB')),
         ]))
         elements.append(assinatura_table)
 
