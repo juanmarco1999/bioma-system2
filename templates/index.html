@@ -13061,41 +13061,112 @@ async function carregarFinanceiroResumo(){
     try{
         // Carregar dados de dashboard (mais completo que resumo)
         const res = await fetch('/api/financeiro/dashboard', {credentials: 'include'});
+
+        if (!res.ok) {
+            console.error(`❌ Erro HTTP ao buscar dashboard financeiro: ${res.status}`);
+            throw new Error(`Erro ${res.status}: Falha ao carregar dashboard`);
+        }
+
         const data = await res.json();
+        console.log('📦 Dados do dashboard financeiro:', { success: data.success, hasData: !!data.financeiro });
 
         if(data.success && data.financeiro){
             const fin = data.financeiro;
 
-            // Atualizar cards principais
-            document.getElementById('financeiroReceitas').textContent =
-                `R$ ${parseFloat(fin.receita_total || 0).toFixed(2)}`;
+            // Atualizar cards principais com fallbacks
+            const financeiroReceitasEl = document.getElementById('financeiroReceitas');
+            const financeiroDespesasEl = document.getElementById('financeiroDespesas');
+            const financeiroComissoesEl = document.getElementById('financeiroComissoes');
+            const financeiroLucroEl = document.getElementById('financeiroLucro');
 
-            document.getElementById('financeiroDespesas').textContent =
-                `R$ ${parseFloat(fin.despesas_total || 0).toFixed(2)}`;
+            if (financeiroReceitasEl) {
+                const receita = parseFloat(fin.receita_total || fin.receitas || 0);
+                financeiroReceitasEl.textContent = `R$ ${receita.toFixed(2).replace('.', ',')}`;
+            }
 
-            document.getElementById('financeiroComissoes').textContent =
-                `R$ ${parseFloat(fin.comissoes_pendentes || 0).toFixed(2)}`;
+            if (financeiroDespesasEl) {
+                const despesas = parseFloat(fin.despesas_total || fin.despesas || 0);
+                financeiroDespesasEl.textContent = `R$ ${despesas.toFixed(2).replace('.', ',')}`;
+            }
 
-            document.getElementById('financeiroLucro').textContent =
-                `R$ ${parseFloat(fin.lucro_liquido || 0).toFixed(2)}`;
+            if (financeiroComissoesEl) {
+                const comissoes = parseFloat(fin.comissoes_pendentes || fin.comissoes || 0);
+                financeiroComissoesEl.textContent = `R$ ${comissoes.toFixed(2).replace('.', ',')}`;
+            }
+
+            if (financeiroLucroEl) {
+                const lucro = parseFloat(fin.lucro_liquido || fin.lucro || 0);
+                financeiroLucroEl.textContent = `R$ ${lucro.toFixed(2).replace('.', ',')}`;
+                // Colorir baseado no valor
+                financeiroLucroEl.style.color = lucro >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
 
             // Atualizar margem de lucro
             const margemEl = document.getElementById('margemLucro');
             if (margemEl) {
-                const margem = parseFloat(fin.margem_lucro_perc || 0).toFixed(1);
-                margemEl.textContent = `${margem}%`;
-                margemEl.style.color = fin.margem_lucro_perc > 0 ? 'var(--success)' : 'var(--danger)';
+                const margem = parseFloat(fin.margem_lucro_perc || fin.margem || 0);
+                margemEl.textContent = `${margem.toFixed(1)}%`;
+                margemEl.style.color = margem > 0 ? 'var(--success)' : margem < 0 ? 'var(--danger)' : 'var(--text-muted)';
             }
 
-            // Recarregar gráficos (importante para manter dados visíveis ao trocar sub-tabs)
-            carregarFaturamentoMensal();
-            carregarServicosMaisVendidos();
-            carregarProdutosMaisVendidos();
+            console.log('✅ Cards financeiros atualizados:', {
+                receita: fin.receita_total,
+                despesas: fin.despesas_total,
+                comissoes: fin.comissoes_pendentes,
+                lucro: fin.lucro_liquido
+            });
 
-            console.log('✅ Resumo financeiro atualizado com gráficos');
+            // IMPORTANTE: Aguardar um frame para garantir que o DOM esteja visível antes de renderizar gráficos
+            // Isso resolve o problema de gráficos desaparecendo ao trocar de sub-tab
+            setTimeout(() => {
+                console.log('📊 Recarregando gráficos financeiros...');
+
+                // Recarregar gráficos (importante para manter dados visíveis ao trocar sub-tabs)
+                carregarFaturamentoMensal();
+                carregarServicosMaisVendidos();
+                carregarProdutosMaisVendidos();
+
+                // Forçar atualização de charts existentes (caso já tenham sido criados)
+                if (window.chartFaturamentoInstance) {
+                    try {
+                        window.chartFaturamentoInstance.update();
+                        console.log('✅ Gráfico de faturamento atualizado');
+                    } catch (err) {
+                        console.warn('⚠️ Erro ao atualizar gráfico de faturamento:', err);
+                    }
+                }
+
+                console.log('✅ Gráficos financeiros recarregados');
+            }, 50); // Pequeno delay para garantir que o CSS tenha aplicado display:block
+
+            console.log('✅ Resumo financeiro atualizado completamente');
+        } else {
+            console.warn('⚠️ Resposta do dashboard não contém dados financeiros');
         }
     }catch(err){
-        console.error('Erro ao carregar resumo financeiro:', err);
+        console.error('❌ Erro ao carregar resumo financeiro:', err);
+
+        // Mostrar valores zerados em caso de erro (evita campos vazios)
+        const zeroValue = 'R$ 0,00';
+        const elements = {
+            financeiroReceitas: document.getElementById('financeiroReceitas'),
+            financeiroDespesas: document.getElementById('financeiroDespesas'),
+            financeiroComissoes: document.getElementById('financeiroComissoes'),
+            financeiroLucro: document.getElementById('financeiroLucro'),
+            margemLucro: document.getElementById('margemLucro')
+        };
+
+        if (elements.financeiroReceitas) elements.financeiroReceitas.textContent = zeroValue;
+        if (elements.financeiroDespesas) elements.financeiroDespesas.textContent = zeroValue;
+        if (elements.financeiroComissoes) elements.financeiroComissoes.textContent = zeroValue;
+        if (elements.financeiroLucro) {
+            elements.financeiroLucro.textContent = zeroValue;
+            elements.financeiroLucro.style.color = 'var(--text-muted)';
+        }
+        if (elements.margemLucro) {
+            elements.margemLucro.textContent = '0.0%';
+            elements.margemLucro.style.color = 'var(--text-muted)';
+        }
     }
 }
 
