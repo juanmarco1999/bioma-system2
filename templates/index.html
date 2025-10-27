@@ -1424,10 +1424,7 @@
         background: var(--primary-dark);
     }
 
-    /* Remove hover flicker */
-    ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, var(--primary), var(--secondary));
-    }
+    /* Hover removido completamente para evitar piscar ao passar mouse */
 
     /* ========== CARDS COM ANIMAÇÕES ========== */
     .stat-card {
@@ -13445,6 +13442,16 @@ async function novaDespesa(){
         await carregarDespesas();
         await carregarDadosFinanceiro(); // Atualizar resumo financeiro
     }
+
+    // Limpeza de segurança: remover qualquer backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) {
+                el.remove();
+            }
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 async function excluirDespesa(id){
