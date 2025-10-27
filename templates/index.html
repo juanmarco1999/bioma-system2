@@ -1764,6 +1764,53 @@ window.addEventListener('load', function() {
                     </button>
                 </div>
             </div>
+
+            <!-- Filtros e Pesquisa -->
+            <div class="card mb-3">
+                <div class="card-body" style="padding: 15px;">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #6c757d;">
+                                <i class="bi bi-search"></i> Pesquisar
+                            </label>
+                            <input type="text" id="consultaSearch" class="form-control" placeholder="Buscar por número, cliente..."
+                                   oninput="filtrarOrcamentos()" style="font-size: 0.95em;">
+                        </div>
+                        <div class="col-md-2">
+                            <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #6c757d;">
+                                <i class="bi bi-funnel"></i> Status
+                            </label>
+                            <select id="consultaStatusFilter" class="form-control" onchange="filtrarOrcamentos()" style="font-size: 0.95em;">
+                                <option value="">Todos</option>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Aprovado">Aprovado</option>
+                                <option value="Cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #6c757d;">
+                                <i class="bi bi-calendar"></i> Data Início
+                            </label>
+                            <input type="date" id="consultaDataInicio" class="form-control" onchange="filtrarOrcamentos()" style="font-size: 0.95em;">
+                        </div>
+                        <div class="col-md-2">
+                            <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #6c757d;">
+                                <i class="bi bi-calendar-check"></i> Data Fim
+                            </label>
+                            <input type="date" id="consultaDataFim" class="form-control" onchange="filtrarOrcamentos()" style="font-size: 0.95em;">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline w-100" onclick="limparFiltrosOrcamentos()" style="font-size: 0.95em;">
+                                <i class="bi bi-x-circle"></i> Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.85em; color: #6c757d;">
+                        <i class="bi bi-info-circle"></i> <span id="consultaResultCount">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="card"><div class="card-header"><i class="bi bi-list-ul"></i> Todos os Orçamentos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody id="consultaBody"><tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
         </div>
 
@@ -3117,7 +3164,7 @@ window.addEventListener('load', function() {
     </div>
 
     <!-- Sub-tab: Receitas -->
-    <div id="financeiro-subtab-receitas" class="sub-tab-content" style="display:none;">
+    <div id="financeiro-subtab-receitas" class="sub-tab-content">
         <div class="card">
             <div class="card-header">
                 <i class="bi bi-arrow-up-circle"></i> Receitas (Orçamentos Aprovados)
@@ -3144,7 +3191,7 @@ window.addEventListener('load', function() {
     </div>
 
     <!-- Sub-tab: Despesas -->
-    <div id="financeiro-subtab-despesas" class="sub-tab-content" style="display:none;">
+    <div id="financeiro-subtab-despesas" class="sub-tab-content">
         <div class="card">
             <div class="card-header">
                 <i class="bi bi-arrow-down-circle"></i> Despesas
@@ -3172,7 +3219,7 @@ window.addEventListener('load', function() {
     </div>
 
     <!-- Sub-tab: Comissões -->
-    <div id="financeiro-subtab-comissoes" class="sub-tab-content" style="display:none;">
+    <div id="financeiro-subtab-comissoes" class="sub-tab-content">
         <div class="card">
             <div class="card-header">
                 <i class="bi bi-cash-stack"></i> Comissões a Pagar
@@ -3768,10 +3815,9 @@ function isLoading(key) {
 function switchSubTab(section, subtab) {
     console.log(`🔄 Mudando sub-tab: ${section} → ${subtab}`);
 
-    // 1. ESCONDER TODOS os conteúdos desta seção
+    // 1. DESATIVAR todos os conteúdos desta seção (CSS controla display via .active)
     document.querySelectorAll(`[id^="${section}-subtab-"]`).forEach(content => {
         content.classList.remove('active');
-        content.classList.add('d-none');
     });
 
     // 2. DESATIVAR todos os botões
@@ -3782,7 +3828,7 @@ function switchSubTab(section, subtab) {
         });
     }
 
-    // 3. MOSTRAR apenas o selecionado
+    // 3. ATIVAR apenas o selecionado
     const targetId = `${section}-subtab-${subtab}`;
     const targetContent = document.getElementById(targetId);
 
@@ -3792,14 +3838,13 @@ function switchSubTab(section, subtab) {
     }
 
     targetContent.classList.add('active');
-    targetContent.classList.remove('d-none');
 
     // 4. ATIVAR botão clicado
     if (event?.target) {
         event.target.classList.add('active');
     }
 
-    // 5. Carregar dados (carregarDadosSubTab será definida mais tarde)
+    // 5. Carregar dados específicos da sub-tab
     if (typeof carregarDadosSubTab === 'function') {
         carregarDadosSubTab(section, subtab);
     }
@@ -6207,6 +6252,9 @@ async function desativarTodosProdutos() {
     }
 }
 
+// Global variable to store all budgets for filtering
+let todosOrcamentos = [];
+
 async function loadConsultar(){
     const key = 'loadConsultar';
     if (isLoading(key)) {
@@ -6218,18 +6266,88 @@ async function loadConsultar(){
     try{
         const res=await fetch('/api/orcamentos',{credentials:'include'});
         const data=await res.json();
-        const tbody=document.getElementById('consultaBody');
         if(data.success&&data.orcamentos&&data.orcamentos.length>0){
-            const html=data.orcamentos.map(o=>`<tr><td><strong>#${o.numero}</strong></td><td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td><td>${o.cliente_nome}</td><td><strong>R$ ${o.total_final.toFixed(2)}</strong></td><td><span class="badge ${o.status==='Aprovado'?'success':'warning'}">${o.status}</span></td><td><button class="btn btn-sm btn-info" onclick="visualizarOrcamento('${o._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-primary" onclick="editarOrcamento('${o._id}')" style="margin-right:5px"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="deleteOrcamento('${o._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
-            tbody.innerHTML=html;
+            todosOrcamentos = data.orcamentos; // Store all budgets
+            filtrarOrcamentos(); // Apply filters
         }else{
-            tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted">Nenhum</td></tr>';
+            todosOrcamentos = [];
+            const tbody=document.getElementById('consultaBody');
+            tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted">Nenhum orçamento encontrado</td></tr>';
+            document.getElementById('consultaResultCount').textContent = '0 orçamentos encontrados';
         }
     }catch(e){
         console.error(e);
+        todosOrcamentos = [];
+        const tbody=document.getElementById('consultaBody');
+        tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger">Erro ao carregar orçamentos</td></tr>';
     } finally {
         setTimeout(() => setLoading(key, false), 1000);
     }
+}
+
+function filtrarOrcamentos(){
+    const searchTerm = document.getElementById('consultaSearch').value.toLowerCase();
+    const statusFilter = document.getElementById('consultaStatusFilter').value;
+    const dataInicio = document.getElementById('consultaDataInicio').value;
+    const dataFim = document.getElementById('consultaDataFim').value;
+
+    let filtrados = todosOrcamentos;
+
+    // Apply search filter
+    if(searchTerm){
+        filtrados = filtrados.filter(o => {
+            const numero = String(o.numero).toLowerCase();
+            const cliente = (o.cliente_nome || '').toLowerCase();
+            return numero.includes(searchTerm) || cliente.includes(searchTerm);
+        });
+    }
+
+    // Apply status filter
+    if(statusFilter){
+        filtrados = filtrados.filter(o => o.status === statusFilter);
+    }
+
+    // Apply date range filter
+    if(dataInicio){
+        const dataInicioDate = new Date(dataInicio);
+        filtrados = filtrados.filter(o => {
+            const orcamentoDate = new Date(o.created_at);
+            return orcamentoDate >= dataInicioDate;
+        });
+    }
+
+    if(dataFim){
+        const dataFimDate = new Date(dataFim);
+        dataFimDate.setHours(23, 59, 59, 999); // Include entire day
+        filtrados = filtrados.filter(o => {
+            const orcamentoDate = new Date(o.created_at);
+            return orcamentoDate <= dataFimDate;
+        });
+    }
+
+    // Render filtered results
+    const tbody = document.getElementById('consultaBody');
+    if(filtrados.length > 0){
+        const html = filtrados.map(o => {
+            const statusClass = o.status === 'Aprovado' ? 'success' : (o.status === 'Cancelado' ? 'danger' : 'warning');
+            return `<tr><td><strong>#${o.numero}</strong></td><td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td><td>${o.cliente_nome}</td><td><strong>R$ ${o.total_final.toFixed(2)}</strong></td><td><span class="badge ${statusClass}">${o.status}</span></td><td><button class="btn btn-sm btn-info" onclick="visualizarOrcamento('${o._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-primary" onclick="editarOrcamento('${o._id}')" style="margin-right:5px"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="deleteOrcamento('${o._id}')"><i class="bi bi-trash"></i></button></td></tr>`;
+        }).join('');
+        tbody.innerHTML = html;
+    }else{
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum orçamento encontrado com os filtros aplicados</td></tr>';
+    }
+
+    // Update result count
+    document.getElementById('consultaResultCount').textContent =
+        `${filtrados.length} de ${todosOrcamentos.length} orçamentos encontrados`;
+}
+
+function limparFiltrosOrcamentos(){
+    document.getElementById('consultaSearch').value = '';
+    document.getElementById('consultaStatusFilter').value = '';
+    document.getElementById('consultaDataInicio').value = '';
+    document.getElementById('consultaDataFim').value = '';
+    filtrarOrcamentos();
 }
 
 async function deleteOrcamento(id){
@@ -9078,12 +9196,29 @@ function money(v){ if(v==null||isNaN(v)) v=0; return v.toLocaleString('pt-BR',{s
 function fmtDate(d){ try{ return new Date(d).toLocaleString('pt-BR'); }catch{ return d||''; } }
 function toast(msg, type='info'){
     if(window.Swal){
-        Swal.fire({
+        // Usar Swal diretamente para toasts (não SafeSwal, pois toasts devem ser não-bloqueantes)
+        const Toast = Swal.mixin({
             toast: true,
             position: 'bottom-end',
-            timer: 2500,
+            timer: 3000,
             timerProgressBar: true,
             showConfirmButton: false,
+            didOpen: (toast) => {
+                // Garantir que o toast não interfira com cliques
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            },
+            didClose: () => {
+                // Limpar qualquer backdrop residual de toasts
+                document.querySelectorAll('.swal2-container.swal2-backdrop-show').forEach(el => {
+                    if(el.classList.contains('swal2-toast-shown')){
+                        el.remove();
+                    }
+                });
+            }
+        });
+
+        Toast.fire({
             icon: type,
             title: msg
         });
@@ -11020,13 +11155,19 @@ async function carregarAgendamentosHoje() {
         
         tbody.innerHTML = agendamentos.map(ag => {
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
+            const horario = ag.horario || ag.hora || 'N/A';
+            const clienteNome = ag.cliente_nome || ag.cliente?.nome || 'Cliente não informado';
+            const servico = ag.servico || ag.servico_nome || ag.servico?.nome || 'Serviço não informado';
+            const profissional = ag.profissional || ag.profissional_nome || ag.profissional?.nome || 'Profissional não informado';
+            const status = ag.status || 'Pendente';
+
             return `
                 <tr>
-                    <td>${ag.horario}</td>
-                    <td>${ag.cliente_nome}</td>
-                    <td>${ag.servico}</td>
-                    <td>${ag.profissional}</td>
-                    <td><span class="badge ${statusClass}">${ag.status}</span></td>
+                    <td>${horario}</td>
+                    <td>${clienteNome}</td>
+                    <td>${servico}</td>
+                    <td>${profissional}</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
                         <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
@@ -11057,35 +11198,41 @@ async function carregarAgendamentosSemana() {
     const FUNC_KEY = 'agendamentosSemana';
     const tbody = document.getElementById('agendamentosSemanaBody');
     if (!tbody) return;
-    
+
     if (window.loadingStates?.[FUNC_KEY]) return;
-    
+
     try {
         if (!window.loadingStates) window.loadingStates = {};
         window.loadingStates[FUNC_KEY] = true;
-        
+
         const res = await fetch('/api/agendamentos/semana', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar agendamentos');
-        
+
         const data = await res.json();
         const agendamentos = data.agendamentos || data;
-        
+
         if (!agendamentos || agendamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento esta semana</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = agendamentos.map(ag => {
-            const dataFormatada = new Date(ag.data).toLocaleDateString('pt-BR');
+            const dataFormatada = ag.data ? new Date(ag.data).toLocaleDateString('pt-BR') : 'Data não informada';
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
+            const horario = ag.horario || ag.hora || 'N/A';
+            const clienteNome = ag.cliente_nome || ag.cliente?.nome || 'Cliente não informado';
+            const servico = ag.servico || ag.servico_nome || ag.servico?.nome || 'Serviço não informado';
+            const profissional = ag.profissional || ag.profissional_nome || ag.profissional?.nome || 'Profissional não informado';
+            const status = ag.status || 'Pendente';
+
             return `
                 <tr>
                     <td>${dataFormatada}</td>
-                    <td>${ag.horario}</td>
-                    <td>${ag.cliente_nome}</td>
-                    <td>${ag.servico}</td>
-                    <td>${ag.profissional}</td>
-                    <td><span class="badge ${statusClass}">${ag.status}</span></td>
+                    <td>${horario}</td>
+                    <td>${clienteNome}</td>
+                    <td>${servico}</td>
+                    <td>${profissional}</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
                         <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
@@ -11111,35 +11258,41 @@ async function carregarAgendamentosMes() {
     const FUNC_KEY = 'agendamentosMes';
     const tbody = document.getElementById('agendamentosMesBody');
     if (!tbody) return;
-    
+
     if (window.loadingStates?.[FUNC_KEY]) return;
-    
+
     try {
         if (!window.loadingStates) window.loadingStates = {};
         window.loadingStates[FUNC_KEY] = true;
-        
+
         const res = await fetch('/api/agendamentos/mes', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar agendamentos');
-        
+
         const data = await res.json();
         const agendamentos = data.agendamentos || data;
-        
+
         if (!agendamentos || agendamentos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento este mês</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = agendamentos.map(ag => {
-            const dataFormatada = new Date(ag.data).toLocaleDateString('pt-BR');
+            const dataFormatada = ag.data ? new Date(ag.data).toLocaleDateString('pt-BR') : 'Data não informada';
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
+            const horario = ag.horario || ag.hora || 'N/A';
+            const clienteNome = ag.cliente_nome || ag.cliente?.nome || 'Cliente não informado';
+            const servico = ag.servico || ag.servico_nome || ag.servico?.nome || 'Serviço não informado';
+            const profissional = ag.profissional || ag.profissional_nome || ag.profissional?.nome || 'Profissional não informado';
+            const status = ag.status || 'Pendente';
+
             return `
                 <tr>
                     <td>${dataFormatada}</td>
-                    <td>${ag.horario}</td>
-                    <td>${ag.cliente_nome}</td>
-                    <td>${ag.servico}</td>
-                    <td>${ag.profissional}</td>
-                    <td><span class="badge ${statusClass}">${ag.status}</span></td>
+                    <td>${horario}</td>
+                    <td>${clienteNome}</td>
+                    <td>${servico}</td>
+                    <td>${profissional}</td>
+                    <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
                         <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
@@ -11740,7 +11893,141 @@ async function exportarRelatorioPDF() {
 
 async function carregarProdutosEstoque() {
     console.log('📦 Carregando produtos do estoque...');
-    // TODO: Implementar carregamento de produtos específicos do estoque
+    const tbody = document.getElementById('estoqueProdutosBody');
+
+    if(!tbody){
+        console.error('tbody estoqueProdutosBody não encontrado');
+        return;
+    }
+
+    try{
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>';
+
+        const res = await fetch('/api/produtos', {credentials: 'include'});
+        const data = await res.json();
+
+        if(data.success && data.produtos && data.produtos.length > 0){
+            // Armazenar produtos para filtro de busca
+            window.produtosEstoqueData = data.produtos;
+
+            tbody.innerHTML = data.produtos.map(prod => {
+                const quantidade = prod.quantidade || 0;
+                const minimo = prod.estoque_minimo || 0;
+                const preco = parseFloat(prod.preco || 0);
+                const valorTotal = quantidade * preco;
+
+                let statusBadge = '';
+                let statusClass = '';
+
+                if(quantidade === 0){
+                    statusBadge = '<span class="badge danger">Esgotado</span>';
+                    statusClass = 'text-danger';
+                } else if(quantidade <= minimo){
+                    statusBadge = '<span class="badge warning">Estoque Baixo</span>';
+                    statusClass = 'text-warning';
+                } else {
+                    statusBadge = '<span class="badge success">Disponível</span>';
+                    statusClass = '';
+                }
+
+                return `
+                    <tr class="${statusClass}">
+                        <td><strong>${prod.nome || 'N/A'}</strong></td>
+                        <td>${prod.marca || 'N/A'}</td>
+                        <td>${prod.sku || 'N/A'}</td>
+                        <td><strong>${quantidade}</strong></td>
+                        <td>${minimo}</td>
+                        <td>R$ ${preco.toFixed(2)}</td>
+                        <td><strong>R$ ${valorTotal.toFixed(2)}</strong></td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            console.log(`✅ ${data.produtos.length} produtos carregados no estoque`);
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p style="margin-top: 15px;">Nenhum produto cadastrado no sistema</p>
+                    </td>
+                </tr>
+            `;
+        }
+    }catch(err){
+        console.error('Erro ao carregar produtos do estoque:', err);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-danger" style="padding: 40px;">
+                    <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+                    <p style="margin-top: 15px;">Erro ao carregar produtos</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function filtrarProdutosEstoque(){
+    const busca = document.getElementById('buscaProdutosEstoque').value.toLowerCase();
+    const tbody = document.getElementById('estoqueProdutosBody');
+
+    if(!window.produtosEstoqueData || window.produtosEstoqueData.length === 0){
+        console.warn('Nenhum produto disponível para filtrar');
+        return;
+    }
+
+    const produtosFiltrados = window.produtosEstoqueData.filter(prod => {
+        const nome = (prod.nome || '').toLowerCase();
+        const marca = (prod.marca || '').toLowerCase();
+        const sku = (prod.sku || '').toLowerCase();
+        return nome.includes(busca) || marca.includes(busca) || sku.includes(busca);
+    });
+
+    if(produtosFiltrados.length > 0){
+        tbody.innerHTML = produtosFiltrados.map(prod => {
+            const quantidade = prod.quantidade || 0;
+            const minimo = prod.estoque_minimo || 0;
+            const preco = parseFloat(prod.preco || 0);
+            const valorTotal = quantidade * preco;
+
+            let statusBadge = '';
+            let statusClass = '';
+
+            if(quantidade === 0){
+                statusBadge = '<span class="badge danger">Esgotado</span>';
+                statusClass = 'text-danger';
+            } else if(quantidade <= minimo){
+                statusBadge = '<span class="badge warning">Estoque Baixo</span>';
+                statusClass = 'text-warning';
+            } else {
+                statusBadge = '<span class="badge success">Disponível</span>';
+                statusClass = '';
+            }
+
+            return `
+                <tr class="${statusClass}">
+                    <td><strong>${prod.nome || 'N/A'}</strong></td>
+                    <td>${prod.marca || 'N/A'}</td>
+                    <td>${prod.sku || 'N/A'}</td>
+                    <td><strong>${quantidade}</strong></td>
+                    <td>${minimo}</td>
+                    <td>R$ ${preco.toFixed(2)}</td>
+                    <td><strong>R$ ${valorTotal.toFixed(2)}</strong></td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                    <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p style="margin-top: 15px;">Nenhum produto encontrado com "${document.getElementById('buscaProdutosEstoque').value}"</p>
+                </td>
+            </tr>
+        `;
+    }
 }
 
 async function carregarComissoesProfissionais(){
@@ -11805,31 +12092,40 @@ async function carregarFinanceiroResumo(){
     console.log('💵 Carregando resumo financeiro...');
 
     try{
-        // Carregar dados de resumo
-        const res = await fetch('/api/financeiro/resumo', {credentials: 'include'});
+        // Carregar dados de dashboard (mais completo que resumo)
+        const res = await fetch('/api/financeiro/dashboard', {credentials: 'include'});
         const data = await res.json();
 
-        if(data.success){
-            const resumo = data.resumo || {};
+        if(data.success && data.financeiro){
+            const fin = data.financeiro;
 
             // Atualizar cards principais
             document.getElementById('financeiroReceitas').textContent =
-                `R$ ${parseFloat(resumo.total_receitas || 0).toFixed(2)}`;
+                `R$ ${parseFloat(fin.receita_total || 0).toFixed(2)}`;
 
             document.getElementById('financeiroDespesas').textContent =
-                `R$ ${parseFloat(resumo.total_despesas || 0).toFixed(2)}`;
+                `R$ ${parseFloat(fin.despesas_total || 0).toFixed(2)}`;
 
-            const lucro = (resumo.total_receitas || 0) - (resumo.total_despesas || 0);
+            document.getElementById('financeiroComissoes').textContent =
+                `R$ ${parseFloat(fin.comissoes_pendentes || 0).toFixed(2)}`;
+
             document.getElementById('financeiroLucro').textContent =
-                `R$ ${lucro.toFixed(2)}`;
+                `R$ ${parseFloat(fin.lucro_liquido || 0).toFixed(2)}`;
 
-            // Calcular margem de lucro
-            const margemPct = resumo.total_receitas > 0
-                ? ((lucro / resumo.total_receitas) * 100).toFixed(1)
-                : 0;
-            document.getElementById('margemLucro').textContent = `${margemPct}%`;
+            // Atualizar margem de lucro
+            const margemEl = document.getElementById('margemLucro');
+            if (margemEl) {
+                const margem = parseFloat(fin.margem_lucro_perc || 0).toFixed(1);
+                margemEl.textContent = `${margem}%`;
+                margemEl.style.color = fin.margem_lucro_perc > 0 ? 'var(--success)' : 'var(--danger)';
+            }
 
-            console.log('✅ Resumo financeiro atualizado');
+            // Recarregar gráficos (importante para manter dados visíveis ao trocar sub-tabs)
+            carregarFaturamentoMensal();
+            carregarServicosMaisVendidos();
+            carregarProdutosMaisVendidos();
+
+            console.log('✅ Resumo financeiro atualizado com gráficos');
         }
     }catch(err){
         console.error('Erro ao carregar resumo financeiro:', err);
