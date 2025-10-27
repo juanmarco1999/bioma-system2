@@ -526,6 +526,54 @@
             }
         }
 
+        /* ========== INDICADOR DE CONECTIVIDADE OFFLINE (PARTE 5.7) ========== */
+
+        .connectivity-indicator {
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 10px;
+            margin: 15px 20px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .connectivity-indicator.online {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+            color: #10B981;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .connectivity-indicator.offline {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.15));
+            color: #EF4444;
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            animation: pulse-offline 2s ease-in-out infinite;
+        }
+
+        .connectivity-indicator i {
+            font-size: 1.1rem;
+        }
+
+        @keyframes pulse-offline {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        /* ========== FIM INDICADOR DE CONECTIVIDADE ========== */
+
 </style>
 </head>
 <body>
@@ -626,6 +674,11 @@
             <li><a href="javascript:void(0)" onclick="doLogout(); return false;"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
         </ul>
         <div class="theme-toggle"><button onclick="toggleTheme()"><i class="bi bi-moon-stars-fill" id="themeIcon"></i><span id="themeText">Modo Escuro</span></button></div>
+
+        <!-- Indicador de Conectividade -->
+        <div id="connectivity-indicator" class="connectivity-indicator online" title="Conectado ao servidor">
+            <i class="bi bi-wifi"></i> Online
+        </div>
     </nav>
 
     <div class="main-content">
@@ -10859,6 +10912,9 @@ console.log('✅ Sistema de auto-atualização inicializado (Diretriz 0.1)');
 
 <!-- BIOMA v4.0 - Melhorias e Correções JavaScript -->
 <script src="/static/js/melhorias-v37.js"></script>
+
+<!-- BIOMA v4.0 - Offline Manager (IndexedDB + Sync) -->
+<script src="/static/js/offline-manager.js"></script>
 
 </body>
 </html>

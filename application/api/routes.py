@@ -113,6 +113,14 @@ def health():
     # Retornar 200 mesmo se degraded (para Render não marcar como down)
     return jsonify(response), 200
 
+@bp.route('/api/ping', methods=['GET'])
+def ping():
+    """
+    Endpoint de ping para verificação de conectividade
+    Sistema offline v4.0
+    """
+    return jsonify({'success': True, 'status': 'online', 'timestamp': datetime.now().isoformat()}), 200
+
 @bp.route('/api/login', methods=['POST'])
 def login():
     db = get_db()
