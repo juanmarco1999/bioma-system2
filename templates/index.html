@@ -332,15 +332,14 @@
         .sub-tab-content{display:none;animation:fadeIn 0.4s ease}
         .sub-tab-content.active{display:block}
 
-        /* ISOLAMENTO ABSOLUTO DAS SEÇÕES - Evita sobreposição */
-        .content-section:not(.active) * {
-            visibility: hidden !important;
-            pointer-events: none !important;
+        /* ISOLAMENTO DAS SEÇÕES - Otimizado para Performance */
+        .content-section:not(.active) {
+            display: none !important;
+            /* Removido visibility e pointer-events de * para evitar reflow massivo */
         }
 
-        .content-section.active * {
-            visibility: visible !important;
-            pointer-events: auto !important;
+        .content-section.active {
+            display: block !important;
         }
 
         /* PROTEÇÃO ESPECÍFICA PARA SEÇÃO DE ESTOQUE */
@@ -4451,6 +4450,7 @@ function goTo(section){
         else if(section==='auditoria')loadAuditoria();
         else if(section==='clube')loadClube();
         else if(section==='comissoes')loadComissoes();
+        else if(section==='relatorios')loadRelatorios();
     }catch(e){
         console.error('❌ Erro navegação:',e);
     } finally {
