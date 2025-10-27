@@ -14,6 +14,63 @@
     })();
     </script>
 
+    <!-- FORCE LIGHT MODE - INLINE CSS TO OVERRIDE CACHE -->
+    <style>
+    /* Override EVERYTHING with !important to bypass cache */
+    html, html[data-theme="dark"], html[data-theme="light"], body {
+        --bg-main: #F9FAFB !important;
+        --bg-card: #FFFFFF !important;
+        --bg-sidebar: #1F2937 !important;
+        --text-primary: #1F2937 !important;
+        --text-secondary: #6B7280 !important;
+        --border-color: #E5E7EB !important;
+        color-scheme: light !important;
+        background: #F9FAFB !important;
+        color: #1F2937 !important;
+    }
+
+    /* Force auth screen to always be in gradient light mode */
+    .auth-screen {
+        background: linear-gradient(135deg,#667eea 0%,#764ba2 100%) !important;
+        color: #1F2937 !important;
+    }
+
+    .auth-box {
+        background: rgba(255,255,255,0.98) !important;
+        color: #1F2937 !important;
+    }
+
+    .auth-logo h2 {
+        color: #1F2937 !important;
+    }
+
+    .auth-logo p {
+        color: #6B7280 !important;
+    }
+
+    .form-control, .form-select {
+        background: white !important;
+        color: #1F2937 !important;
+        border: 2px solid #E5E7EB !important;
+    }
+
+    .nav-pills .nav-link {
+        color: #6B7280 !important;
+    }
+
+    .nav-pills .nav-link.active {
+        background: linear-gradient(135deg,#7C3AED,#6D28D9) !important;
+        color: white !important;
+    }
+
+    /* Never allow dark mode variables */
+    html[data-theme="dark"] {
+        --bg-main: #F9FAFB !important;
+        --bg-card: #FFFFFF !important;
+        --text-primary: #1F2937 !important;
+    }
+    </style>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -5635,6 +5692,7 @@ _Equipe BIOMA Uberaba_
  */
 async function enviarContratoEmail(contratoId) {
     try {
+        // Show loading modal
         Swal.fire({
             title: 'Enviando E-mail...',
             html: '<div class="spinner"></div><p style="margin-top:20px">Aguarde enquanto enviamos o contrato...</p>',
@@ -5649,6 +5707,9 @@ async function enviarContratoEmail(contratoId) {
         });
 
         const data = await res.json();
+
+        // IMPORTANT: Close loading modal before showing result
+        Swal.close();
 
         if(data.success) {
             Swal.fire({
@@ -5668,6 +5729,11 @@ async function enviarContratoEmail(contratoId) {
         }
     } catch(error) {
         console.error('❌ Erro ao enviar email:', error);
+
+        // CRITICAL: Always close loading modal on error
+        Swal.close();
+
+        // Then show error
         Swal.fire({
             icon: 'error',
             title: 'Erro ao Enviar E-mail',

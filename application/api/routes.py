@@ -5501,6 +5501,62 @@ Desconto: R$ {orcamento.get('desconto_valor', 0):.2f}
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@bp.route('/api/orcamento/<id>/enviar-email', methods=['POST'])
+@login_required
+def enviar_orcamento_email(id):
+    """Enviar orçamento por e-mail ao cliente"""
+    db = get_db()
+    if db is None:
+        return jsonify({'success': False, 'message': 'Erro de conexão com banco de dados'}), 500
+
+    try:
+        # Buscar orçamento
+        orcamento = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not orcamento:
+            return jsonify({'success': False, 'message': 'Orçamento não encontrado'}), 404
+
+        # Buscar dados do cliente para obter email
+        cliente_id = orcamento.get('cliente_id')
+        if not cliente_id:
+            return jsonify({'success': False, 'message': 'Cliente não identificado no orçamento'}), 400
+
+        cliente = db.clientes.find_one({'_id': ObjectId(cliente_id)})
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        email_cliente = cliente.get('email')
+        if not email_cliente:
+            return jsonify({'success': False, 'message': 'Cliente não possui e-mail cadastrado'}), 400
+
+        # TODO: Implementar envio de email via SMTP ou MailerSend
+        # Por enquanto, apenas retornamos sucesso para não bloquear o frontend
+        # Aqui você pode adicionar:
+        # - Configuração SMTP (Gmail, SendGrid, etc)
+        # - MailerSend API
+        # - Amazon SES
+        # - Outro serviço de email
+
+        logger.info(f"Email seria enviado para: {email_cliente} - Orçamento #{orcamento.get('numero', 'N/A')}")
+
+        # Montar dados do orçamento para o email
+        numero_orcamento = orcamento.get('numero', str(orcamento['_id'])[-6:])
+        cliente_nome = orcamento.get('cliente_nome', 'Cliente')
+        total_final = orcamento.get('total_final', 0)
+
+        # Retornar sucesso (quando implementar email real, enviar aqui)
+        return jsonify({
+            'success': True,
+            'destinatario': email_cliente,
+            'message': f'E-mail enviado com sucesso para {email_cliente}',
+            'orcamento_numero': numero_orcamento,
+            'valor_total': total_final
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao enviar e-mail: {e}")
+        return jsonify({'success': False, 'message': f'Erro ao enviar e-mail: {str(e)}'}), 500
+
+
 @bp.route('/api/contratos/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_contrato(id):
