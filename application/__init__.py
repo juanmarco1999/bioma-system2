@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BIOMA UBERABA v3.7 - Application Factory
+BIOMA UBERABA v4.0 - Application Factory
 Desenvolvedor: Juan Marco (@juanmarco1999)
 
 Architecture Pattern: Application Factory + Flask Blueprints
-Ref: Plano de Ação (Seção 2.2 - Modularização)
+Sistema consolidado e otimizado - Outubro 2025
 """
 
 import os
@@ -48,7 +48,7 @@ def create_app(config_name=None):
 
     app.config.from_object(config[config_name])
 
-    logger.info(f"🚀 Iniciando BIOMA v3.7 - Modo: {config_name}")
+    logger.info(f"🚀 Iniciando BIOMA v4.0 - Modo: {config_name}")
 
     # Configurar CORS
     if app.config['CROSS_SITE_DEV']:
@@ -76,17 +76,12 @@ def create_app(config_name=None):
     # Registrar Blueprints
     logger.info("📦 Registrando Blueprints...")
 
-    # Blueprint consolidado com TODAS as rotas do sistema
-    # (Migrado do app.py monolítico - futura modularização gradual)
+    # Blueprint principal com TODAS as rotas do sistema (consolidado)
     from application.api import bp as api_bp
     app.register_blueprint(api_bp)
 
-    # Blueprint v3.7 - Melhorias e APIs faltantes
-    from application.api.routes_melhorias import bp as melhorias_bp
-    app.register_blueprint(melhorias_bp)
-
     logger.info("✅ Blueprint API registrado (todas as rotas consolidadas)")
-    logger.info("✅ Blueprint Melhorias v3.7 registrado (auto-refresh, comissões, finance)")
-    logger.info("✅ Sistema auto-contido - Arquitetura modular com Application Factory")
+    logger.info("✅ Sistema consolidado e otimizado - BIOMA v4.0")
+    logger.info("✅ Arquitetura modular com Application Factory Pattern")
 
     return app
