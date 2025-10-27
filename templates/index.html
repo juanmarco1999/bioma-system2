@@ -6364,6 +6364,10 @@ async function loadComissoes(){
 
     console.log('💰 Carregando histórico de comissões...');
 
+    // Carregar também gráficos e top performers em paralelo
+    loadComissoesChart();
+    loadTopPerformers();
+
     try{
         const res = await fetch('/api/comissoes', {credentials: 'include'});
         const data = await res.json();
@@ -6419,6 +6423,154 @@ async function loadComissoes(){
         setLoading(key, false);
     } finally {
         setTimeout(() => setLoading(key, false), 500);
+    }
+}
+
+// Carregar gráfico de desempenho de comissões (por mês)
+async function loadComissoesChart(){
+    try {
+        const res = await fetch('/api/comissoes', {credentials: 'include'});
+        const data = await res.json();
+
+        if (!data.success || !data.comissoes || data.comissoes.length === 0) {
+            const canvas = document.getElementById('chartComissoes');
+            if (canvas) {
+                canvas.style.display = 'none';
+                canvas.parentElement.innerHTML = '<p class="text-center text-muted" style="padding: 40px;">Nenhum dado de comissões disponível</p>';
+            }
+            return;
+        }
+
+        // Agrupar comissões por mês
+        const meses = {};
+        data.comissoes.forEach(c => {
+            const data_registro = new Date(c.data_registro);
+            const mesAno = `${data_registro.getMonth() + 1}/${data_registro.getFullYear()}`;
+            if (!meses[mesAno]) {
+                meses[mesAno] = 0;
+            }
+            meses[mesAno] += c.comissao_valor || 0;
+        });
+
+        // Ordenar por data
+        const labels = Object.keys(meses).sort((a, b) => {
+            const [mesA, anoA] = a.split('/').map(Number);
+            const [mesB, anoB] = b.split('/').map(Number);
+            return (anoA * 12 + mesA) - (anoB * 12 + mesB);
+        });
+        const valores = labels.map(label => meses[label]);
+
+        // Criar gráfico com Chart.js
+        const ctx = document.getElementById('chartComissoes');
+        if (ctx && window.Chart) {
+            // Destruir gráfico anterior se existir
+            if (window.chartComissoesInstance) {
+                window.chartComissoesInstance.destroy();
+            }
+
+            window.chartComissoesInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Comissões (R$)',
+                        data: valores,
+                        borderColor: 'rgb(124, 58, 237)',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toFixed(0);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar gráfico de comissões:', error);
+    }
+}
+
+// Carregar Top Performers
+async function loadTopPerformers(){
+    try {
+        const res = await fetch('/api/comissoes', {credentials: 'include'});
+        const data = await res.json();
+
+        const container = document.getElementById('topPerformersBody');
+        if (!container) return;
+
+        if (!data.success || !data.comissoes || data.comissoes.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted" style="padding: 20px;">Nenhum dado disponível</p>';
+            return;
+        }
+
+        // Agrupar por profissional
+        const profissionais = {};
+        data.comissoes.forEach(c => {
+            const nome = c.profissional_nome;
+            if (!profissionais[nome]) {
+                profissionais[nome] = {
+                    nome: nome,
+                    total: 0,
+                    quantidade: 0
+                };
+            }
+            profissionais[nome].total += c.comissao_valor || 0;
+            profissionais[nome].quantidade += 1;
+        });
+
+        // Ordenar por total e pegar top 5
+        const top = Object.values(profissionais)
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+
+        if (top.length === 0) {
+            container.innerHTML = '<p class="text-center text-muted" style="padding: 20px;">Nenhum profissional com comissões</p>';
+            return;
+        }
+
+        // Renderizar top performers
+        const html = top.map((prof, index) => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--bg-main); border-radius: 10px; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem;">
+                        ${index + 1}
+                    </div>
+                    <div>
+                        <div style="font-weight: 700; color: var(--text-primary);">${prof.nome}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">${prof.quantidade} comissões</div>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 900; font-size: 1.1rem; color: var(--success);">R$ ${prof.total.toFixed(2)}</div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Erro ao carregar top performers:', error);
+        const container = document.getElementById('topPerformersBody');
+        if (container) {
+            container.innerHTML = '<p class="text-center text-danger" style="padding: 20px;">Erro ao carregar dados</p>';
+        }
     }
 }
 
