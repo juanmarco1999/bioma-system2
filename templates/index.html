@@ -12040,11 +12040,11 @@ async function carregarAgendamentosHoje() {
                 </tr>
             `;
         }).join('');
-        
-        console.log(`✅ ${total} agendamentos carregados`);
-        
+
+        console.log(`✅ ${agendamentos.length} agendamentos de hoje carregados`);
+
     } catch (error) {
-        console.error('❌ Erro ao carregar agendamentos:', error);
+        console.error('❌ Erro ao carregar agendamentos de hoje:', error);
         Swal.fire('Erro', 'Não foi possível carregar os agendamentos de hoje', 'error');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados</td></tr>';
     } finally {
@@ -12105,9 +12105,11 @@ async function carregarAgendamentosSemana() {
                 </tr>
             `;
         }).join('');
-        
+
+        console.log(`✅ ${agendamentos.length} agendamentos da semana carregados`);
+
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao carregar agendamentos da semana:', error);
         Swal.fire('Erro', 'Falha ao carregar agendamentos da semana', 'error');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
     } finally {
@@ -12165,9 +12167,11 @@ async function carregarAgendamentosMes() {
                 </tr>
             `;
         }).join('');
-        
+
+        console.log(`✅ ${agendamentos.length} agendamentos do mês carregados`);
+
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao carregar agendamentos do mês:', error);
         Swal.fire('Erro', 'Falha ao carregar agendamentos do mês', 'error');
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
     } finally {
