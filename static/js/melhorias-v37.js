@@ -3200,6 +3200,381 @@ function getBadgeClassStatus(status) {
     return badges[status] || 'bg-secondary';
 }
 
+// ==================== SISTEMA DE NÍVEIS DE ACESSO (Diretriz 5.1) ====================
+
+// Variável global para armazenar perfil do usuário
+window.perfilUsuario = null;
+
+/**
+ * Carregar perfil do usuário logado
+ */
+async function carregarPerfilUsuario() {
+    try {
+        const response = await fetch('/api/usuarios/meu-perfil', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            window.perfilUsuario = data.perfil;
+            console.log('Perfil carregado:', window.perfilUsuario.nivel_nome);
+            return data.perfil;
+        }
+
+    } catch (error) {
+        console.error('Erro ao carregar perfil:', error);
+    }
+
+    return null;
+}
+
+/**
+ * Verificar se usuário tem permissão específica
+ */
+window.verificarPermissao = async function(permissao) {
+    try {
+        const response = await fetch(`/api/verificar-permissao/${permissao}`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+        return data.success && data.tem_permissao;
+
+    } catch (error) {
+        console.error('Erro ao verificar permissão:', error);
+        return false;
+    }
+};
+
+/**
+ * Verificar se usuário tem nível mínimo
+ */
+function verificarNivelMinimo(nivelMinimo) {
+    if (!window.perfilUsuario) return false;
+
+    const niveis = { 'profissional': 1, 'gestor': 2, 'admin': 3 };
+    const nivelUsuario = niveis[window.perfilUsuario.nivel_acesso] || 1;
+    const nivelRequerido = niveis[nivelMinimo] || 1;
+
+    return nivelUsuario >= nivelRequerido;
+}
+
+/**
+ * Gerenciar usuários (somente admin/gestor)
+ */
+window.gerenciarUsuarios = async function() {
+    try {
+        // Verificar permissão
+        if (!window.perfilUsuario || !verificarNivelMinimo('gestor')) {
+            Swal.fire('Acesso Negado', 'Você não tem permissão para gerenciar usuários', 'error');
+            return;
+        }
+
+        Swal.fire({
+            title: 'Carregando usuários...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch('/api/usuarios', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Erro', data.message || 'Não foi possível carregar usuários', 'error');
+            return;
+        }
+
+        const usuarios = data.usuarios || [];
+
+        // Construir tabela de usuários
+        let tabelaHtml = `
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Nível de Acesso</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        usuarios.forEach(usuario => {
+            const badgeNivel = usuario.nivel_numero === 3 ? 'bg-danger' :
+                              usuario.nivel_numero === 2 ? 'bg-warning' : 'bg-info';
+            const badgeStatus = usuario.ativo ? 'bg-success' : 'bg-secondary';
+            const isAdmin = verificarNivelMinimo('admin');
+
+            // Não permitir editar próprio usuário
+            const isProprio = usuario.id === window.perfilUsuario.id;
+
+            tabelaHtml += `
+                <tr>
+                    <td>${usuario.nome}</td>
+                    <td>${usuario.email}</td>
+                    <td><span class="badge ${badgeNivel}">${usuario.nivel_nome}</span></td>
+                    <td><span class="badge ${badgeStatus}">${usuario.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                    <td>
+                        ${isAdmin && !isProprio ? `
+                            <button class="btn btn-sm btn-primary" onclick="alterarNivelAcesso('${usuario.id}', '${usuario.nome}', '${usuario.nivel_acesso}')">
+                                <i class="bi bi-key"></i>
+                            </button>
+                            <button class="btn btn-sm ${usuario.ativo ? 'btn-warning' : 'btn-success'}"
+                                    onclick="toggleUsuarioAtivo('${usuario.id}', '${usuario.nome}', ${usuario.ativo})">
+                                <i class="bi bi-${usuario.ativo ? 'pause' : 'play'}"></i>
+                            </button>
+                        ` : '<span class="text-muted">-</span>'}
+                    </td>
+                </tr>
+            `;
+        });
+
+        tabelaHtml += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        Swal.fire({
+            title: '<i class="bi bi-people"></i> Gerenciar Usuários',
+            html: `
+                <div class="text-start">
+                    <p class="text-muted mb-3">Total: ${usuarios.length} usuários</p>
+                    ${tabelaHtml}
+                    ${isAdmin ? `
+                        <div class="alert alert-info mt-3">
+                            <strong><i class="bi bi-info-circle"></i> Informações:</strong><br>
+                            <i class="bi bi-key"></i> = Alterar nível de acesso<br>
+                            <i class="bi bi-pause"></i> = Desativar usuário<br>
+                            <i class="bi bi-play"></i> = Ativar usuário
+                        </div>
+                    ` : ''}
+                </div>
+            `,
+            width: '900px',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error('Erro ao gerenciar usuários:', error);
+        Swal.fire('Erro', 'Não foi possível carregar usuários', 'error');
+    }
+};
+
+/**
+ * Alterar nível de acesso de um usuário
+ */
+window.alterarNivelAcesso = async function(usuarioId, nomeUsuario, nivelAtual) {
+    try {
+        const { value: novoNivel } = await Swal.fire({
+            title: `<strong>Alterar Nível de Acesso</strong>`,
+            html: `
+                <div class="text-start">
+                    <p><strong>Usuário:</strong> ${nomeUsuario}</p>
+                    <p><strong>Nível atual:</strong> <span class="badge bg-secondary">${nivelAtual}</span></p>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Novo Nível de Acesso</label>
+                        <select id="select-nivel" class="form-select">
+                            <option value="profissional" ${nivelAtual === 'profissional' ? 'selected' : ''}>
+                                Profissional (Nível 1)
+                            </option>
+                            <option value="gestor" ${nivelAtual === 'gestor' ? 'selected' : ''}>
+                                Gestor (Nível 2)
+                            </option>
+                            <option value="admin" ${nivelAtual === 'admin' ? 'selected' : ''}>
+                                Administrador (Nível 3)
+                            </option>
+                        </select>
+                    </div>
+                    <div class="alert alert-warning">
+                        <small>
+                            <strong>Profissional:</strong> Acesso limitado a próprios agendamentos<br>
+                            <strong>Gestor:</strong> Acesso a relatórios e gestão<br>
+                            <strong>Admin:</strong> Acesso total ao sistema
+                        </small>
+                    </div>
+                </div>
+            `,
+            width: '500px',
+            showCancelButton: true,
+            confirmButtonText: 'Alterar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                return document.getElementById('select-nivel').value;
+            }
+        });
+
+        if (novoNivel && novoNivel !== nivelAtual) {
+            Swal.fire({
+                title: 'Alterando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const response = await fetch(`/api/usuarios/${usuarioId}/nivel-acesso`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ nivel_acesso: novoNivel })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                await Swal.fire('Sucesso!', result.message, 'success');
+                gerenciarUsuarios(); // Recarregar lista
+            } else {
+                Swal.fire('Erro', result.message, 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao alterar nível:', error);
+        Swal.fire('Erro', 'Não foi possível alterar o nível de acesso', 'error');
+    }
+};
+
+/**
+ * Ativar/desativar usuário
+ */
+window.toggleUsuarioAtivo = async function(usuarioId, nomeUsuario, ativoAtual) {
+    try {
+        const acao = ativoAtual ? 'desativar' : 'ativar';
+
+        const confirmar = await Swal.fire({
+            title: `${acao.charAt(0).toUpperCase() + acao.slice(1)} Usuário?`,
+            html: `
+                <p>Tem certeza que deseja ${acao} o usuário <strong>${nomeUsuario}</strong>?</p>
+                ${ativoAtual ? '<p class="text-danger">O usuário não poderá fazer login enquanto estiver inativo.</p>' : ''}
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: `Sim, ${acao}`,
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (confirmar.isConfirmed) {
+            Swal.fire({
+                title: 'Processando...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const response = await fetch(`/api/usuarios/${usuarioId}/ativar`, {
+                method: 'PUT',
+                credentials: 'include'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                await Swal.fire('Sucesso!', result.message, 'success');
+                gerenciarUsuarios(); // Recarregar lista
+            } else {
+                Swal.fire('Erro', result.message, 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao alterar status:', error);
+        Swal.fire('Erro', 'Não foi possível alterar o status do usuário', 'error');
+    }
+};
+
+/**
+ * Visualizar meu perfil
+ */
+window.visualizarMeuPerfil = async function() {
+    try {
+        const perfil = await carregarPerfilUsuario();
+
+        if (!perfil) {
+            Swal.fire('Erro', 'Não foi possível carregar seu perfil', 'error');
+            return;
+        }
+
+        const badgeNivel = perfil.nivel_numero === 3 ? 'bg-danger' :
+                          perfil.nivel_numero === 2 ? 'bg-warning' : 'bg-info';
+
+        Swal.fire({
+            title: '<i class="bi bi-person-circle"></i> Meu Perfil',
+            html: `
+                <div class="text-start">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5>${perfil.nome}</h5>
+                            <p class="text-muted mb-2">${perfil.email}</p>
+                            <p><strong>Nível de Acesso:</strong> <span class="badge ${badgeNivel}">${perfil.nivel_nome}</span></p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <strong>Minhas Permissões</strong>
+                        </div>
+                        <div class="card-body">
+                            ${perfil.permissoes.includes('*') ?
+                                '<p class="text-success"><i class="bi bi-check-circle-fill"></i> Acesso total ao sistema</p>' :
+                                '<ul class="list-unstyled mb-0">' +
+                                perfil.permissoes.map(p => `<li><i class="bi bi-check"></i> ${formatarPermissao(p)}</li>`).join('') +
+                                '</ul>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `,
+            width: '600px',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar perfil:', error);
+        Swal.fire('Erro', 'Não foi possível carregar perfil', 'error');
+    }
+};
+
+/**
+ * Formatar nome de permissão para exibição
+ */
+function formatarPermissao(permissao) {
+    const map = {
+        'visualizar_orcamentos': 'Visualizar Orçamentos',
+        'visualizar_clientes': 'Visualizar Clientes',
+        'visualizar_profissionais': 'Visualizar Profissionais',
+        'visualizar_relatorios': 'Visualizar Relatórios',
+        'visualizar_financeiro': 'Visualizar Financeiro',
+        'visualizar_agendamentos': 'Visualizar Agendamentos',
+        'visualizar_estoque': 'Visualizar Estoque',
+        'editar_orcamentos': 'Editar Orçamentos',
+        'editar_clientes': 'Editar Clientes',
+        'aprovar_orcamentos': 'Aprovar Orçamentos',
+        'visualizar_proprios_agendamentos': 'Visualizar Próprios Agendamentos',
+        'visualizar_proprios_orcamentos': 'Visualizar Próprios Orçamentos',
+        'visualizar_clientes_basico': 'Visualizar Clientes (Básico)',
+        'atualizar_status_agendamento': 'Atualizar Status de Agendamento'
+    };
+
+    return map[permissao] || permissao;
+}
+
+// Carregar perfil automaticamente ao carregar a página
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', carregarPerfilUsuario);
+} else {
+    carregarPerfilUsuario();
+}
+
 console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
 console.log('✅ Histórico de Atendimentos carregado (12.4)');
+console.log('✅ Sistema de Níveis de Acesso carregado (5.1)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');

@@ -2904,9 +2904,384 @@ def get_timeline_atendimentos(profissional_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ==================== SISTEMA DE NÍVEIS DE ACESSO (Diretriz 5.1) ====================
+
+from functools import wraps
+
+# Definição de níveis de acesso
+NIVEIS_ACESSO = {
+    'admin': {
+        'nivel': 3,
+        'nome': 'Administrador',
+        'descricao': 'Acesso total ao sistema',
+        'permissoes': ['*']  # Todas as permissões
+    },
+    'gestor': {
+        'nivel': 2,
+        'nome': 'Gestor',
+        'descricao': 'Acesso a relatórios e gestão',
+        'permissoes': [
+            'visualizar_orcamentos',
+            'visualizar_clientes',
+            'visualizar_profissionais',
+            'visualizar_relatorios',
+            'visualizar_financeiro',
+            'visualizar_agendamentos',
+            'visualizar_estoque',
+            'editar_orcamentos',
+            'editar_clientes',
+            'aprovar_orcamentos'
+        ]
+    },
+    'profissional': {
+        'nivel': 1,
+        'nome': 'Profissional',
+        'descricao': 'Acesso limitado a próprios agendamentos',
+        'permissoes': [
+            'visualizar_proprios_agendamentos',
+            'visualizar_proprios_orcamentos',
+            'visualizar_clientes_basico',
+            'atualizar_status_agendamento'
+        ]
+    }
+}
+
+
+def verificar_permissao(permissao_requerida):
+    """
+    Decorator para verificar se usuário tem permissão para acessar rota
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Verificar se usuário está logado
+            if 'usuario_id' not in session:
+                return jsonify({'success': False, 'message': 'Não autorizado'}), 401
+
+            # Buscar usuário no banco
+            db = get_db()
+            usuario = db.usuarios.find_one({'_id': ObjectId(session['usuario_id'])})
+
+            if not usuario:
+                return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 401
+
+            # Obter nível de acesso (default: profissional)
+            nivel_usuario = usuario.get('nivel_acesso', 'profissional')
+            config_nivel = NIVEIS_ACESSO.get(nivel_usuario, NIVEIS_ACESSO['profissional'])
+
+            # Admin tem acesso total
+            if '*' in config_nivel['permissoes']:
+                return f(*args, **kwargs)
+
+            # Verificar permissão específica
+            if permissao_requerida not in config_nivel['permissoes']:
+                return jsonify({
+                    'success': False,
+                    'message': 'Você não tem permissão para acessar este recurso',
+                    'nivel_requerido': permissao_requerida,
+                    'seu_nivel': nivel_usuario
+                }), 403
+
+            return f(*args, **kwargs)
+
+        return decorated_function
+    return decorator
+
+
+def verificar_nivel_minimo(nivel_minimo):
+    """
+    Decorator para verificar nível mínimo de acesso (admin=3, gestor=2, profissional=1)
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'usuario_id' not in session:
+                return jsonify({'success': False, 'message': 'Não autorizado'}), 401
+
+            db = get_db()
+            usuario = db.usuarios.find_one({'_id': ObjectId(session['usuario_id'])})
+
+            if not usuario:
+                return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 401
+
+            nivel_usuario = usuario.get('nivel_acesso', 'profissional')
+            nivel_numero = NIVEIS_ACESSO.get(nivel_usuario, NIVEIS_ACESSO['profissional'])['nivel']
+
+            nivel_requerido_numero = NIVEIS_ACESSO.get(nivel_minimo, NIVEIS_ACESSO['profissional'])['nivel']
+
+            if nivel_numero < nivel_requerido_numero:
+                return jsonify({
+                    'success': False,
+                    'message': f'Acesso restrito a {NIVEIS_ACESSO[nivel_minimo]["nome"]} ou superior',
+                    'nivel_requerido': nivel_minimo,
+                    'seu_nivel': nivel_usuario
+                }), 403
+
+            return f(*args, **kwargs)
+
+        return decorated_function
+    return decorator
+
+
+@bp.route('/api/usuarios/nivel-acesso/info')
+def get_niveis_acesso():
+    """
+    Obter informações sobre níveis de acesso disponíveis
+    """
+    try:
+        return jsonify({
+            'success': True,
+            'niveis': NIVEIS_ACESSO
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao obter níveis de acesso: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/usuarios/meu-perfil')
+def get_meu_perfil():
+    """
+    Obter perfil do usuário logado com permissões
+    """
+    try:
+        if 'usuario_id' not in session:
+            return jsonify({'success': False, 'message': 'Não autorizado'}), 401
+
+        db = get_db()
+        usuario = db.usuarios.find_one({'_id': ObjectId(session['usuario_id'])})
+
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 401
+
+        nivel_acesso = usuario.get('nivel_acesso', 'profissional')
+        config_nivel = NIVEIS_ACESSO.get(nivel_acesso, NIVEIS_ACESSO['profissional'])
+
+        perfil = {
+            'id': str(usuario['_id']),
+            'nome': usuario.get('nome'),
+            'email': usuario.get('email'),
+            'nivel_acesso': nivel_acesso,
+            'nivel_nome': config_nivel['nome'],
+            'nivel_numero': config_nivel['nivel'],
+            'permissoes': config_nivel['permissoes'],
+            'criado_em': usuario.get('created_at')
+        }
+
+        return jsonify({
+            'success': True,
+            'perfil': perfil
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao obter perfil: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/usuarios', methods=['GET'])
+@verificar_nivel_minimo('gestor')
+def listar_usuarios():
+    """
+    Listar todos os usuários (somente gestor/admin)
+    """
+    try:
+        db = get_db()
+
+        # Buscar todos os usuários
+        usuarios = list(db.usuarios.find({}))
+
+        usuarios_formatados = []
+        for usuario in usuarios:
+            nivel_acesso = usuario.get('nivel_acesso', 'profissional')
+            config_nivel = NIVEIS_ACESSO.get(nivel_acesso, NIVEIS_ACESSO['profissional'])
+
+            usuarios_formatados.append({
+                'id': str(usuario['_id']),
+                'nome': usuario.get('nome'),
+                'email': usuario.get('email'),
+                'nivel_acesso': nivel_acesso,
+                'nivel_nome': config_nivel['nome'],
+                'nivel_numero': config_nivel['nivel'],
+                'ativo': usuario.get('ativo', True),
+                'criado_em': usuario.get('created_at')
+            })
+
+        # Ordenar por nível (admin primeiro)
+        usuarios_formatados.sort(key=lambda x: x['nivel_numero'], reverse=True)
+
+        return jsonify({
+            'success': True,
+            'usuarios': usuarios_formatados,
+            'total': len(usuarios_formatados)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao listar usuários: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/usuarios/<usuario_id>/nivel-acesso', methods=['PUT'])
+@verificar_nivel_minimo('admin')
+def alterar_nivel_acesso(usuario_id):
+    """
+    Alterar nível de acesso de um usuário (somente admin)
+    """
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        novo_nivel = data.get('nivel_acesso')
+
+        # Validar nível
+        if novo_nivel not in NIVEIS_ACESSO:
+            return jsonify({
+                'success': False,
+                'message': f'Nível inválido. Opções: {list(NIVEIS_ACESSO.keys())}'
+            }), 400
+
+        # Buscar usuário alvo
+        usuario_alvo = db.usuarios.find_one({'_id': ObjectId(usuario_id)})
+        if not usuario_alvo:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+
+        # Não permitir alterar próprio nível (segurança)
+        if str(usuario_alvo['_id']) == session.get('usuario_id'):
+            return jsonify({
+                'success': False,
+                'message': 'Você não pode alterar seu próprio nível de acesso'
+            }), 403
+
+        # Atualizar nível
+        db.usuarios.update_one(
+            {'_id': ObjectId(usuario_id)},
+            {
+                '$set': {
+                    'nivel_acesso': novo_nivel,
+                    'updated_at': datetime.now()
+                }
+            }
+        )
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'nivel_acesso_alterado',
+            'usuario': session.get('usuario', 'Admin'),
+            'descricao': f'Nível de acesso alterado de {usuario_alvo.get("nome")} para {NIVEIS_ACESSO[novo_nivel]["nome"]}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'usuario_id': usuario_id,
+                'nivel_anterior': usuario_alvo.get('nivel_acesso', 'profissional'),
+                'nivel_novo': novo_nivel
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'message': 'Nível de acesso alterado com sucesso',
+            'novo_nivel': NIVEIS_ACESSO[novo_nivel]['nome']
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao alterar nível de acesso: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/usuarios/<usuario_id>/ativar', methods=['PUT'])
+@verificar_nivel_minimo('admin')
+def toggle_usuario_ativo(usuario_id):
+    """
+    Ativar/desativar usuário (somente admin)
+    """
+    try:
+        db = get_db()
+
+        # Buscar usuário
+        usuario = db.usuarios.find_one({'_id': ObjectId(usuario_id)})
+        if not usuario:
+            return jsonify({'success': False, 'message': 'Usuário não encontrado'}), 404
+
+        # Não permitir desativar próprio usuário
+        if str(usuario['_id']) == session.get('usuario_id'):
+            return jsonify({
+                'success': False,
+                'message': 'Você não pode desativar sua própria conta'
+            }), 403
+
+        # Toggle ativo
+        novo_status = not usuario.get('ativo', True)
+
+        db.usuarios.update_one(
+            {'_id': ObjectId(usuario_id)},
+            {
+                '$set': {
+                    'ativo': novo_status,
+                    'updated_at': datetime.now()
+                }
+            }
+        )
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'usuario_ativado' if novo_status else 'usuario_desativado',
+            'usuario': session.get('usuario', 'Admin'),
+            'descricao': f'Usuário {usuario.get("nome")} {"ativado" if novo_status else "desativado"}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'usuario_id': usuario_id,
+                'novo_status': novo_status
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'message': f'Usuário {"ativado" if novo_status else "desativado"} com sucesso',
+            'ativo': novo_status
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao ativar/desativar usuário: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/verificar-permissao/<permissao>')
+def verificar_permissao_api(permissao):
+    """
+    Verificar se usuário logado tem determinada permissão
+    """
+    try:
+        if 'usuario_id' not in session:
+            return jsonify({'success': False, 'tem_permissao': False, 'message': 'Não autorizado'}), 401
+
+        db = get_db()
+        usuario = db.usuarios.find_one({'_id': ObjectId(session['usuario_id'])})
+
+        if not usuario:
+            return jsonify({'success': False, 'tem_permissao': False}), 401
+
+        nivel_acesso = usuario.get('nivel_acesso', 'profissional')
+        config_nivel = NIVEIS_ACESSO.get(nivel_acesso, NIVEIS_ACESSO['profissional'])
+
+        # Admin tem todas as permissões
+        if '*' in config_nivel['permissoes']:
+            tem_permissao = True
+        else:
+            tem_permissao = permissao in config_nivel['permissoes']
+
+        return jsonify({
+            'success': True,
+            'tem_permissao': tem_permissao,
+            'nivel_acesso': nivel_acesso
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao verificar permissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 logger.info("✅ Rotas de melhorias carregadas com sucesso")
 logger.info("✅ Sistema de Fila Inteligente carregado (Diretrizes 10.1 e 10.2)")
 logger.info("✅ Sistema de Anamnese/Prontuário carregado (Diretrizes 11.1, 11.3, 11.4)")
 logger.info("✅ Sistema de Multicomissão carregado (Diretriz 12.1)")
 logger.info("✅ Melhorias nos Profissionais carregadas (Diretrizes 12.2 e 12.3)")
 logger.info("✅ Histórico de Atendimentos carregado (Diretriz 12.4)")
+logger.info("✅ Sistema de Níveis de Acesso carregado (Diretriz 5.1)")
