@@ -213,29 +213,31 @@
 
         /* ========== LOGO PERSONALIZADO: DINÂMICO E SEM FUNDO ========== */
         .sidebar-logo {
-            padding: 15px 10px !important;
+            padding: 20px 15px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
             background: linear-gradient(135deg,var(--primary),var(--secondary)) !important;
             border-bottom: 5px solid var(--accent) !important;
-            min-height: auto !important;
+            min-height: 140px !important;
             max-height: none !important;
             overflow: hidden !important;
             transition: all 0.3s ease !important;
         }
 
         #sidebarLogoImage {
-            width: 100% !important;
+            width: auto !important;
+            max-width: 240px !important;
             height: auto !important;
-            max-height: 100px !important;
+            min-height: 100px !important;
+            max-height: 120px !important;
             object-fit: contain !important;
             object-position: center !important;
             display: block !important;
-            margin: 0 auto 8px auto !important;
+            margin: 0 auto !important;
             background: transparent !important;
-            filter: brightness(1.1) contrast(1.1) !important;
+            filter: brightness(1.15) contrast(1.1) drop-shadow(0 2px 10px rgba(0,0,0,0.3)) !important;
         }
 
         /* Quando há logo personalizado, esconder texto */
@@ -3077,19 +3079,49 @@ async function checkAutoLogin(){
         $('#rememberMe').checked = true;
 
         // Auto-login silencioso após 500ms
-        setTimeout(() => {
+        setTimeout(async () => {
             console.log('🚀 Executando auto-login...');
-            Swal.fire({
-                title: 'Login Automático',
-                html: '<p style="color: #7C3AED; font-weight: 600;">Conectando com credenciais salvas...</p><div class="spinner" style="margin: 20px auto;"></div>',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                timer: 1500,
-                timerProgressBar: true
-            }).then(() => {
-                // Trigger login
-                handleLogin({preventDefault: () => {}});
-            });
+
+            try {
+                // Fazer login direto sem modal intermediário
+                const username = data.username;
+                const password = atob(data.password);
+
+                const response = await API.post('/api/login', { username, password });
+
+                if(response.success){
+                    // Salvar sessão
+                    sessionStorage.setItem('bioma_user', JSON.stringify(response.user));
+
+                    // Mostrar modal de sucesso simplificado
+                    Swal.fire({
+                        icon: 'success',
+                        title: '<strong style="color: #10B981;">Login Automático</strong>',
+                        html: `
+                            <div style="text-align: center; padding: 15px;">
+                                <p style="margin: 0; color: #065F46; font-weight: 600;">
+                                    Bem-vindo de volta, ${response.user.name || response.user.username}!
+                                </p>
+                            </div>
+                        `,
+                        showConfirmButton: false,
+                        timer: 1500,
+                        timerProgressBar: true,
+                        allowOutsideClick: false,
+                        didClose: () => {
+                            // Iniciar app APÓS modal fechar completamente
+                            initApp(response.user);
+                        }
+                    });
+                } else {
+                    // Falha no auto-login: limpar dados salvos
+                    console.warn('⚠️ Auto-login falhou:', response.message);
+                    localStorage.removeItem('bioma_remember');
+                }
+            } catch(error) {
+                console.error('❌ Erro no auto-login:', error);
+                localStorage.removeItem('bioma_remember');
+            }
         }, 500);
 
         return true;
