@@ -4249,17 +4249,86 @@ async function loadEstoqueResumo(){
     setLoading(key, true);
 
     try{
-        const res = await fetch('/api/estoque/relatorio',{credentials:'include'});
-        const data = await res.json();
-        if(data.success && data.relatorio){
-            const rel = data.relatorio;
-            // Elementos de resumo removidos (órfãos que apareciam em todas as abas)
-            // document.getElementById('estoqueResumoValorVenda')?.textContent = formatarMoeda(rel.valor_total_venda || 0);
-            // document.getElementById('estoqueResumoValorCusto')?.textContent = formatarMoeda(rel.valor_total_custo || 0);
-            // document.getElementById('estoqueResumoMargem')?.textContent = formatarMoeda(rel.margem_potencial || 0);
-            // document.getElementById('estoqueResumoTotalProdutos')?.textContent = `${rel.total_produtos || 0} itens`;
-            // document.getElementById('estoqueResumoCriticos')?.textContent = rel.produtos_zerados || 0;
-            // document.getElementById('estoqueResumoBaixo')?.textContent = rel.produtos_baixo_estoque || 0;
+        // Buscar produtos
+        const prodRes = await fetch('/api/produtos', {credentials: 'include'});
+        const prodData = await prodRes.json();
+
+        // Buscar movimentações do mês
+        const hoje = new Date();
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const movRes = await fetch(`/api/estoque/movimentacoes?data_inicio=${inicioMes.toISOString()}&per_page=10000`, {credentials: 'include'});
+        const movData = await movRes.json();
+
+        if (prodData.success && prodData.produtos) {
+            const produtos = prodData.produtos;
+
+            // Total de produtos
+            document.getElementById('totalProdutosEstoque').textContent = produtos.length;
+
+            // Valor total em estoque
+            const valorTotal = produtos.reduce((sum, p) => {
+                return sum + ((p.preco || 0) * (p.estoque || 0));
+            }, 0);
+            document.getElementById('valorTotalEstoque').textContent = `R$ ${valorTotal.toFixed(2)}`;
+
+            // Produtos abaixo do mínimo
+            const abaixoMinimo = produtos.filter(p => {
+                const estoque = p.estoque || 0;
+                const minimo = p.estoque_minimo || 0;
+                return estoque < minimo && minimo > 0;
+            }).length;
+            document.getElementById('itensAbaixoMinimo').textContent = abaixoMinimo;
+        }
+
+        // Movimentações do mês
+        if (movData.success && movData.movimentacoes) {
+            document.getElementById('movimentacoesEstoque').textContent = movData.movimentacoes.length;
+
+            // Criar gráfico de movimentações
+            const entradas = movData.movimentacoes.filter(m => m.tipo === 'entrada').length;
+            const saidas = movData.movimentacoes.filter(m => m.tipo === 'saida' || m.tipo === 'saída').length;
+
+            const ctx = document.getElementById('chartEstoqueVisaoGeral');
+            if (ctx && window.Chart) {
+                if (window.chartEstoqueVisaoGeralInstance) {
+                    window.chartEstoqueVisaoGeralInstance.destroy();
+                }
+
+                window.chartEstoqueVisaoGeralInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Entradas', 'Saídas'],
+                        datasets: [{
+                            label: 'Movimentações',
+                            data: [entradas, saidas],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(239, 68, 68, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(239, 68, 68, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
         }
     }catch(error){
         console.error('Erro ao carregar resumo de estoque', error);
