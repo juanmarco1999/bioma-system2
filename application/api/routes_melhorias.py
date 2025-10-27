@@ -15,6 +15,15 @@ import urllib.parse
 import json
 from io import BytesIO
 
+# ReportLab imports para geração de PDF (Diretriz 3.2)
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.lib.colors import HexColor, black, white
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT, TA_JUSTIFY
+
 logger = logging.getLogger(__name__)
 
 # Criar novo blueprint para melhorias
@@ -3278,6 +3287,419 @@ def verificar_permissao_api(permissao):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ============================================================================
+# PDF COM ASSINATURAS (DIRETRIZ 3.2)
+# ============================================================================
+
+@bp.route('/api/contratos/<id>/pdf-assinatura', methods=['GET'])
+def gerar_pdf_contrato_com_assinatura(id):
+    """
+    Diretriz 3.2: Gerar PDF de contrato com campos de assinatura
+
+    Melhoria: Adiciona seção profissional de assinaturas no mesmo campo,
+    permitindo que cliente e empresa assinem no mesmo documento.
+    """
+    try:
+        db = get_db()
+        if db is None:
+            return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+        # Buscar contrato
+        contrato = db.orcamentos.find_one({'_id': ObjectId(id)})
+        if not contrato:
+            return jsonify({'success': False, 'message': 'Contrato não encontrado'}), 404
+
+        # Criar buffer para o PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            topMargin=1.5*cm,
+            bottomMargin=2*cm,
+            leftMargin=2*cm,
+            rightMargin=2*cm
+        )
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # ====================================================================
+        # HEADER COM LOGO E TÍTULO
+        # ====================================================================
+
+        # Estilo do título principal
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=HexColor('#7C3AED'),
+            alignment=TA_CENTER,
+            spaceAfter=0.3*cm,
+            fontName='Helvetica-Bold'
+        )
+
+        elements.append(Paragraph("🌿 BIOMA UBERABA", title_style))
+
+        # Subtítulo com número do contrato
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Normal'],
+            fontSize=16,
+            textColor=HexColor('#4B5563'),
+            alignment=TA_CENTER,
+            spaceAfter=0.5*cm,
+            fontName='Helvetica-Bold'
+        )
+
+        numero_contrato = contrato.get('numero', str(contrato['_id'])[-6:])
+        elements.append(Paragraph(f"CONTRATO DE PRESTAÇÃO DE SERVIÇOS Nº {numero_contrato}", subtitle_style))
+
+        # Badge de status
+        status = contrato.get('status', 'Pendente')
+        status_color = {
+            'Aprovado': '#10B981',
+            'Pendente': '#F59E0B',
+            'Cancelado': '#EF4444',
+            'Em Andamento': '#3B82F6'
+        }.get(status, '#6B7280')
+
+        status_style = ParagraphStyle(
+            'Status',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=HexColor('#FFFFFF'),
+            alignment=TA_CENTER,
+            spaceAfter=0.8*cm
+        )
+
+        status_table = Table(
+            [[Paragraph(f"<b>STATUS: {status}</b>", status_style)]],
+            colWidths=[6*cm]
+        )
+        status_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), HexColor(status_color)),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('ROUNDEDCORNERS', [5, 5, 5, 5]),
+        ]))
+        elements.append(status_table)
+        elements.append(Spacer(1, 0.3*cm))
+
+        # ====================================================================
+        # DADOS DO CLIENTE
+        # ====================================================================
+
+        section_style = ParagraphStyle(
+            'SectionTitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=HexColor('#1F2937'),
+            spaceAfter=0.3*cm,
+            fontName='Helvetica-Bold'
+        )
+
+        elements.append(Paragraph("📋 DADOS DO CLIENTE", section_style))
+
+        # Data de criação
+        data_contrato = contrato.get('created_at', datetime.now())
+        if isinstance(data_contrato, datetime):
+            data_formatada = data_contrato.strftime('%d/%m/%Y')
+        else:
+            data_formatada = 'N/A'
+
+        cliente_data = [
+            ['Nome Completo:', contrato.get('cliente_nome', 'N/A')],
+            ['CPF:', contrato.get('cliente_cpf', 'N/A')],
+            ['Telefone:', contrato.get('cliente_telefone', 'N/A')],
+            ['E-mail:', contrato.get('cliente_email', 'N/A')],
+            ['Data do Contrato:', data_formatada],
+            ['Forma de Pagamento:', contrato.get('forma_pagamento', 'N/A')]
+        ]
+
+        cliente_table = Table(cliente_data, colWidths=[5*cm, 12*cm])
+        cliente_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#F3F4F6')),
+            ('TEXTCOLOR', (0, 0), (0, -1), HexColor('#374151')),
+            ('TEXTCOLOR', (1, 0), (1, -1), HexColor('#111827')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#D1D5DB')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        elements.append(cliente_table)
+        elements.append(Spacer(1, 0.6*cm))
+
+        # ====================================================================
+        # SERVIÇOS CONTRATADOS
+        # ====================================================================
+
+        if contrato.get('servicos'):
+            elements.append(Paragraph("✨ SERVIÇOS CONTRATADOS", section_style))
+
+            servicos_data = [['Descrição', 'Profissional', 'Qtd', 'Valor Unit.', 'Total']]
+            for srv in contrato['servicos']:
+                servicos_data.append([
+                    srv.get('nome', 'N/A'),
+                    srv.get('profissional_nome', '-'),
+                    str(srv.get('quantidade', 1)),
+                    f"R$ {srv.get('preco', 0):.2f}",
+                    f"R$ {srv.get('total', 0):.2f}"
+                ])
+
+            servicos_table = Table(servicos_data, colWidths=[6*cm, 4*cm, 1.5*cm, 2.5*cm, 3*cm])
+            servicos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#7C3AED')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (4, 1), (4, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#D1D5DB')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('BACKGROUND', (0, 1), (-1, -1), HexColor('#FAFAFA')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F9FAFB')]),
+            ]))
+            elements.append(servicos_table)
+            elements.append(Spacer(1, 0.4*cm))
+
+        # ====================================================================
+        # PRODUTOS
+        # ====================================================================
+
+        if contrato.get('produtos'):
+            elements.append(Paragraph("🛍️ PRODUTOS", section_style))
+
+            produtos_data = [['Descrição', 'Quantidade', 'Valor Unit.', 'Total']]
+            for prd in contrato['produtos']:
+                produtos_data.append([
+                    prd.get('nome', 'N/A'),
+                    str(prd.get('quantidade', 1)),
+                    f"R$ {prd.get('preco', 0):.2f}",
+                    f"R$ {prd.get('total', 0):.2f}"
+                ])
+
+            produtos_table = Table(produtos_data, colWidths=[8*cm, 3*cm, 3*cm, 3*cm])
+            produtos_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#10B981')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (3, 1), (3, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#D1D5DB')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('BACKGROUND', (0, 1), (-1, -1), HexColor('#FAFAFA')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [HexColor('#FFFFFF'), HexColor('#F0FDF4')]),
+            ]))
+            elements.append(produtos_table)
+            elements.append(Spacer(1, 0.4*cm))
+
+        # ====================================================================
+        # TOTAIS
+        # ====================================================================
+
+        elements.append(Paragraph("💰 VALORES", section_style))
+
+        totais_data = [
+            ['Subtotal Serviços:', f"R$ {contrato.get('total_servicos', 0):.2f}"],
+            ['Subtotal Produtos:', f"R$ {contrato.get('total_produtos', 0):.2f}"],
+            ['Desconto:', f"R$ {contrato.get('desconto_valor', 0):.2f}"],
+        ]
+
+        totais_table = Table(totais_data, colWidths=[13*cm, 4*cm])
+        totais_table.setStyle(TableStyle([
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#D1D5DB')),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, 0), (-1, -1), HexColor('#F9FAFB')),
+        ]))
+        elements.append(totais_table)
+
+        # Total final destacado
+        total_final_data = [
+            [Paragraph('<b>TOTAL DO CONTRATO:</b>', styles['Normal']),
+             Paragraph(f'<b>R$ {contrato.get("total_final", 0):.2f}</b>', styles['Normal'])]
+        ]
+
+        total_final_table = Table(total_final_data, colWidths=[13*cm, 4*cm])
+        total_final_table.setStyle(TableStyle([
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 14),
+            ('TEXTCOLOR', (0, 0), (-1, -1), HexColor('#FFFFFF')),
+            ('BACKGROUND', (0, 0), (-1, -1), HexColor('#7C3AED')),
+            ('GRID', (0, 0), (-1, -1), 0, HexColor('#7C3AED')),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ]))
+        elements.append(total_final_table)
+        elements.append(Spacer(1, 0.6*cm))
+
+        # ====================================================================
+        # OBSERVAÇÕES
+        # ====================================================================
+
+        if contrato.get('observacoes'):
+            elements.append(Paragraph("📝 OBSERVAÇÕES", section_style))
+            obs_style = ParagraphStyle(
+                'Observacoes',
+                parent=styles['Normal'],
+                fontSize=10,
+                alignment=TA_JUSTIFY,
+                spaceAfter=0.6*cm
+            )
+            elements.append(Paragraph(contrato['observacoes'], obs_style))
+
+        # ====================================================================
+        # TERMOS E CONDIÇÕES
+        # ====================================================================
+
+        elements.append(Paragraph("📄 TERMOS E CONDIÇÕES", section_style))
+
+        termos_texto = """
+        1. Este contrato estabelece os serviços e produtos acordados entre as partes, conforme
+        descrição detalhada acima.<br/>
+        2. O cliente declara estar ciente dos valores, condições de pagamento e prazos apresentados.<br/>
+        3. A BIOMA UBERABA se compromete a prestar os serviços com excelência, profissionalismo
+        e qualidade.<br/>
+        4. O pagamento deverá ser realizado conforme a forma especificada neste contrato.<br/>
+        5. Eventuais alterações deverão ser acordadas por escrito entre as partes.<br/>
+        6. Este contrato é regido pelas leis brasileiras, elegendo-se o foro da cidade de Uberaba/MG
+        para dirimir quaisquer questões.
+        """
+
+        termos_style = ParagraphStyle(
+            'Termos',
+            parent=styles['Normal'],
+            fontSize=9,
+            alignment=TA_JUSTIFY,
+            spaceAfter=1*cm,
+            leading=12
+        )
+        elements.append(Paragraph(termos_texto, termos_style))
+
+        # ====================================================================
+        # SEÇÃO DE ASSINATURAS (DIRETRIZ 3.2)
+        # ====================================================================
+
+        elements.append(Spacer(1, 1*cm))
+
+        assinatura_title_style = ParagraphStyle(
+            'AssinaturaTitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=HexColor('#7C3AED'),
+            alignment=TA_CENTER,
+            spaceAfter=0.8*cm,
+            fontName='Helvetica-Bold'
+        )
+        elements.append(Paragraph("✍️ ASSINATURAS", assinatura_title_style))
+
+        # Data e local
+        local_data_style = ParagraphStyle(
+            'LocalData',
+            parent=styles['Normal'],
+            fontSize=10,
+            alignment=TA_CENTER,
+            spaceAfter=1.2*cm
+        )
+        elements.append(Paragraph(
+            f"Uberaba/MG, {datetime.now().strftime('%d de %B de %Y')}",
+            local_data_style
+        ))
+
+        # Tabela com as duas assinaturas lado a lado
+        assinatura_data = [
+            [
+                # Cliente (esquerda)
+                Paragraph('<br/><br/><br/>_________________________________<br/><br/>'
+                         '<b>CLIENTE</b><br/>'
+                         f'{contrato.get("cliente_nome", "")}<br/>'
+                         f'CPF: {contrato.get("cliente_cpf", "")}',
+                         ParagraphStyle('AssinaturaCampo', parent=styles['Normal'],
+                                      fontSize=9, alignment=TA_CENTER)),
+
+                # Espaço
+                '',
+
+                # Empresa (direita)
+                Paragraph('<br/><br/><br/>_________________________________<br/><br/>'
+                         '<b>BIOMA UBERABA</b><br/>'
+                         'Representante Legal<br/>'
+                         'CNPJ: 00.000.000/0001-00',
+                         ParagraphStyle('AssinaturaCampo', parent=styles['Normal'],
+                                      fontSize=9, alignment=TA_CENTER))
+            ]
+        ]
+
+        assinatura_table = Table(assinatura_data, colWidths=[7*cm, 3*cm, 7*cm])
+        assinatura_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+            ('ALIGN', (2, 0), (2, 0), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(assinatura_table)
+
+        # ====================================================================
+        # FOOTER COM INFORMAÇÕES DA EMPRESA
+        # ====================================================================
+
+        elements.append(Spacer(1, 1.5*cm))
+
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=HexColor('#6B7280'),
+            alignment=TA_CENTER,
+            leading=10
+        )
+
+        footer_texto = """
+        <b>BIOMA UBERABA</b><br/>
+        Endereço: Rua Exemplo, 123 - Centro - Uberaba/MG - CEP 38010-000<br/>
+        Telefone: (34) 3333-3333 | E-mail: contato@biomauberaba.com.br<br/>
+        Website: www.biomauberaba.com.br
+        """
+
+        elements.append(Paragraph(footer_texto, footer_style))
+
+        # ====================================================================
+        # GERAR PDF
+        # ====================================================================
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        logger.info(f"✅ PDF com assinaturas gerado para contrato {numero_contrato}")
+
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"contrato_bioma_{numero_contrato}.pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao gerar PDF com assinaturas: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 logger.info("✅ Rotas de melhorias carregadas com sucesso")
 logger.info("✅ Sistema de Fila Inteligente carregado (Diretrizes 10.1 e 10.2)")
 logger.info("✅ Sistema de Anamnese/Prontuário carregado (Diretrizes 11.1, 11.3, 11.4)")
@@ -3285,3 +3707,4 @@ logger.info("✅ Sistema de Multicomissão carregado (Diretriz 12.1)")
 logger.info("✅ Melhorias nos Profissionais carregadas (Diretrizes 12.2 e 12.3)")
 logger.info("✅ Histórico de Atendimentos carregado (Diretriz 12.4)")
 logger.info("✅ Sistema de Níveis de Acesso carregado (Diretriz 5.1)")
+logger.info("✅ PDF com Assinaturas implementado (Diretriz 3.2)")

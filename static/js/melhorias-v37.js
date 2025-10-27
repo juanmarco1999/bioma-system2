@@ -5387,10 +5387,131 @@ if (document.readyState === 'loading') {
     carregarPerfilUsuario();
 }
 
+// ============================================================================
+// PDF COM ASSINATURAS (DIRETRIZ 3.2)
+// ============================================================================
+
+/**
+ * Diretriz 3.2: Baixar PDF de contrato com campos de assinatura
+ *
+ * Melhoria: Gera PDF profissional com seção de assinaturas no mesmo campo,
+ * permitindo que cliente e empresa assinem no mesmo documento.
+ *
+ * @param {String} orcamentoId - ID do orçamento/contrato
+ */
+window.baixarPDFComAssinatura = async function(orcamentoId) {
+    try {
+        console.log(`📄 Gerando PDF com assinaturas para contrato ${orcamentoId}...`);
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Gerando PDF...',
+            html: '<i class="bi bi-file-pdf" style="font-size: 3rem; color: #7C3AED;"></i><br/><br/>Aguarde enquanto criamos seu contrato profissional com campos de assinatura.',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Fazer requisição para gerar PDF
+        const response = await fetch(`/api/contratos/${orcamentoId}/pdf-assinatura`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        Swal.close();
+
+        if (!response.ok) {
+            throw new Error(`Erro ao gerar PDF: ${response.statusText}`);
+        }
+
+        // Converter resposta em blob
+        const blob = await response.blob();
+
+        // Criar URL temporária para download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `contrato_bioma_${orcamentoId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+
+        // Limpar
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // Mostrar sucesso
+        Swal.fire({
+            icon: 'success',
+            title: 'PDF Gerado!',
+            html: `
+                <p>✅ Contrato profissional gerado com sucesso!</p>
+                <p style="margin-top: 1rem; font-size: 0.9rem; color: #6B7280;">
+                    <i class="bi bi-check-circle-fill" style="color: #10B981;"></i>
+                    O PDF inclui campos de assinatura para cliente e empresa no mesmo documento.
+                </p>
+            `,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#7C3AED'
+        });
+
+        console.log('✅ PDF com assinaturas gerado e baixado com sucesso!');
+
+    } catch (error) {
+        console.error('❌ Erro ao gerar PDF com assinaturas:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao gerar PDF',
+            text: error.message || 'Não foi possível gerar o PDF. Tente novamente.',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#EF4444'
+        });
+    }
+};
+
+/**
+ * Adicionar botão de PDF com assinaturas ao modal de visualização de orçamento
+ *
+ * Esta função deve ser chamada no modal de visualização para adicionar
+ * um botão extra que permite baixar o PDF com assinaturas.
+ *
+ * @param {String} orcamentoId - ID do orçamento
+ */
+window.adicionarBotaoPDFAssinatura = function(orcamentoId) {
+    // Verificar se já existe o botão
+    const botaoExistente = document.getElementById('btn-pdf-assinatura');
+    if (botaoExistente) {
+        botaoExistente.remove();
+    }
+
+    // Procurar pelo container de ações do modal
+    const modalFooter = document.querySelector('.swal2-actions');
+    if (!modalFooter) return;
+
+    // Criar botão
+    const btnPDF = document.createElement('button');
+    btnPDF.id = 'btn-pdf-assinatura';
+    btnPDF.className = 'swal2-confirm swal2-styled';
+    btnPDF.style.backgroundColor = '#7C3AED';
+    btnPDF.innerHTML = '<i class="bi bi-file-pdf"></i> PDF com Assinaturas';
+    btnPDF.onclick = () => baixarPDFComAssinatura(orcamentoId);
+
+    // Adicionar antes do botão de fechar
+    const btnFechar = modalFooter.querySelector('.swal2-confirm');
+    if (btnFechar) {
+        modalFooter.insertBefore(btnPDF, btnFechar);
+    } else {
+        modalFooter.appendChild(btnPDF);
+    }
+};
+
 console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
 console.log('✅ Histórico de Atendimentos carregado (12.4)');
 console.log('✅ Sistema de Níveis de Acesso carregado (5.1)');
 console.log('✅ Layout Melhorado do Contrato carregado (1.3)');
 console.log('✅ Detalhamento em Consultar melhorado (2.2)');
 console.log('✅ Gráficos da aba Resumo melhorados (4.1)');
+console.log('✅ PDF com Assinaturas implementado (3.2)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
