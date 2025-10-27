@@ -126,6 +126,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- jsPDF AutoTable para tabelas em PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- FullCalendar para calendário de profissionais -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/pt-br.global.min.js"></script>
     <style>
 :root[data-theme="light"]{--primary:#7C3AED;--primary-dark:#6D28D9;--secondary:#EC4899;--accent:#F59E0B;--success:#10B981;--danger:#EF4444;--warning:#F59E0B;--info:#3B82F6;--bg-main:#F9FAFB;--bg-card:#FFFFFF;--bg-sidebar:#1F2937;--bg-sidebar-hover:#374151;--text-primary:#1F2937;--text-secondary:#6B7280;--text-muted:#9CA3AF;--border-color:#E5E7EB;--shadow:0 4px 20px rgba(0,0,0,0.08);--shadow-hover:0 8px 30px rgba(124,58,237,0.15);}:root[data-theme="dark"]{--primary:#8B5CF6;--primary-dark:#7C3AED;--secondary:#F472B6;--accent:#FBBF24;--success:#34D399;--danger:#F87171;--warning:#FBBF24;--info:#60A5FA;--bg-main:#0F172A;--bg-card:#1E293B;--bg-sidebar:#0F172A;--bg-sidebar-hover:#1E293B;--text-primary:#F1F5F9;--text-secondary:#CBD5E1;--text-muted:#94A3B8;--border-color:#334155;--shadow:0 4px 20px rgba(0,0,0,0.4);--shadow-hover:0 8px 30px rgba(139,92,246,0.3)}*{margin:0;padding:0;box-sizing:border-box}body,button,input,select,textarea{transition:background-color .2s ease,color .2s ease,border-color .2s ease}body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-main);color:var(--text-primary);overflow-x:hidden;line-height:1.6}.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;animation:gradientAnimation 15s ease infinite;background-size:400% 400%}@keyframes gradientAnimation{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.auth-box{background:rgba(255,255,255,0.98);backdrop-filter:blur(10px);border-radius:30px;padding:50px;max-width:500px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,0.4);animation:slideUp 0.6s cubic-bezier(0.68,-0.55,0.265,1.55)}@keyframes slideUp{from{opacity:0;transform:translateY(50px) scale(0.9)}to{opacity:1;transform:translateY(0) scale(1)}}.auth-logo{text-align:center;margin-bottom:40px}.auth-logo .logo-icon{font-size:5rem;background:linear-gradient(135deg,#7C3AED,#EC4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:pulse 2s ease-in-out infinite;filter:drop-shadow(0 5px 15px rgba(124,58,237,0.3))}@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}.auth-logo h2{font-weight:900;font-size:2.8rem;color:#1F2937;margin-top:20px;letter-spacing:2px}.auth-logo p{color:#6B7280;font-size:1.1rem;margin-top:10px;font-weight:500}.nav-pills .nav-link{border-radius:15px;font-weight:700;padding:12px 25px;transition:all .3s;color:#6B7280;border:none;background:transparent;cursor:pointer}.nav-pills .nav-link.active{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:white;box-shadow:0 5px 20px rgba(124,58,237,0.4);transform:translateY(-2px)}.form-control,.form-select{border-radius:12px;border:2px solid #E5E7EB;padding:12px 18px;font-size:1rem;transition:all .3s;background:white;color:#1F2937}.form-control:focus,.form-select:focus{border-color:#7C3AED;box-shadow:0 0 0 5px rgba(124,58,237,0.1);outline:none;background:white}.alert{border-radius:15px;border:none;padding:15px 20px}.alert-info{background:linear-gradient(135deg,#E0E7FF,#DBEAFE);color:#1E40AF;border-left:5px solid #3B82F6}.alert-success{background:linear-gradient(135deg,#D1FAE5,#A7F3D0);color:#065F46;border-left:5px solid #10B981}.btn{border-radius:12px;padding:12px 30px;font-weight:700;border:none;cursor:pointer;transition:all .3s ease;display:inline-flex;align-items:center;gap:10px;font-size:1rem;text-transform:uppercase;letter-spacing:0.5px}.btn i{font-size:1.2rem}.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 5px 20px rgba(124,58,237,0.3)}.btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(124,58,237,0.5);color:#fff}.btn-success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.btn-success:hover{transform:translateY(-3px);color:#fff}.btn-danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.btn-outline{background:transparent;color:var(--primary);border:3px solid var(--primary)}.btn-outline:hover{background:var(--primary);color:#fff}.btn-secondary{background:#6B7280;color:#fff}.btn-sm{padding:8px 16px;font-size:0.85rem}.w-100{width:100%}.mt-3{margin-top:1rem}.mb-3{margin-bottom:1rem}#app{display:none}.sidebar{width:280px;background:var(--bg-sidebar);color:#fff;position:fixed;height:100vh;overflow-y:auto;z-index:1000;box-shadow:4px 0 25px rgba(0,0,0,0.2)}.sidebar::-webkit-scrollbar{width:8px}.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,0.05)}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:4px}.sidebar-logo{padding:30px 20px;text-align:center;background:linear-gradient(135deg,var(--primary),var(--secondary));border-bottom:5px solid var(--accent)}.sidebar-logo h1{font-size:2.5rem;font-weight:900;letter-spacing:5px;margin:0;text-shadow:2px 2px 8px rgba(0,0,0,0.3)}.sidebar-logo p{font-size:1rem;opacity:0.95;margin:10px 0 0 0;letter-spacing:2px}.sidebar-menu{list-style:none;padding:20px 0}.sidebar-menu li a{display:flex;align-items:center;gap:12px;padding:14px 20px;color:rgba(255,255,255,0.85);text-decoration:none;transition:all .3s;border-left:5px solid transparent;font-weight:500;font-size:0.95rem}.sidebar-menu li a i{font-size:1.3rem;width:25px}.sidebar-menu li a:hover{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--accent);padding-left:28px}.sidebar-menu li a.active{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--primary);font-weight:700}.theme-toggle{padding:15px 20px;border-top:1px solid rgba(255,255,255,0.1)}.theme-toggle button{width:100%;padding:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);border-radius:12px;color:#fff;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px}.main-content{margin-left:280px;padding:30px 40px 100px;min-height:100vh;overflow-y:auto;overflow-x:hidden}.main-content::-webkit-scrollbar{width:10px}.main-content::-webkit-scrollbar-track{background:var(--bg-main)}.main-content::-webkit-scrollbar-thumb{background:var(--primary);border-radius:5px}.content-section{display:none}.content-section.active{display:block;animation:fadeIn 0.4s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.page-header{margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}.page-header h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:0;display:flex;align-items:center;gap:15px}.stat-card{background:var(--bg-card);border-radius:20px;padding:30px;box-shadow:var(--shadow);transition:all .3s;text-align:center;position:relative;overflow:hidden;border:2px solid var(--border-color)}.stat-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:6px;background:linear-gradient(90deg,var(--primary),var(--secondary))}.stat-card:hover{transform:translateY(-10px);box-shadow:var(--shadow-hover);border-color:var(--primary)}.stat-card .icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 10px 25px rgba(124,58,237,0.3)}.stat-card h3{font-size:3rem;font-weight:900;margin:15px 0 10px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}.stat-card p{color:var(--text-secondary);font-size:1rem;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:1px}.card{background:var(--bg-card);border-radius:20px;box-shadow:var(--shadow);margin-bottom:30px;overflow:visible;transition:all .3s;border:2px solid var(--border-color)}.card-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px 30px;font-weight:800;font-size:1.2rem;display:flex;align-items:center;gap:12px}.card-body{padding:30px}table{width:100%;border-collapse:collapse;font-size:0.95rem}table thead th{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:16px 14px;text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;font-size:0.85rem}table tbody tr{border-bottom:2px solid var(--border-color);transition:all .2s}table tbody tr:hover{background:var(--bg-main);transform:scale(1.01)}table tbody td{padding:16px 14px;vertical-align:middle;color:var(--text-primary)}.badge{padding:8px 16px;border-radius:20px;font-weight:800;font-size:0.8rem;display:inline-block;text-transform:uppercase;letter-spacing:0.5px}.badge.success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.badge.warning{background:linear-gradient(135deg,var(--warning),#F59E0B);color:#000}.badge.danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.spinner{border:4px solid var(--border-color);border-top:4px solid var(--primary);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.text-center{text-align:center}.text-muted{color:var(--text-secondary)}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.autocomplete-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:2px solid var(--primary);border-radius:14px;margin-top:5px;max-height:350px;overflow-y:auto;z-index:9999;box-shadow:0 10px 40px rgba(124,58,237,0.3);display:none}.autocomplete-results::-webkit-scrollbar{width:8px}.autocomplete-results::-webkit-scrollbar-track{background:var(--bg-main);border-radius:10px}.autocomplete-results::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px}.autocomplete-item{padding:14px 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s ease;word-wrap:break-word;white-space:normal}.autocomplete-item:hover{background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));transform:translateX(5px);border-left:4px solid var(--primary)}.autocomplete-item:last-child{border-bottom:none}.autocomplete-item strong{color:var(--primary);font-size:1.05rem;display:block;margin-bottom:5px}.autocomplete-item small{color:var(--text-secondary);font-size:0.9rem;display:block}.row{display:flex;flex-wrap:wrap;margin:0 -15px}.row.g-4>*{padding:0 15px;margin-bottom:25px}[class^="col-"]{padding:0 15px}.col-12{width:100%}@media (min-width:768px){.col-md-6{width:50%}.col-md-4{width:33.333%}.col-md-3{width:25%}.col-md-2{width:16.666%}}@media (min-width:992px){.col-lg-3{width:25%}.col-lg-4{width:33.333%}.col-lg-6{width:50%}}
             .global-search-container{margin-bottom:24px;background:var(--bg-card);border-radius:18px;padding:20px;box-shadow:var(--shadow);position:relative}
@@ -2743,6 +2747,9 @@ window.addEventListener('load', function() {
                 <button class="sub-tab-btn active" onclick="showSubTab('profissionais', 'lista')">
                     <i class="bi bi-people-fill"></i> Lista de Profissionais
                 </button>
+                <button class="sub-tab-btn" onclick="showSubTab('profissionais', 'calendario')">
+                    <i class="bi bi-calendar3"></i> Calendário
+                </button>
                 <button class="sub-tab-btn" onclick="showSubTab('profissionais', 'comissoes')">
                     <i class="bi bi-cash-stack"></i> Comissões
                 </button>
@@ -2780,6 +2787,76 @@ window.addEventListener('load', function() {
                                     <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-tab: Calendário de Profissionais -->
+            <div id="profissionais-calendario" class="sub-tab-content">
+                <!-- Controles do Calendário -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-funnel-fill"></i> Filtros e Visualização
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    <i class="bi bi-person"></i> Filtrar por Profissional
+                                </label>
+                                <select id="filtroCalendarioProfissional" class="form-select" onchange="carregarCalendario()">
+                                    <option value="">Todos os Profissionais</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    <i class="bi bi-eye"></i> Visualização
+                                </label>
+                                <select id="visualizacaoCalendario" class="form-select" onchange="alterarVisualizacaoCalendario()">
+                                    <option value="dayGridMonth">Mês</option>
+                                    <option value="timeGridWeek">Semana</option>
+                                    <option value="timeGridDay">Dia</option>
+                                    <option value="listWeek">Lista Semanal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">
+                                    <i class="bi bi-calendar-plus"></i> Ações Rápidas
+                                </label>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn btn-success flex-fill" onclick="novoAgendamentoRapido()">
+                                        <i class="bi bi-plus-circle"></i> Novo Agendamento
+                                    </button>
+                                    <button class="btn btn-outline" onclick="calendarioHoje()">
+                                        <i class="bi bi-calendar-event"></i> Hoje
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legenda de Cores -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                            <strong><i class="bi bi-palette"></i> Legenda:</strong>
+                            <div id="legendaProfissionais" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <!-- Será populado dinamicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendário Principal -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-calendar3"></i> Calendário de Agendamentos
+                    </div>
+                    <div class="card-body">
+                        <div id="calendarioProfissionais" style="background: var(--bg-main); padding: 20px; border-radius: 15px;">
+                            <!-- FullCalendar será renderizado aqui -->
                         </div>
                     </div>
                 </div>
@@ -6437,6 +6514,448 @@ function showModalProfissional(){
         }
     });
 }
+
+// ========== CALENDÁRIO DE PROFISSIONAIS ====================
+
+// Variável global para armazenar instância do calendário
+let calendarioProfissionaisInstance = null;
+
+// Paleta de cores para profissionais (12 cores vibrantes e distintas)
+const CORES_PROFISSIONAIS = [
+    '#7C3AED', // Roxo (primary)
+    '#EC4899', // Rosa (secondary)
+    '#10B981', // Verde
+    '#F59E0B', // Laranja
+    '#3B82F6', // Azul
+    '#EF4444', // Vermelho
+    '#8B5CF6', // Roxo claro
+    '#14B8A6', // Teal
+    '#F472B6', // Rosa claro
+    '#FCD34D', // Amarelo
+    '#60A5FA', // Azul claro
+    '#34D399'  // Verde claro
+];
+
+// Função para obter cor de um profissional (hash determinístico)
+function getCorProfissional(profissionalId, profissionais) {
+    if (!profissionais) return CORES_PROFISSIONAIS[0];
+    const index = profissionais.findIndex(p => p._id === profissionalId);
+    return CORES_PROFISSIONAIS[index % CORES_PROFISSIONAIS.length];
+}
+
+// Função para inicializar o calendário
+async function inicializarCalendario() {
+    console.log('📅 Inicializando calendário de profissionais...');
+
+    try {
+        // Buscar profissionais para preencher filtro e legenda
+        const resProfissionais = await fetch('/api/profissionais', {credentials: 'include'});
+        const dataProfissionais = await resProfissionais.json();
+
+        if (!dataProfissionais.success || !dataProfissionais.profissionais) {
+            console.error('Erro ao carregar profissionais');
+            return;
+        }
+
+        const profissionais = dataProfissionais.profissionais;
+
+        // Preencher select de filtro
+        const selectFiltro = document.getElementById('filtroCalendarioProfissional');
+        if (selectFiltro) {
+            const optionsHTML = profissionais.map(p =>
+                `<option value="${p._id}">${p.nome} - ${p.especialidade || 'Profissional'}</option>`
+            ).join('');
+            selectFiltro.innerHTML = '<option value="">Todos os Profissionais</option>' + optionsHTML;
+        }
+
+        // Criar legenda de cores
+        const legendaDiv = document.getElementById('legendaProfissionais');
+        if (legendaDiv) {
+            const legendaHTML = profissionais.map((p, index) => {
+                const cor = CORES_PROFISSIONAIS[index % CORES_PROFISSIONAIS.length];
+                return `<div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: ${cor}; border-radius: 5px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>
+                    <span style="font-size: 0.9rem;">${p.nome}</span>
+                </div>`;
+            }).join('');
+            legendaDiv.innerHTML = legendaHTML;
+        }
+
+        // Inicializar FullCalendar
+        const calendarEl = document.getElementById('calendarioProfissionais');
+        if (!calendarEl) {
+            console.error('Elemento do calendário não encontrado');
+            return;
+        }
+
+        // Destruir calendário existente se houver
+        if (calendarioProfissionaisInstance) {
+            calendarioProfissionaisInstance.destroy();
+        }
+
+        // Criar nova instância do calendário
+        calendarioProfissionaisInstance = new FullCalendar.Calendar(calendarEl, {
+            locale: 'pt-br',
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+            },
+            buttonText: {
+                today: 'Hoje',
+                month: 'Mês',
+                week: 'Semana',
+                day: 'Dia',
+                list: 'Lista'
+            },
+            height: 'auto',
+            navLinks: true,
+            editable: true,
+            selectable: true,
+            selectMirror: true,
+            dayMaxEvents: true,
+            weekends: true,
+            slotMinTime: '08:00:00',
+            slotMaxTime: '20:00:00',
+            allDaySlot: false,
+
+            // Eventos customizados
+            select: function(info) {
+                novoAgendamentoRapido(info.startStr, info.endStr);
+            },
+
+            eventClick: function(info) {
+                visualizarAgendamentoCalendario(info.event);
+            },
+
+            eventDrop: function(info) {
+                atualizarDataAgendamento(info.event.id, info.event.start, info.event.end);
+            },
+
+            eventResize: function(info) {
+                atualizarDataAgendamento(info.event.id, info.event.start, info.event.end);
+            },
+
+            // Carregar eventos
+            events: async function(fetchInfo, successCallback, failureCallback) {
+                try {
+                    await carregarEventosCalendario(fetchInfo, successCallback, failureCallback, profissionais);
+                } catch (error) {
+                    console.error('Erro ao carregar eventos:', error);
+                    failureCallback(error);
+                }
+            }
+        });
+
+        calendarioProfissionaisInstance.render();
+        console.log('✅ Calendário inicializado com sucesso');
+
+    } catch (error) {
+        console.error('❌ Erro ao inicializar calendário:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao carregar calendário',
+            text: 'Não foi possível inicializar o calendário. Tente recarregar a página.',
+        });
+    }
+}
+
+// Função para carregar eventos do calendário
+async function carregarEventosCalendario(fetchInfo, successCallback, failureCallback, profissionais) {
+    try {
+        const filtroProf = document.getElementById('filtroCalendarioProfissional')?.value;
+
+        // Buscar agendamentos
+        const res = await fetch('/api/agendamentos', {credentials: 'include'});
+        const data = await res.json();
+
+        if (!data.success || !data.agendamentos) {
+            successCallback([]);
+            return;
+        }
+
+        // Filtrar por profissional se selecionado
+        let agendamentos = data.agendamentos;
+        if (filtroProf) {
+            agendamentos = agendamentos.filter(a =>
+                a.profissional_id === filtroProf ||
+                a.profissional?._id === filtroProf
+            );
+        }
+
+        // Converter agendamentos para eventos do FullCalendar
+        const eventos = agendamentos.map(agendamento => {
+            const profissionalId = agendamento.profissional_id || agendamento.profissional?._id;
+            const profissionalNome = agendamento.profissional_nome || agendamento.profissional?.nome || 'Sem profissional';
+            const cor = getCorProfissional(profissionalId, profissionais);
+
+            // Criar data/hora do evento
+            let start, end;
+            if (agendamento.data && agendamento.horario) {
+                // data format: "2025-10-27", horario: "14:30"
+                start = `${agendamento.data}T${agendamento.horario}`;
+                // Assumir 1 hora de duração padrão
+                const startDate = new Date(start);
+                const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+                end = endDate.toISOString().slice(0, 16);
+            } else {
+                start = agendamento.created_at;
+                end = agendamento.created_at;
+            }
+
+            return {
+                id: agendamento._id,
+                title: `${profissionalNome} - ${agendamento.cliente_nome || 'Cliente'}`,
+                start: start,
+                end: end,
+                backgroundColor: cor,
+                borderColor: cor,
+                extendedProps: {
+                    cliente: agendamento.cliente_nome || 'Cliente não informado',
+                    profissional: profissionalNome,
+                    telefone: agendamento.telefone || '-',
+                    observacoes: agendamento.observacoes || '-',
+                    status: agendamento.status || 'Agendado'
+                }
+            };
+        });
+
+        successCallback(eventos);
+    } catch (error) {
+        console.error('Erro ao carregar eventos:', error);
+        failureCallback(error);
+    }
+}
+
+// Função para recarregar calendário (útil após filtrar)
+function carregarCalendario() {
+    if (calendarioProfissionaisInstance) {
+        calendarioProfissionaisInstance.refetchEvents();
+    } else {
+        inicializarCalendario();
+    }
+}
+
+// Função para criar novo agendamento rápido
+function novoAgendamentoRapido(dataInicio, dataFim) {
+    let dataDefault = '';
+    let horaDefault = '';
+
+    if (dataInicio) {
+        const dt = new Date(dataInicio);
+        dataDefault = dt.toISOString().split('T')[0];
+        horaDefault = dt.toISOString().split('T')[1].substring(0, 5);
+    }
+
+    Swal.fire({
+        title: '📅 Novo Agendamento',
+        html: `
+            <div style="text-align: left;">
+                <div class="mb-3">
+                    <label class="form-label">Cliente</label>
+                    <input type="text" id="agend-cliente" class="form-control" placeholder="Nome do cliente">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Telefone</label>
+                    <input type="text" id="agend-telefone" class="form-control" placeholder="(34) 99999-9999">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Profissional</label>
+                    <select id="agend-profissional" class="form-select">
+                        <option value="">Selecione um profissional</option>
+                    </select>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Data</label>
+                        <input type="date" id="agend-data" class="form-control" value="${dataDefault}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Horário</label>
+                        <input type="time" id="agend-hora" class="form-control" value="${horaDefault}">
+                    </div>
+                </div>
+                <div class="mb-3 mt-3">
+                    <label class="form-label">Observações</label>
+                    <textarea id="agend-obs" class="form-control" rows="2" placeholder="Observações opcionais"></textarea>
+                </div>
+            </div>
+        `,
+        width: '600px',
+        showCancelButton: true,
+        confirmButtonText: 'Agendar',
+        cancelButtonText: 'Cancelar',
+        didOpen: async () => {
+            // Carregar profissionais no select
+            try {
+                const res = await fetch('/api/profissionais', {credentials: 'include'});
+                const data = await res.json();
+                if (data.success && data.profissionais) {
+                    const select = document.getElementById('agend-profissional');
+                    select.innerHTML = '<option value="">Selecione um profissional</option>' +
+                        data.profissionais.map(p => `<option value="${p._id}">${p.nome} - ${p.especialidade || 'Profissional'}</option>`).join('');
+                }
+            } catch (e) {
+                console.error('Erro ao carregar profissionais:', e);
+            }
+        },
+        preConfirm: () => {
+            const cliente = document.getElementById('agend-cliente').value;
+            const telefone = document.getElementById('agend-telefone').value;
+            const profissional = document.getElementById('agend-profissional').value;
+            const data = document.getElementById('agend-data').value;
+            const hora = document.getElementById('agend-hora').value;
+            const obs = document.getElementById('agend-obs').value;
+
+            if (!cliente || !data || !hora) {
+                Swal.showValidationMessage('Preencha cliente, data e horário');
+                return false;
+            }
+
+            return { cliente, telefone, profissional, data, hora, obs };
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                const payload = {
+                    cliente_nome: result.value.cliente,
+                    telefone: result.value.telefone,
+                    profissional_id: result.value.profissional,
+                    data: result.value.data,
+                    horario: result.value.hora,
+                    observacoes: result.value.obs,
+                    status: 'Agendado'
+                };
+
+                const response = await fetch('/api/agendamentos', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Agendamento Criado!',
+                        text: `${result.value.cliente} agendado para ${result.value.data} às ${result.value.hora}`,
+                        timer: 2500
+                    });
+                    carregarCalendario();
+                } else {
+                    throw new Error(data.message || 'Erro ao criar agendamento');
+                }
+            } catch (error) {
+                console.error('Erro ao criar agendamento:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: error.message || 'Não foi possível criar o agendamento'
+                });
+            }
+        }
+    });
+}
+
+// Função para visualizar agendamento clicado no calendário
+function visualizarAgendamentoCalendario(event) {
+    const props = event.extendedProps;
+
+    Swal.fire({
+        title: '📋 Detalhes do Agendamento',
+        html: `
+            <div style="text-align: left; padding: 20px;">
+                <p><strong>Cliente:</strong> ${props.cliente}</p>
+                <p><strong>Profissional:</strong> ${props.profissional}</p>
+                <p><strong>Telefone:</strong> ${props.telefone}</p>
+                <p><strong>Data/Hora:</strong> ${event.start.toLocaleString('pt-BR')}</p>
+                <p><strong>Status:</strong> <span class="badge success">${props.status}</span></p>
+                <p><strong>Observações:</strong> ${props.observacoes}</p>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Cancelar Agendamento',
+        confirmButtonColor: '#EF4444',
+        cancelButtonText: 'Fechar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            // Cancelar agendamento
+            try {
+                await fetch(`/api/agendamentos/${event.id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                Swal.fire('Cancelado!', 'Agendamento cancelado com sucesso', 'success');
+                carregarCalendario();
+            } catch (error) {
+                Swal.fire('Erro', 'Não foi possível cancelar o agendamento', 'error');
+            }
+        }
+    });
+}
+
+// Função para atualizar data de agendamento (drag & drop)
+async function atualizarDataAgendamento(agendamentoId, novaData, novaDataFim) {
+    try {
+        const data = novaData.toISOString().split('T')[0];
+        const hora = novaData.toISOString().split('T')[1].substring(0, 5);
+
+        const response = await fetch(`/api/agendamentos/${agendamentoId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({ data, horario: hora })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            toast('✅ Agendamento atualizado', 'success');
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar agendamento:', error);
+        toast('❌ Erro ao atualizar', 'error');
+        carregarCalendario(); // Recarregar para desfazer mudança visual
+    }
+}
+
+// Função para voltar ao dia de hoje
+function calendarioHoje() {
+    if (calendarioProfissionaisInstance) {
+        calendarioProfissionaisInstance.today();
+    }
+}
+
+// Função para alterar visualização do calendário
+function alterarVisualizacaoCalendario() {
+    const visualizacao = document.getElementById('visualizacaoCalendario')?.value;
+    if (calendarioProfissionaisInstance && visualizacao) {
+        calendarioProfissionaisInstance.changeView(visualizacao);
+    }
+}
+
+// Hook: Inicializar calendário quando sub-tab for ativada
+// Será chamado pela função showSubTab
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionar listener para detectar quando sub-tab de calendário é ativada
+    const btnCalendario = document.querySelector('[onclick*="profissionais"][onclick*="calendario"]');
+    if (btnCalendario) {
+        btnCalendario.addEventListener('click', function() {
+            setTimeout(() => {
+                if (!calendarioProfissionaisInstance) {
+                    inicializarCalendario();
+                }
+            }, 300);
+        });
+    }
+});
+
+// ========== FIM CALENDÁRIO DE PROFISSIONAIS ====================
 
 async function loadServicosLista(){
     const key = 'loadServicosLista';
