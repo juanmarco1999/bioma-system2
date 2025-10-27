@@ -3580,15 +3580,21 @@ def get_all_comissoes():
         for comissao in comissoes:
             # Buscar informações do profissional
             profissional = db.profissionais.find_one({'_id': comissao.get('profissional_id')})
-            profissional_nome = profissional.get('nome', 'Desconhecido') if profissional else 'Desconhecido'
+            profissional_nome = profissional.get('nome', '[Profissional removido]') if profissional else '[Profissional não encontrado]'
 
             # Buscar informações do orçamento
             orcamento = db.orcamentos.find_one({'_id': comissao.get('orcamento_id')})
-            cliente_nome = orcamento.get('cliente_nome', 'Desconhecido') if orcamento else 'Desconhecido'
+            cliente_nome = '[Cliente não encontrado]'
+            orcamento_numero = '[Removido]'
+
+            if orcamento:
+                cliente_nome = orcamento.get('cliente_nome') or orcamento.get('nome_cliente') or '[Nome não informado]'
+                orcamento_numero = orcamento.get('numero', orcamento.get('orcamento_numero', '[S/N]'))
 
             comissoes_lista.append({
                 'id': str(comissao['_id']),
                 'orcamento_id': str(comissao.get('orcamento_id', '')),
+                'orcamento_numero': orcamento_numero,
                 'profissional_id': str(comissao.get('profissional_id', '')),
                 'profissional_nome': profissional_nome,
                 'cliente_nome': cliente_nome,

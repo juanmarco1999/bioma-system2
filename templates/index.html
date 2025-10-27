@@ -341,57 +341,88 @@
             display: block;
             margin: 0 auto;
             padding: 15px;
-            background: transparent !important; /* Sem background */
-            border-radius: 50% !important; /* Arredondado */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Sombra suave */
+            background: transparent !important;
+            border-radius: 50% !important;
+            box-shadow:
+                0 4px 15px rgba(0,0,0,0.2),
+                0 0 20px rgba(255, 255, 255, 0.1),
+                0 0 40px rgba(124, 58, 237, 0.2);
             position: relative;
-            animation: logoPulse 3s ease-in-out infinite;
-            /* Efeito de brilho mágico */
+            animation: logoGlamourGlow 2s ease-in-out infinite;
         }
 
-        /* Efeito de brilho do logo - Shimmer effect */
+        /* ✨ EFEITO GLAMOUR ESTRELADO - Múltiplas estrelas cintilantes ✨ */
+        #sidebarLogoImage::before,
         #sidebarLogoImage::after {
-            content: '';
+            content: '✨';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            right: -50%;
-            bottom: -50%;
-            background: linear-gradient(
-                45deg,
-                transparent 30%,
-                rgba(255, 255, 255, 0.3) 50%,
-                transparent 70%
-            );
-            transform: rotate(0deg);
-            animation: logoShimmer 3s infinite;
-            border-radius: 50%;
+            font-size: 25px;
             pointer-events: none;
+            animation: sparkleGlamour 2s ease-in-out infinite;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
         }
 
-        @keyframes logoShimmer {
-            0% {
-                transform: rotate(0deg) scale(1);
-                opacity: 0;
-            }
-            50% {
-                transform: rotate(180deg) scale(1.1);
-                opacity: 1;
-            }
-            100% {
-                transform: rotate(360deg) scale(1);
-                opacity: 0;
-            }
+        #sidebarLogoImage::before {
+            top: -10px;
+            right: -10px;
+            animation-delay: 0s;
         }
 
-        @keyframes logoPulse {
+        #sidebarLogoImage::after {
+            bottom: -10px;
+            left: -10px;
+            animation-delay: 1s;
+        }
+
+        /* Brilho glamour contínuo */
+        @keyframes logoGlamourGlow {
             0%, 100% {
-                transform: scale(1);
-                filter: brightness(1);
+                filter: brightness(1) drop-shadow(0 0 8px rgba(124, 58, 237, 0.4));
+                box-shadow:
+                    0 4px 15px rgba(0,0,0,0.2),
+                    0 0 20px rgba(255, 255, 255, 0.1),
+                    0 0 40px rgba(124, 58, 237, 0.2);
+            }
+            25% {
+                filter: brightness(1.15) drop-shadow(0 0 15px rgba(236, 72, 153, 0.6));
+                box-shadow:
+                    0 4px 15px rgba(0,0,0,0.2),
+                    0 0 30px rgba(255, 255, 255, 0.3),
+                    0 0 60px rgba(236, 72, 153, 0.4);
             }
             50% {
-                transform: scale(1.02);
-                filter: brightness(1.1);
+                filter: brightness(1.3) drop-shadow(0 0 20px rgba(245, 158, 11, 0.7));
+                box-shadow:
+                    0 4px 15px rgba(0,0,0,0.2),
+                    0 0 40px rgba(255, 255, 255, 0.4),
+                    0 0 80px rgba(245, 158, 11, 0.5);
+            }
+            75% {
+                filter: brightness(1.15) drop-shadow(0 0 15px rgba(124, 58, 237, 0.6));
+                box-shadow:
+                    0 4px 15px rgba(0,0,0,0.2),
+                    0 0 30px rgba(255, 255, 255, 0.3),
+                    0 0 60px rgba(124, 58, 237, 0.4);
+            }
+        }
+
+        /* Cintilação das estrelas ✨ */
+        @keyframes sparkleGlamour {
+            0%, 100% {
+                opacity: 0;
+                transform: scale(0) rotate(0deg);
+            }
+            25% {
+                opacity: 1;
+                transform: scale(1.2) rotate(90deg);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(0.8) rotate(180deg);
+            }
+            75% {
+                opacity: 1;
+                transform: scale(1.3) rotate(270deg);
             }
         }
 
@@ -665,6 +696,232 @@
             }
         }
 
+        /* ========== ANIMAÇÕES EXTRAS SOFISTICADAS ========== */
+
+        /* Shake animation para erros */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+            20%, 40%, 60%, 80% { transform: translateX(8px); }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Success glow effect */
+        @keyframes successGlow {
+            0%, 100% {
+                box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.4);
+            }
+        }
+
+        .success-glow {
+            animation: successGlow 1.5s ease-in-out 2;
+        }
+
+        /* Floating animation para ícones */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .stat-card .icon {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .stat-card:nth-child(2) .icon {
+            animation-delay: 0.5s;
+        }
+
+        .stat-card:nth-child(3) .icon {
+            animation-delay: 1s;
+        }
+
+        .stat-card:nth-child(4) .icon {
+            animation-delay: 1.5s;
+        }
+
+        /* Ripple effect para cards ao clicar */
+        @keyframes ripple {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+        }
+
+        .card:active::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        /* Bounce in animation para badges */
+        @keyframes bounceInBadge {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .badge {
+            animation: bounceInBadge 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        /* Typewriter effect para títulos */
+        @keyframes typewriter {
+            from {
+                width: 0;
+            }
+            to {
+                width: 100%;
+            }
+        }
+
+        .page-header h1 {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typewriter 1s steps(30, end);
+        }
+
+        /* Gradient animation para botões primários */
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .btn-primary {
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        /* Slide up animation para form controls ao focar */
+        @keyframes slideUpFocus {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(-2px);
+            }
+        }
+
+        .form-control:focus, .form-select:focus {
+            animation: slideUpFocus 0.2s ease-out forwards;
+        }
+
+        /* Confetti effect para sucessos */
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100%) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Progress bar animation */
+        @keyframes progressBar {
+            0% {
+                width: 0%;
+            }
+            100% {
+                width: 100%;
+            }
+        }
+
+        /* Fade in zoom para imagens */
+        @keyframes fadeInZoom {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        #sidebarLogoImage, img.profile-pic {
+            animation: fadeInZoom 0.6s ease-out;
+        }
+
+        /* Hover effect para links com underline animado */
+        a {
+            position: relative;
+        }
+
+        a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease-out;
+        }
+
+        a:hover::after {
+            width: 100%;
+        }
+
+        /* Skeleton loading animation */
+        @keyframes skeleton-loading {
+            0% {
+                background-position: -200px 0;
+            }
+            100% {
+                background-position: calc(200px + 100%) 0;
+            }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200px 100%;
+            animation: skeleton-loading 1.5s ease-in-out infinite;
+        }
+
         /* ========== TELA DE LOGIN: SEMPRE LIGHT MODE ========== */
         /* A tela de autenticação NUNCA deve ser afetada por dark mode */
         #authScreen,
@@ -894,26 +1151,83 @@ const _OriginalSwal = (typeof Swal !== 'undefined') ? Swal.fire.bind(Swal) : nul
 
 window.SafeSwal = {
     _isOpen: false,
+    _currentModal: null,
 
     fire: function(config) {
         // Fechar modal anterior se houver
         if (this._isOpen) {
-            Swal.close();
+            try {
+                Swal.close();
+            } catch(e) {
+                console.warn('Erro ao fechar modal anterior:', e);
+            }
         }
         this._isOpen = true;
 
         // Normalizar config
         if (typeof config === 'string') config = { title: config };
 
-        // Hook para marcar como fechado
-        const originalDidClose = config.didClose;
-        config.didClose = () => {
+        // CORREÇÃO CRÍTICA: Garantir que SEMPRE seja possível fechar o modal
+        const safeConfig = {
+            ...config,
+            allowEscapeKey: config.allowEscapeKey !== false,
+            allowOutsideClick: config.allowOutsideClick !== false,
+            showCloseButton: config.showCloseButton !== false,
+            // Adicionar backdrop para garantir que clicks fora funcionem
+            backdrop: config.backdrop !== false,
+            // Timer de segurança: fechar automaticamente após 5 minutos (previne travamento)
+            timer: config.timer || undefined
+        };
+
+        // Hook para marcar como fechado em TODOS os cenários
+        const originalDidClose = safeConfig.didClose;
+        const originalWillClose = safeConfig.willClose;
+        const originalDidDestroy = safeConfig.didDestroy;
+
+        safeConfig.willClose = () => {
             this._isOpen = false;
+            this._currentModal = null;
+            if (originalWillClose) originalWillClose();
+        };
+
+        safeConfig.didClose = () => {
+            this._isOpen = false;
+            this._currentModal = null;
+            // Limpar qualquer overlay residual
+            document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+                if (el.style) el.style.display = 'none';
+            });
             if (originalDidClose) originalDidClose();
         };
 
-        // Chamar Swal original
-        return _OriginalSwal(config);
+        safeConfig.didDestroy = () => {
+            this._isOpen = false;
+            this._currentModal = null;
+            if (originalDidDestroy) originalDidDestroy();
+        };
+
+        // Chamar Swal original e guardar referência
+        const result = _OriginalSwal(safeConfig);
+        this._currentModal = result;
+
+        return result;
+    },
+
+    // Método de emergência para forçar fechamento
+    forceClose: function() {
+        this._isOpen = false;
+        this._currentModal = null;
+        try {
+            Swal.close();
+            // Forçar remoção de todos os elementos do SweetAlert2
+            document.querySelectorAll('.swal2-container, .swal2-backdrop-show, .swal2-shown').forEach(el => {
+                el.remove();
+            });
+            // Remover classes do body
+            document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+        } catch(e) {
+            console.error('Erro ao forçar fechamento:', e);
+        }
     }
 };
 
@@ -923,6 +1237,54 @@ if (typeof Swal !== 'undefined') {
         return window.SafeSwal.fire(...args);
     };
 }
+
+// Adicionar listener de emergência para ESC (funciona mesmo se modal não responder)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && window.SafeSwal._isOpen) {
+        console.log('🚨 ESC pressionado - forçando fechamento do modal');
+        window.SafeSwal.forceClose();
+    }
+});
+
+// Botão de emergência invisível para fechar modais travados
+window.addEventListener('load', function() {
+    const emergencyButton = document.createElement('div');
+    emergencyButton.id = 'modalEmergencyClose';
+    emergencyButton.innerHTML = '✕ Fechar';
+    emergencyButton.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 999999;
+        background: #EF4444;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(239,68,68,0.4);
+        display: none;
+        font-size: 14px;
+    `;
+    emergencyButton.onclick = function() {
+        console.log('🆘 Botão de emergência acionado');
+        window.SafeSwal.forceClose();
+        this.style.display = 'none';
+    };
+    document.body.appendChild(emergencyButton);
+
+    // Mostrar botão de emergência se modal estiver aberto por mais de 3 segundos
+    setInterval(function() {
+        if (window.SafeSwal._isOpen) {
+            const modalVisible = document.querySelector('.swal2-container');
+            if (modalVisible) {
+                emergencyButton.style.display = 'block';
+            }
+        } else {
+            emergencyButton.style.display = 'none';
+        }
+    }, 3000);
+});
 </script>
 
 <div id="authScreen" class="auth-screen">
