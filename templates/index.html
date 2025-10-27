@@ -5560,6 +5560,123 @@ async function loadContratos(){
     }
 }
 
+// ========== FUNÇÕES DE ENVIO DE CONTRATOS ==========
+
+/**
+ * Enviar contrato via WhatsApp
+ */
+async function enviarContratoWhatsApp(contratoId) {
+    try {
+        // Buscar dados do contrato
+        const res = await fetch(`/api/orcamento/${contratoId}`, {credentials: 'include'});
+        const data = await res.json();
+
+        if(!data.success) {
+            throw new Error(data.message || 'Erro ao buscar contrato');
+        }
+
+        const contrato = data.orcamento;
+
+        // Buscar dados do cliente para telefone
+        const clienteRes = await fetch(`/api/cliente/${contrato.cliente_id}`, {credentials: 'include'});
+        const clienteData = await clienteRes.json();
+
+        if(!clienteData.success || !clienteData.cliente.telefone) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cliente sem telefone',
+                text: 'Este cliente não possui telefone cadastrado',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        const telefone = clienteData.cliente.telefone.replace(/\D/g, ''); // Remove formatação
+
+        // Montar mensagem
+        const dataFormatada = new Date(contrato.created_at).toLocaleDateString('pt-BR');
+        const mensagem = `
+🌳 *BIOMA Uberaba - Contrato #${contrato.numero}*
+
+Olá, ${contrato.cliente_nome}!
+
+Seu contrato foi aprovado! ✅
+
+📊 *Valor Total:* R$ ${contrato.total_final.toFixed(2)}
+📅 *Data:* ${dataFormatada}
+💳 *Pagamento:* ${contrato.forma_pagamento || 'Crédito à Vista'}
+
+🔗 *Visualizar PDF:*
+${window.location.origin}/api/orcamento/${contratoId}/pdf
+
+Obrigado pela preferência! 🌿
+_Equipe BIOMA Uberaba_
+        `.trim();
+
+        // Abrir WhatsApp
+        const url = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
+        window.open(url, '_blank');
+
+        console.log('✅ WhatsApp aberto com sucesso');
+
+    } catch(error) {
+        console.error('❌ Erro ao enviar WhatsApp:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao abrir WhatsApp',
+            text: error.message || 'Não foi possível enviar pelo WhatsApp',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
+/**
+ * Enviar contrato via Email
+ */
+async function enviarContratoEmail(contratoId) {
+    try {
+        Swal.fire({
+            title: 'Enviando E-mail...',
+            html: '<div class="spinner"></div><p style="margin-top:20px">Aguarde enquanto enviamos o contrato...</p>',
+            allowOutsideClick: false,
+            showConfirmButton: false
+        });
+
+        const res = await fetch(`/api/orcamento/${contratoId}/enviar-email`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if(data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'E-mail Enviado!',
+                html: `
+                    <p>Contrato enviado com sucesso para:</p>
+                    <p style="font-weight:700;color:var(--primary);font-size:1.1rem">${data.destinatario || 'cliente'}</p>
+                `,
+                timer: 4000,
+                timerProgressBar: true,
+                showConfirmButton: true,
+                confirmButtonText: 'OK'
+            });
+        } else {
+            throw new Error(data.message || 'Erro ao enviar e-mail');
+        }
+    } catch(error) {
+        console.error('❌ Erro ao enviar email:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao Enviar E-mail',
+            text: error.message || 'Não foi possível enviar o e-mail. Verifique as configurações SMTP.',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
 async function loadComissoes(){
     const key = 'loadComissoes';
     if (isLoading(key)) {
@@ -7089,9 +7206,9 @@ async function startDashboardRealtime() {
     
     // Primeira execução imediata
     await updateDashboardRealtime();
-    
-    // Atualizar a cada 30 segundos
-    dashboardRealtimeInterval = setInterval(updateDashboardRealtime, 30000);
+
+    // Atualizar a cada 60 segundos (otimizado para reduzir carga)
+    dashboardRealtimeInterval = setInterval(updateDashboardRealtime, 60000);
 }
 
 async function updateDashboardRealtime() {
@@ -10919,17 +11036,17 @@ function enableAutoUpdate() {
         clearInterval(autoUpdateInterval);
     }
 
-    console.log('🔄 Auto-atualização ATIVADA (intervalo: 30s)');
+    console.log('🔄 Auto-atualização ATIVADA (intervalo: 60s - otimizado)');
 
     // Atualizar imediatamente ao ativar
     performAutoUpdate();
 
-    // Configurar intervalo de 30 segundos
+    // Configurar intervalo de 60 segundos (otimizado para reduzir carga)
     autoUpdateInterval = setInterval(() => {
         if (autoUpdateEnabled) {
             performAutoUpdate();
         }
-    }, 30000); // 30 segundos
+    }, 60000); // 60 segundos (otimizado)
 }
 
 function disableAutoUpdate() {
