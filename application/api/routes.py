@@ -3566,7 +3566,51 @@ def upload_foto_profissional_form():
         logger.error(f"Erro no upload de foto: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# 5. Calcular Comissões Multiníveis
+# 5. Listar Todas as Comissões
+@bp.route('/api/comissoes', methods=['GET'])
+@login_required
+def get_all_comissoes():
+    db = get_db()
+    """Lista todas as comissões registradas no sistema"""
+    try:
+        # Buscar todas as comissões do histórico
+        comissoes_lista = []
+        comissoes = list(db.comissoes_historico.find().sort('data_registro', DESCENDING).limit(100))
+
+        for comissao in comissoes:
+            # Buscar informações do profissional
+            profissional = db.profissionais.find_one({'_id': comissao.get('profissional_id')})
+            profissional_nome = profissional.get('nome', 'Desconhecido') if profissional else 'Desconhecido'
+
+            # Buscar informações do orçamento
+            orcamento = db.orcamentos.find_one({'_id': comissao.get('orcamento_id')})
+            cliente_nome = orcamento.get('cliente_nome', 'Desconhecido') if orcamento else 'Desconhecido'
+
+            comissoes_lista.append({
+                'id': str(comissao['_id']),
+                'orcamento_id': str(comissao.get('orcamento_id', '')),
+                'profissional_id': str(comissao.get('profissional_id', '')),
+                'profissional_nome': profissional_nome,
+                'cliente_nome': cliente_nome,
+                'comissao_valor': comissao.get('comissao_valor', 0),
+                'data_registro': comissao.get('data_registro', datetime.now()).isoformat() if comissao.get('data_registro') else datetime.now().isoformat()
+            })
+
+        total = sum(c.get('comissao_valor', 0) for c in comissoes_lista)
+
+        logger.info(f"✅ Listadas {len(comissoes_lista)} comissões - Total: R$ {total:.2f}")
+
+        return jsonify({
+            'success': True,
+            'comissoes': comissoes_lista,
+            'total': round(total, 2),
+            'quantidade': len(comissoes_lista)
+        })
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar comissões: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 6. Calcular Comissões Multiníveis
 @bp.route('/api/comissoes/calcular-orcamento', methods=['POST'])
 @login_required
 def calcular_comissoes_orcamento():

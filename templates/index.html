@@ -344,7 +344,55 @@
             background: transparent !important; /* Sem background */
             border-radius: 50% !important; /* Arredondado */
             box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Sombra suave */
-            /* Logo arredondado, intuitivo, sem fundo roxo */
+            position: relative;
+            animation: logoPulse 3s ease-in-out infinite;
+            /* Efeito de brilho mágico */
+        }
+
+        /* Efeito de brilho do logo - Shimmer effect */
+        #sidebarLogoImage::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            right: -50%;
+            bottom: -50%;
+            background: linear-gradient(
+                45deg,
+                transparent 30%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 70%
+            );
+            transform: rotate(0deg);
+            animation: logoShimmer 3s infinite;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        @keyframes logoShimmer {
+            0% {
+                transform: rotate(0deg) scale(1);
+                opacity: 0;
+            }
+            50% {
+                transform: rotate(180deg) scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: rotate(360deg) scale(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes logoPulse {
+            0%, 100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+            50% {
+                transform: scale(1.02);
+                filter: brightness(1.1);
+            }
         }
 
         /* Quando há logo personalizado, esconder texto */
@@ -365,6 +413,93 @@
         }
 
         /* ========== ANIMAÇÕES MELHORADAS (PARTE 4.2) ========== */
+
+        /* Animações de entrada suaves */
+        @keyframes slideInFromLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Aplicar animações aos elementos */
+        .stat-card {
+            animation: slideInFromTop 0.5s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card:nth-child(2) { animation-delay: 0.2s; }
+        .stat-card:nth-child(3) { animation-delay: 0.3s; }
+        .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .card {
+            animation: slideInFromLeft 0.6s ease-out;
+        }
+
+        .sidebar-menu li {
+            animation: slideInFromLeft 0.5s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .sidebar-menu li:nth-child(1) { animation-delay: 0.1s; }
+        .sidebar-menu li:nth-child(2) { animation-delay: 0.15s; }
+        .sidebar-menu li:nth-child(3) { animation-delay: 0.2s; }
+        .sidebar-menu li:nth-child(4) { animation-delay: 0.25s; }
+        .sidebar-menu li:nth-child(5) { animation-delay: 0.3s; }
+
+        /* Hover animations */
+        .btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn:hover {
+            animation: bounceIn 0.6s;
+        }
 
         /* Animação de entrada suave para cards */
         .stat-card, .card {
@@ -4744,6 +4879,9 @@ function showModalCliente(){
         showCancelButton:true,
         confirmButtonText:'Salvar',
         cancelButtonText:'Cancelar',
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
         preConfirm:()=>{
             const nome=document.getElementById('swal-nome').value.trim();
             const cpf=document.getElementById('swal-cpf').value.trim();
@@ -4949,7 +5087,11 @@ async function visualizarCliente(id){
             html:`<div style="text-align:left">${blocoResumo}${blocoEstatisticas}${blocoObservacoes}${fichaAnamnese}${fichaProntuario}<p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Cadastrado em: ${c.created_at?new Date(c.created_at).toLocaleString('pt-BR'):''}</p></div>`,
             width:680,
             confirmButtonText:'Fechar',
-            confirmButtonColor:'#7C3AED'
+            confirmButtonColor:'#7C3AED',
+            allowEscapeKey: true,
+            allowOutsideClick: true,
+            showCloseButton: true,
+            focusConfirm: true
         });
     }catch(error){
         console.error('Erro ao visualizar cliente', error);
@@ -4994,6 +5136,9 @@ async function editarCliente(id){
             showCancelButton:true,
             confirmButtonText:'Salvar',
             cancelButtonText:'Cancelar',
+            allowEscapeKey: true,
+            allowOutsideClick: true,
+            showCloseButton: true,
             preConfirm:()=>{
                 const nome=document.getElementById('swal-nome').value.trim();
                 const cpf=document.getElementById('swal-cpf').value.trim();
@@ -5164,7 +5309,14 @@ async function deleteProfissional(id){
 }
 
 function showModalProfissional(){
-    Swal.fire({title:'Novo Profissional',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade"><input type="number" id="swal-comissao" class="form-control" placeholder="Comissão %" value="10">`,showCancelButton:true,preConfirm:()=>{
+    Swal.fire({
+        title:'Novo Profissional',
+        html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade"><input type="number" id="swal-comissao" class="form-control" placeholder="Comissão %" value="10">`,
+        showCancelButton:true,
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
+        preConfirm:()=>{
         const nome=document.getElementById('swal-nome').value;
         const cpf=document.getElementById('swal-cpf').value;
         if(!nome||!cpf){Swal.showValidationMessage('Nome e CPF obrigatórios');return false;}
@@ -5254,7 +5406,17 @@ async function visualizarProfissional(id){
         const data=await res.json();
         if(data.success&&data.profissional){
             const p=data.profissional;
-            Swal.fire({title:`<strong>👨‍💼 ${p.nome}</strong>`,html:`<div style="text-align:left"><div style="background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px"><p style="margin:5px 0"><strong>CPF:</strong> ${p.cpf}</p>${p.especialidade?`<p style="margin:5px 0"><strong>Especialidade:</strong> ${p.especialidade}</p>`:''}${p.telefone?`<p style="margin:5px 0"><strong>Telefone:</strong> ${p.telefone}</p>`:''}</div><div style="background:#f3f4f6;padding:15px;border-radius:10px"><p><strong>💰 Comissão:</strong> <span style="color:#7C3AED;font-size:1.3rem">${p.comissao_perc}%</span></p><p><strong>📊 Status:</strong> <span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'ATIVO':'INATIVO'}</span></p></div><p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Cadastrado em: ${new Date(p.created_at).toLocaleString('pt-BR')}</p></div>`,width:'600px',confirmButtonText:'Fechar',confirmButtonColor:'#7C3AED'});
+            Swal.fire({
+                title:`<strong>👨‍💼 ${p.nome}</strong>`,
+                html:`<div style="text-align:left"><div style="background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px"><p style="margin:5px 0"><strong>CPF:</strong> ${p.cpf}</p>${p.especialidade?`<p style="margin:5px 0"><strong>Especialidade:</strong> ${p.especialidade}</p>`:''}${p.telefone?`<p style="margin:5px 0"><strong>Telefone:</strong> ${p.telefone}</p>`:''}</div><div style="background:#f3f4f6;padding:15px;border-radius:10px"><p><strong>💰 Comissão:</strong> <span style="color:#7C3AED;font-size:1.3rem">${p.comissao_perc}%</span></p><p><strong>📊 Status:</strong> <span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'ATIVO':'INATIVO'}</span></p></div><p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Cadastrado em: ${new Date(p.created_at).toLocaleString('pt-BR')}</p></div>`,
+                width:'600px',
+                confirmButtonText:'Fechar',
+                confirmButtonColor:'#7C3AED',
+                allowEscapeKey: true,
+                allowOutsideClick: true,
+                showCloseButton: true,
+                focusConfirm: true
+            });
         }
     }catch(e){
         Swal.fire('Erro','Não foi possível carregar os detalhes','error');
@@ -5267,7 +5429,16 @@ async function editarProfissional(id){
         const data=await res.json();
         if(data.success&&data.profissional){
             const p=data.profissional;
-            Swal.fire({title:'Editar Profissional',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome" value="${p.nome}"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF" value="${p.cpf}"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade" value="${p.especialidade||''}"><input type="number" id="swal-comissao" class="form-control mb-3" placeholder="Comissão %" value="${p.comissao_perc}"><select id="swal-ativo" class="form-select"><option value="true" ${p.ativo?'selected':''}>Ativo</option><option value="false" ${!p.ativo?'selected':''}>Inativo</option></select>`,showCancelButton:true,confirmButtonText:'Salvar',cancelButtonText:'Cancelar',preConfirm:()=>{
+            Swal.fire({
+                title:'Editar Profissional',
+                html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome" value="${p.nome}"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF" value="${p.cpf}"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade" value="${p.especialidade||''}"><input type="number" id="swal-comissao" class="form-control mb-3" placeholder="Comissão %" value="${p.comissao_perc}"><select id="swal-ativo" class="form-select"><option value="true" ${p.ativo?'selected':''}>Ativo</option><option value="false" ${!p.ativo?'selected':''}>Inativo</option></select>`,
+                showCancelButton:true,
+                confirmButtonText:'Salvar',
+                cancelButtonText:'Cancelar',
+                allowEscapeKey: true,
+                allowOutsideClick: true,
+                showCloseButton: true,
+                preConfirm:()=>{
                 const nome=document.getElementById('swal-nome').value;
                 const cpf=document.getElementById('swal-cpf').value;
                 if(!nome||!cpf){Swal.showValidationMessage('Nome e CPF obrigatórios');return false;}
@@ -5290,7 +5461,15 @@ async function editarProfissional(id){
 }
 
 function showModalServico(){
-    Swal.fire({title:'Novo Serviço',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><div class="row"><div class="col-6"><input type="number" id="swal-kids" class="form-control mb-2" placeholder="Kids" step="0.01"><input type="number" id="swal-masc" class="form-control mb-2" placeholder="Masculino" step="0.01"><input type="number" id="swal-curto" class="form-control" placeholder="Curto" step="0.01"></div><div class="col-6"><input type="number" id="swal-medio" class="form-control mb-2" placeholder="Médio" step="0.01"><input type="number" id="swal-longo" class="form-control mb-2" placeholder="Longo" step="0.01"><input type="number" id="swal-xl" class="form-control" placeholder="XL" step="0.01"></div></div>`,showCancelButton:true,width:'600px',preConfirm:()=>{
+    Swal.fire({
+        title:'Novo Serviço',
+        html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><div class="row"><div class="col-6"><input type="number" id="swal-kids" class="form-control mb-2" placeholder="Kids" step="0.01"><input type="number" id="swal-masc" class="form-control mb-2" placeholder="Masculino" step="0.01"><input type="number" id="swal-curto" class="form-control" placeholder="Curto" step="0.01"></div><div class="col-6"><input type="number" id="swal-medio" class="form-control mb-2" placeholder="Médio" step="0.01"><input type="number" id="swal-longo" class="form-control mb-2" placeholder="Longo" step="0.01"><input type="number" id="swal-xl" class="form-control" placeholder="XL" step="0.01"></div></div>`,
+        showCancelButton:true,
+        width:'600px',
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
+        preConfirm:()=>{
         const nome=document.getElementById('swal-nome').value;
         if(!nome){Swal.showValidationMessage('Nome obrigatório');return false;}
         return {nome,preco_kids:document.getElementById('swal-kids').value||0,preco_masculino:document.getElementById('swal-masc').value||0,preco_curto:document.getElementById('swal-curto').value||0,preco_medio:document.getElementById('swal-medio').value||0,preco_longo:document.getElementById('swal-longo').value||0,preco_extra_longo:document.getElementById('swal-xl').value||0};
@@ -5462,7 +5641,14 @@ async function deleteProduto(id){
 }
 
 function showModalProduto(){
-    Swal.fire({title:'Novo Produto',html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-marca" class="form-control mb-3" placeholder="Marca"><input type="number" id="swal-preco" class="form-control mb-3" placeholder="Preço" step="0.01"><input type="number" id="swal-estoque" class="form-control" placeholder="Estoque" value="0">`,showCancelButton:true,preConfirm:()=>{
+    Swal.fire({
+        title:'Novo Produto',
+        html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-marca" class="form-control mb-3" placeholder="Marca"><input type="number" id="swal-preco" class="form-control mb-3" placeholder="Preço" step="0.01"><input type="number" id="swal-estoque" class="form-control" placeholder="Estoque" value="0">`,
+        showCancelButton:true,
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
+        preConfirm:()=>{
         const nome=document.getElementById('swal-nome').value;
         const preco=document.getElementById('swal-preco').value;
         if(!nome||!preco){Swal.showValidationMessage('Nome e Preço obrigatórios');return false;}
@@ -5997,6 +6183,9 @@ function showModalFila(){
         confirmButtonText: '<i class="bi bi-plus-circle"></i> Adicionar',
         cancelButtonText: 'Cancelar',
         width: '500px',
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
         preConfirm: () => {
             const cliente_nome = document.getElementById('swal-nome').value.trim();
             const cliente_telefone = document.getElementById('swal-telefone').value.trim();
@@ -6227,7 +6416,11 @@ async function visualizarAgendamento(id){
                 confirmButtonColor: '#7C3AED',
                 showCancelButton: true,
                 cancelButtonText: '<i class="bi bi-trash"></i> Cancelar Agendamento',
-                cancelButtonColor: '#EF4444'
+                cancelButtonColor: '#EF4444',
+                allowEscapeKey: true,
+                allowOutsideClick: true,
+                showCloseButton: true,
+                focusConfirm: true
             }).then((result) => {
                 if (result.dismiss === Swal.DismissReason.cancel) {
                     cancelarAgendamento(id);
@@ -6333,6 +6526,9 @@ async function showModalAgendamento(){
         confirmButtonText: '<i class="bi bi-check-circle"></i> Agendar',
         cancelButtonText: 'Cancelar',
         width: '600px',
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
         preConfirm: () => {
             const cliente_nome = document.getElementById('swal-cliente').value;
             const servico_nome = document.getElementById('swal-servico').value;
@@ -6768,7 +6964,17 @@ async function visualizarOrcamento(id){
                 const orc=data.orcamento;
                 const servicosHtml=orc.servicos.map(s=>`<tr><td>${s.nome}</td><td>${s.tamanho}</td><td>${s.qtd}</td><td>R$ ${s.preco_unit.toFixed(2)}</td><td>${s.desconto}%</td><td><strong>R$ ${s.total.toFixed(2)}</strong></td></tr>`).join('');
                 const produtosHtml=orc.produtos.map(p=>`<tr><td>${p.nome}</td><td>${p.marca||'-'}</td><td>${p.qtd}</td><td>${p.preco_unit.toFixed(2)}</td><td>${p.desconto}%</td><td><strong>R$ ${p.total.toFixed(2)}</strong></td></tr>`).join('');
-                Swal.fire({title:`<strong>Orçamento #${orc.numero}</strong>`,html:`<div style="text-align:left;max-height:500px;overflow-y:auto"><div style="background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px"><h3 style="margin:0">👤 ${orc.cliente_nome}</h3><p style="margin:5px 0 0"><strong>CPF:</strong> ${orc.cliente_cpf}</p>${orc.cliente_email?`<p style="margin:5px 0 0"><strong>Email:</strong> ${orc.cliente_email}</p>`:''}${orc.cliente_telefone?`<p style="margin:5px 0 0"><strong>Telefone:</strong> ${orc.cliente_telefone}</p>`:''}</div><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">✂️ Serviços</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Serviço</th><th>Tamanho</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${servicosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">📦 Produtos</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Produto</th><th>Marca</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${produtosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><div style="background:#f3f4f6;padding:15px;border-radius:10px"><p><strong>Desconto Global:</strong> ${orc.desconto_global||0}%</p><p><strong>Cashback:</strong> ${orc.cashback_perc||0}% (R$ ${orc.cashback_valor.toFixed(2)})</p><p><strong>Pagamento:</strong> ${orc.pagamento?.tipo||'N/A'}</p><h3 style="color:#10B981;margin:10px 0 0">TOTAL: R$ ${orc.total_final.toFixed(2)}</h3></div><p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Criado em: ${new Date(orc.created_at).toLocaleString('pt-BR')}</p></div>`,width:'700px',confirmButtonText:'Fechar',confirmButtonColor:'#7C3AED'});
+                Swal.fire({
+                    title:`<strong>Orçamento #${orc.numero}</strong>`,
+                    html:`<div style="text-align:left;max-height:500px;overflow-y:auto"><div style="background:linear-gradient(135deg,#7C3AED,#EC4899);color:#fff;padding:20px;border-radius:15px;margin-bottom:20px"><h3 style="margin:0">👤 ${orc.cliente_nome}</h3><p style="margin:5px 0 0"><strong>CPF:</strong> ${orc.cliente_cpf}</p>${orc.cliente_email?`<p style="margin:5px 0 0"><strong>Email:</strong> ${orc.cliente_email}</p>`:''}${orc.cliente_telefone?`<p style="margin:5px 0 0"><strong>Telefone:</strong> ${orc.cliente_telefone}</p>`:''}</div><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">✂️ Serviços</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Serviço</th><th>Tamanho</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${servicosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><h4 style="color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:10px">📦 Produtos</h4><table style="width:100%;margin-bottom:20px;font-size:0.9rem"><thead><tr style="background:#f3f4f6"><th style="padding:8px;text-align:left">Produto</th><th>Marca</th><th>Qtd</th><th>Preço</th><th>Desc</th><th>Total</th></tr></thead><tbody>${produtosHtml||'<tr><td colspan="6" style="text-align:center;color:#999">Nenhum</td></tr>'}</tbody></table><div style="background:#f3f4f6;padding:15px;border-radius:10px"><p><strong>Desconto Global:</strong> ${orc.desconto_global||0}%</p><p><strong>Cashback:</strong> ${orc.cashback_perc||0}% (R$ ${orc.cashback_valor.toFixed(2)})</p><p><strong>Pagamento:</strong> ${orc.pagamento?.tipo||'N/A'}</p><h3 style="color:#10B981;margin:10px 0 0">TOTAL: R$ ${orc.total_final.toFixed(2)}</h3></div><p style="margin-top:15px;font-size:0.85rem;color:#6B7280">Criado em: ${new Date(orc.created_at).toLocaleString('pt-BR')}</p></div>`,
+                    width:'700px',
+                    confirmButtonText:'Fechar',
+                    confirmButtonColor:'#7C3AED',
+                    allowEscapeKey: true,
+                    allowOutsideClick: true,
+                    focusConfirm: true,
+                    showCloseButton: true
+                });
             }
         }catch(e){
             Swal.fire('Erro','Não foi possível carregar os detalhes','error');
@@ -9016,44 +9222,40 @@ function limparFiltrosComissoes() {
 
 async function exportarComissoesExcel() {
     const profissionalId = document.getElementById('filtroComissoesProfissional')?.value;
-    
+
     if (!profissionalId) {
         Swal.fire('Atenção', 'Selecione um profissional primeiro', 'warning');
         return;
     }
 
-    const profissionalNome = document.getElementById('filtroComissoesProfissional')
-        ?.selectedOptions[0]?.textContent || 'Profissional';
+    try {
+        // Buscar dados do profissional
+        const res = await fetch(`/api/profissionais/${profissionalId}/comissoes`, {credentials: 'include'});
+        const data = await res.json();
 
-    const tbody = document.getElementById('tabelaHistoricoComissoes');
-    const rows = tbody?.querySelectorAll('tr') || [];
-    
-    if (rows.length === 1 && rows[0].cells.length === 1) {
-        Swal.fire('Atenção', 'Nenhum dado para exportar', 'warning');
-        return;
-    }
-
-    let csv = '\uFEFF';
-    csv += `Relatório de Comissões - ${profissionalNome}\n\n`;
-    csv += 'Data;Orçamento;Tipo;Valor Base;Comissão %;Valor Comissão;Status\n';
-
-    rows.forEach(row => {
-        const cells = row.cells;
-        if (cells.length > 1) {
-            const line = Array.from(cells).map(cell => {
-                return cell.textContent.trim().replace(/;/g, ',');
-            }).join(';');
-            csv += line + '\n';
+        if (!data.success || !data.historico || data.historico.length === 0) {
+            Swal.fire('Atenção', 'Nenhuma comissão disponível para exportar', 'info');
+            return;
         }
-    });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `comissoes_${profissionalId}_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+        const profissionalNome = document.getElementById('filtroComissoesProfissional')
+            ?.selectedOptions[0]?.textContent || 'Profissional';
 
-    Swal.fire('Sucesso', 'Relatório exportado com sucesso!', 'success');
+        const columns = [
+            { key: 'data_registro', label: 'Data', type: 'date', width: 12 },
+            { key: 'orcamento_numero', label: 'Orçamento', width: 12 },
+            { key: 'tipo', label: 'Tipo', width: 15 },
+            { key: 'valor_base', label: 'Valor Base', type: 'currency', width: 15 },
+            { key: 'comissao_percentual', label: 'Comissão %', width: 12 },
+            { key: 'comissao_valor', label: 'Valor Comissão', type: 'currency', width: 15 },
+            { key: 'status', label: 'Status', width: 12 }
+        ];
+
+        await ExportLibrary.toExcel(data.historico, columns, `comissoes_${profissionalNome.replace(/\s/g, '_')}`, 'Comissões');
+    } catch (error) {
+        console.error('Erro ao exportar comissões:', error);
+        Swal.fire('Erro', 'Não foi possível exportar as comissões', 'error');
+    }
 }
 
 async function carregarRankingProfissionais() {
@@ -9301,7 +9503,11 @@ async function visualizarAnamnese(id) {
                 </div>
             `,
             width: 600,
-            confirmButtonText: 'Fechar'
+            confirmButtonText: 'Fechar',
+            allowEscapeKey: true,
+            allowOutsideClick: true,
+            showCloseButton: true,
+            focusConfirm: true
         });
         
     } catch (error) {
@@ -9497,7 +9703,11 @@ async function visualizarProntuario(id) {
                 </div>
             `,
             width: 600,
-            confirmButtonText: 'Fechar'
+            confirmButtonText: 'Fechar',
+            allowEscapeKey: true,
+            allowOutsideClick: true,
+            showCloseButton: true,
+            focusConfirm: true
         });
         
     } catch (error) {
@@ -10669,12 +10879,8 @@ async function gerarRelatorioEstoque() {
     }
 }
 
-async function exportarRelatorioExcel() {
-    Swal.fire('Info', 'Funcionalidade de exportação será implementada em breve', 'info');
-}
-
 async function exportarRelatorioPDF() {
-    Swal.fire('Info', 'Funcionalidade de exportação será implementada em breve', 'info');
+    Swal.fire('Info', 'Funcionalidade de exportação PDF será implementada em breve', 'info');
 }
 // ========== FIM SUB-TABS ESTOQUE ==========
 
