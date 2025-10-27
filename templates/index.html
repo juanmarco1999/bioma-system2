@@ -9366,25 +9366,30 @@ async function carregarMapaCalor(){
 async function carregarDadosFinanceiro() {
   console.log('💰 Atualizando dados financeiros...');
   try {
-    // Carrega dados de receitas
-    await fetch('/api/financeiro/receitas', {credentials: 'include'})
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('financeiroReceitas').textContent =
-            `R$ ${parseFloat(data.total || 0).toFixed(2)}`;
-        }
-      });
+    // Carregar dashboard completo
+    const dashRes = await fetch('/api/financeiro/dashboard', {credentials: 'include'});
+    const dashData = await dashRes.json();
 
-    // Carrega dados de despesas
-    await fetch('/api/financeiro/despesas', {credentials: 'include'})
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('financeiroDespesas').textContent =
-            `R$ ${parseFloat(data.total || 0).toFixed(2)}`;
-        }
-      });
+    if (dashData.success && dashData.financeiro) {
+      const fin = dashData.financeiro;
+
+      // Atualizar cards principais
+      document.getElementById('financeiroReceitas').textContent = `R$ ${fin.receita_total.toFixed(2)}`;
+      document.getElementById('financeiroDespesas').textContent = `R$ ${fin.despesas_total.toFixed(2)}`;
+      document.getElementById('financeiroLucro').textContent = `R$ ${fin.lucro_liquido.toFixed(2)}`;
+
+      // Atualizar margem de lucro
+      const margemEl = document.getElementById('margemLucro');
+      if (margemEl) {
+        margemEl.textContent = `${fin.margem_lucro_perc.toFixed(1)}%`;
+        margemEl.style.color = fin.margem_lucro_perc > 0 ? 'var(--success)' : 'var(--danger)';
+      }
+    }
+
+    // Carregar gráficos em paralelo
+    carregarFaturamentoMensal();
+    carregarServicosMaisVendidos();
+    carregarProdutosMaisVendidos();
 
     // Carrega comissões
     carregarHistoricoComissoes();
@@ -9394,6 +9399,239 @@ async function carregarDadosFinanceiro() {
   } catch (error) {
     console.error('Erro ao carregar dados financeiros:', error);
     toast('❌ Erro ao atualizar dados financeiros', 'error');
+  }
+}
+
+// Carregar faturamento mensal dos últimos 12 meses
+async function carregarFaturamentoMensal() {
+  try {
+    const res = await fetch('/api/orcamentos', {credentials: 'include'});
+    const data = await res.json();
+
+    if (!data.success || !data.orcamentos) return;
+
+    // Filtrar aprovados dos últimos 12 meses
+    const hoje = new Date();
+    const doze_meses_atras = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
+
+    const aprovados = data.orcamentos.filter(o => {
+      if (o.status !== 'Aprovado') return false;
+      const dataOrc = new Date(o.created_at);
+      return dataOrc >= doze_meses_atras;
+    });
+
+    // Agrupar por mês
+    const faturamentoPorMes = {};
+    for (let i = 11; i >= 0; i--) {
+      const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const mesAno = `${mes.getMonth() + 1}/${mes.getFullYear()}`;
+      faturamentoPorMes[mesAno] = 0;
+    }
+
+    aprovados.forEach(orc => {
+      const data = new Date(orc.created_at);
+      const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
+      if (faturamentoPorMes[mesAno] !== undefined) {
+        faturamentoPorMes[mesAno] += orc.total || orc.total_final || 0;
+      }
+    });
+
+    const labels = Object.keys(faturamentoPorMes);
+    const valores = Object.values(faturamentoPorMes);
+
+    // Criar gráfico
+    const ctx = document.getElementById('chartFaturamento');
+    if (ctx && window.Chart) {
+      if (window.chartFaturamentoInstance) {
+        window.chartFaturamentoInstance.destroy();
+      }
+
+      window.chartFaturamentoInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Faturamento (R$)',
+            data: valores,
+            backgroundColor: 'rgba(16, 185, 129, 0.7)',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'R$ ' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao carregar faturamento mensal:', error);
+  }
+}
+
+// Carregar serviços mais vendidos
+async function carregarServicosMaisVendidos() {
+  try {
+    const res = await fetch('/api/orcamentos', {credentials: 'include'});
+    const data = await res.json();
+
+    if (!data.success || !data.orcamentos) return;
+
+    const aprovados = data.orcamentos.filter(o => o.status === 'Aprovado');
+
+    // Agrupar serviços
+    const servicos = {};
+    aprovados.forEach(orc => {
+      (orc.servicos || []).forEach(serv => {
+        const nome = serv.nome || serv.servico || 'Serviço';
+        if (!servicos[nome]) {
+          servicos[nome] = { quantidade: 0, valor: 0 };
+        }
+        servicos[nome].quantidade += 1;
+        servicos[nome].valor += serv.valor || serv.preco || 0;
+      });
+    });
+
+    // Top 5 por quantidade
+    const top = Object.entries(servicos)
+      .sort((a, b) => b[1].quantidade - a[1].quantidade)
+      .slice(0, 5);
+
+    if (top.length === 0) {
+      const canvas = document.getElementById('graficoServicosMaisVendidos');
+      if (canvas) {
+        canvas.style.display = 'none';
+        canvas.parentElement.innerHTML = '<p class="text-center text-muted" style="padding: 40px;">Nenhum serviço vendido</p>';
+      }
+      return;
+    }
+
+    const labels = top.map(t => t[0]);
+    const valores = top.map(t => t[1].quantidade);
+
+    // Criar gráfico
+    const ctx = document.getElementById('graficoServicosMaisVendidos');
+    if (ctx && window.Chart) {
+      if (window.chartServicosInstance) {
+        window.chartServicosInstance.destroy();
+      }
+
+      window.chartServicosInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: valores,
+            backgroundColor: [
+              'rgba(124, 58, 237, 0.8)',
+              'rgba(236, 72, 153, 0.8)',
+              'rgba(245, 158, 11, 0.8)',
+              'rgba(16, 185, 129, 0.8)',
+              'rgba(59, 130, 246, 0.8)'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao carregar serviços mais vendidos:', error);
+  }
+}
+
+// Carregar produtos mais vendidos
+async function carregarProdutosMaisVendidos() {
+  try {
+    const res = await fetch('/api/estoque/movimentacoes?tipo=saida&per_page=1000', {credentials: 'include'});
+    const data = await res.json();
+
+    if (!data.success || !data.movimentacoes || data.movimentacoes.length === 0) {
+      const canvas = document.getElementById('graficoProdutosMaisVendidos');
+      if (canvas) {
+        canvas.style.display = 'none';
+        canvas.parentElement.innerHTML = '<p class="text-center text-muted" style="padding: 40px;">Nenhum produto vendido</p>';
+      }
+      return;
+    }
+
+    // Agrupar produtos
+    const produtos = {};
+    data.movimentacoes.forEach(mov => {
+      const nome = mov.produto_nome || 'Produto';
+      if (!produtos[nome]) {
+        produtos[nome] = 0;
+      }
+      produtos[nome] += mov.quantidade || 0;
+    });
+
+    // Top 5 por quantidade
+    const top = Object.entries(produtos)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const labels = top.map(t => t[0]);
+    const valores = top.map(t => t[1]);
+
+    // Criar gráfico
+    const ctx = document.getElementById('graficoProdutosMaisVendidos');
+    if (ctx && window.Chart) {
+      if (window.chartProdutosInstance) {
+        window.chartProdutosInstance.destroy();
+      }
+
+      window.chartProdutosInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Quantidade Vendida',
+            data: valores,
+            backgroundColor: 'rgba(236, 72, 153, 0.7)',
+            borderColor: 'rgba(236, 72, 153, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao carregar produtos mais vendidos:', error);
   }
 }
 
