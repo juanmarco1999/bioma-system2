@@ -4252,6 +4252,404 @@ function gerarContratoHTML(orc, orcamentoId) {
     printWindow.document.close();
 }
 
+// ==================== MELHORAR DETALHAMENTO EM CONSULTAR (Diretriz 2.2) ====================
+
+// Estado dos filtros de consultar
+let filtrosConsultar = {
+    status: 'todos',
+    dataInicio: '',
+    dataFim: '',
+    busca: ''
+};
+
+/**
+ * Carregar Consultar com melhorias (substitui loadConsultar original)
+ */
+window.loadConsultarMelhorado = async function() {
+    try {
+        Swal.fire({
+            title: 'Carregando orçamentos...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch('/api/orcamentos', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Erro', 'Não foi possível carregar orçamentos', 'error');
+            return;
+        }
+
+        const orcamentos = data.orcamentos || [];
+
+        // Aplicar filtros
+        const orcamentosFiltrados = aplicarFiltrosConsultar(orcamentos);
+
+        // Calcular estatísticas
+        const stats = calcularEstatisticasConsultar(orcamentos, orcamentosFiltrados);
+
+        // Renderizar estatísticas
+        renderizarEstatisticasConsultar(stats);
+
+        // Renderizar tabela
+        renderizarTabelaConsultar(orcamentosFiltrados);
+
+        Swal.close();
+
+    } catch (error) {
+        console.error('Erro ao carregar Consultar:', error);
+        Swal.fire('Erro', 'Não foi possível carregar orçamentos', 'error');
+    }
+};
+
+/**
+ * Aplicar filtros aos orçamentos
+ */
+function aplicarFiltrosConsultar(orcamentos) {
+    return orcamentos.filter(orc => {
+        // Filtro de status
+        if (filtrosConsultar.status !== 'todos') {
+            const statusMatch = filtrosConsultar.status.toLowerCase() === orc.status?.toLowerCase();
+            if (!statusMatch) return false;
+        }
+
+        // Filtro de data início
+        if (filtrosConsultar.dataInicio) {
+            const orcData = new Date(orc.created_at);
+            const filtroData = new Date(filtrosConsultar.dataInicio);
+            if (orcData < filtroData) return false;
+        }
+
+        // Filtro de data fim
+        if (filtrosConsultar.dataFim) {
+            const orcData = new Date(orc.created_at);
+            const filtroData = new Date(filtrosConsultar.dataFim);
+            filtroData.setHours(23, 59, 59); // Incluir o dia inteiro
+            if (orcData > filtroData) return false;
+        }
+
+        // Filtro de busca (cliente ou número)
+        if (filtrosConsultar.busca) {
+            const busca = filtrosConsultar.busca.toLowerCase();
+            const clienteMatch = orc.cliente_nome?.toLowerCase().includes(busca);
+            const numeroMatch = orc.numero?.toString().includes(busca);
+            if (!clienteMatch && !numeroMatch) return false;
+        }
+
+        return true;
+    });
+}
+
+/**
+ * Calcular estatísticas dos orçamentos
+ */
+function calcularEstatisticasConsultar(todos, filtrados) {
+    const stats = {
+        // Todos os orçamentos
+        totalGeral: todos.length,
+        valorTotalGeral: todos.reduce((acc, o) => acc + (o.total_final || 0), 0),
+
+        // Filtrados
+        totalFiltrados: filtrados.length,
+        valorTotalFiltrados: filtrados.reduce((acc, o) => acc + (o.total_final || 0), 0),
+
+        // Por status (filtrados)
+        pendentes: filtrados.filter(o => o.status?.toLowerCase() === 'pendente').length,
+        aprovados: filtrados.filter(o => o.status?.toLowerCase() === 'aprovado').length,
+        cancelados: filtrados.filter(o => o.status?.toLowerCase() === 'cancelado').length,
+
+        // Valores por status
+        valorPendentes: filtrados.filter(o => o.status?.toLowerCase() === 'pendente')
+            .reduce((acc, o) => acc + (o.total_final || 0), 0),
+        valorAprovados: filtrados.filter(o => o.status?.toLowerCase() === 'aprovado')
+            .reduce((acc, o) => acc + (o.total_final || 0), 0)
+    };
+
+    // Ticket médio
+    stats.ticketMedio = stats.totalFiltrados > 0 ? stats.valorTotalFiltrados / stats.totalFiltrados : 0;
+
+    // Taxa de conversão
+    stats.taxaConversao = stats.totalFiltrados > 0 ? (stats.aprovados / stats.totalFiltrados * 100) : 0;
+
+    return stats;
+}
+
+/**
+ * Renderizar cards de estatísticas
+ */
+function renderizarEstatisticasConsultar(stats) {
+    // Buscar ou criar container de estatísticas
+    let statsContainer = document.getElementById('consultar-stats');
+
+    if (!statsContainer) {
+        // Criar container antes da tabela
+        const tbody = document.getElementById('consultaBody');
+        const table = tbody?.closest('table');
+
+        if (table && table.parentNode) {
+            statsContainer = document.createElement('div');
+            statsContainer.id = 'consultar-stats';
+            statsContainer.className = 'mb-4';
+            table.parentNode.insertBefore(statsContainer, table);
+        }
+    }
+
+    if (!statsContainer) return;
+
+    // HTML dos cards
+    statsContainer.innerHTML = `
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card border-0" style="background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%); color: white;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-subtitle mb-2" style="opacity: 0.9;">Total de Orçamentos</h6>
+                                <h2 class="card-title mb-0">${stats.totalFiltrados}</h2>
+                                ${stats.totalFiltrados !== stats.totalGeral ?
+                                    `<small style="opacity: 0.8;">de ${stats.totalGeral} no total</small>` :
+                                    ''}
+                            </div>
+                            <i class="bi bi-file-earmark-text" style="font-size: 2rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0" style="background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%); color: white;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-subtitle mb-2" style="opacity: 0.9;">Valor Total</h6>
+                                <h2 class="card-title mb-0">${formatarMoeda(stats.valorTotalFiltrados)}</h2>
+                                <small style="opacity: 0.8;">Ticket: ${formatarMoeda(stats.ticketMedio)}</small>
+                            </div>
+                            <i class="bi bi-cash-stack" style="font-size: 2rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0" style="background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%); color: white;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-subtitle mb-2" style="opacity: 0.9;">Aprovados</h6>
+                                <h2 class="card-title mb-0">${stats.aprovados}</h2>
+                                <small style="opacity: 0.8;">${formatarMoeda(stats.valorAprovados)}</small>
+                            </div>
+                            <i class="bi bi-check-circle" style="font-size: 2rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0" style="background: linear-gradient(135deg, #FA709A 0%, #FEE140 100%); color: white;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-subtitle mb-2" style="opacity: 0.9;">Taxa de Conversão</h6>
+                                <h2 class="card-title mb-0">${stats.taxaConversao.toFixed(1)}%</h2>
+                                <small style="opacity: 0.8;">${stats.pendentes} pendentes</small>
+                            </div>
+                            <i class="bi bi-graph-up-arrow" style="font-size: 2rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Renderizar tabela melhorada
+ */
+function renderizarTabelaConsultar(orcamentos) {
+    const tbody = document.getElementById('consultaBody');
+
+    if (!tbody) return;
+
+    if (orcamentos.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center" style="padding: 60px;">
+                    <i class="bi bi-inbox" style="font-size: 4rem; opacity: 0.2;"></i>
+                    <p class="text-muted mt-3">Nenhum orçamento encontrado com os filtros aplicados</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    // Ordenar por data (mais recente primeiro)
+    orcamentos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const html = orcamentos.map(orc => {
+        const data = new Date(orc.created_at).toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        // Badge de status
+        let badgeClass = 'bg-secondary';
+        let badgeIcon = 'bi-question-circle';
+
+        if (orc.status?.toLowerCase() === 'aprovado') {
+            badgeClass = 'bg-success';
+            badgeIcon = 'bi-check-circle-fill';
+        } else if (orc.status?.toLowerCase() === 'pendente') {
+            badgeClass = 'bg-warning';
+            badgeIcon = 'bi-clock-fill';
+        } else if (orc.status?.toLowerCase() === 'cancelado') {
+            badgeClass = 'bg-danger';
+            badgeIcon = 'bi-x-circle-fill';
+        }
+
+        // Informações extras
+        const numServicos = orc.servicos?.length || 0;
+        const numProdutos = orc.produtos?.length || 0;
+
+        return `
+            <tr style="cursor: pointer; transition: all 0.2s;"
+                onmouseover="this.style.backgroundColor='#F8F9FA'"
+                onmouseout="this.style.backgroundColor=''">
+                <td>
+                    <strong style="font-size: 1.1rem; color: #7C3AED;">#${orc.numero || orc._id.substring(0, 6)}</strong>
+                </td>
+                <td>
+                    <div>${data}</div>
+                    <small class="text-muted">${new Date(orc.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</small>
+                </td>
+                <td>
+                    <div><strong>${orc.cliente_nome || 'N/A'}</strong></div>
+                    <small class="text-muted">${orc.cliente_telefone || ''}</small>
+                </td>
+                <td>
+                    <div><strong style="font-size: 1.1rem; color: #28A745;">R$ ${(orc.total_final || 0).toFixed(2)}</strong></div>
+                    <small class="text-muted">${numServicos} serv. | ${numProdutos} prod.</small>
+                </td>
+                <td>
+                    <span class="badge ${badgeClass}">
+                        <i class="bi ${badgeIcon}"></i> ${orc.status || 'Pendente'}
+                    </span>
+                </td>
+                <td>
+                    ${orc.profissional_nome ?
+                        `<small class="text-muted"><i class="bi bi-person"></i> ${orc.profissional_nome}</small>` :
+                        '<small class="text-muted">-</small>'}
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-info"
+                                onclick="visualizarOrcamento('${orc._id}')"
+                                title="Visualizar">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary"
+                                onclick="editarOrcamento('${orc._id}')"
+                                title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger"
+                                onclick="deleteOrcamento('${orc._id}')"
+                                title="Deletar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * Abrir modal de filtros avançados
+ */
+window.abrirFiltrosConsultar = async function() {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong><i class="bi bi-funnel"></i> Filtros Avançados</strong>',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select id="filtro-status" class="form-select">
+                        <option value="todos" ${filtrosConsultar.status === 'todos' ? 'selected' : ''}>Todos</option>
+                        <option value="pendente" ${filtrosConsultar.status === 'pendente' ? 'selected' : ''}>Pendente</option>
+                        <option value="aprovado" ${filtrosConsultar.status === 'aprovado' ? 'selected' : ''}>Aprovado</option>
+                        <option value="cancelado" ${filtrosConsultar.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Data Início</label>
+                        <input type="date" id="filtro-data-inicio" class="form-control"
+                               value="${filtrosConsultar.dataInicio}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Data Fim</label>
+                        <input type="date" id="filtro-data-fim" class="form-control"
+                               value="${filtrosConsultar.dataFim}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Buscar Cliente ou Número</label>
+                    <input type="text" id="filtro-busca" class="form-control"
+                           placeholder="Digite nome do cliente ou número..."
+                           value="${filtrosConsultar.busca}">
+                </div>
+            </div>
+        `,
+        width: '600px',
+        showCancelButton: true,
+        confirmButtonText: 'Aplicar Filtros',
+        cancelButtonText: 'Limpar Filtros',
+        showDenyButton: true,
+        denyButtonText: 'Cancelar',
+        preConfirm: () => {
+            return {
+                status: document.getElementById('filtro-status').value,
+                dataInicio: document.getElementById('filtro-data-inicio').value,
+                dataFim: document.getElementById('filtro-data-fim').value,
+                busca: document.getElementById('filtro-busca').value
+            };
+        }
+    });
+
+    if (formValues) {
+        // Aplicar filtros
+        filtrosConsultar = formValues;
+        loadConsultarMelhorado();
+    } else if (formValues === null) {
+        // Limpar filtros
+        filtrosConsultar = {
+            status: 'todos',
+            dataInicio: '',
+            dataFim: '',
+            busca: ''
+        };
+        loadConsultarMelhorado();
+    }
+};
+
+/**
+ * Busca rápida (ao digitar)
+ */
+window.buscaRapidaConsultar = function(termo) {
+    filtrosConsultar.busca = termo;
+    // Debounce: aguardar 500ms após última digitação
+    clearTimeout(window.buscaRapidaTimeout);
+    window.buscaRapidaTimeout = setTimeout(() => {
+        loadConsultarMelhorado();
+    }, 500);
+};
+
 // Carregar perfil automaticamente ao carregar a página
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', carregarPerfilUsuario);
@@ -4263,4 +4661,5 @@ console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
 console.log('✅ Histórico de Atendimentos carregado (12.4)');
 console.log('✅ Sistema de Níveis de Acesso carregado (5.1)');
 console.log('✅ Layout Melhorado do Contrato carregado (1.3)');
+console.log('✅ Detalhamento em Consultar melhorado (2.2)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
