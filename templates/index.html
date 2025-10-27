@@ -10065,81 +10065,191 @@ async function carregarDadosFinanceiro() {
 // Carregar faturamento mensal dos últimos 12 meses
 async function carregarFaturamentoMensal() {
   try {
-    const res = await fetch('/api/orcamentos', {credentials: 'include'});
-    const data = await res.json();
+    console.log('📊 Carregando faturamento mensal...');
 
-    if (!data.success || !data.orcamentos) return;
+    // Verificar se Chart.js está disponível
+    if (!window.Chart) {
+      console.error('❌ Chart.js não está carregado!');
+      return;
+    }
+
+    // Verificar se canvas existe
+    const ctx = document.getElementById('graficoFaturamentoMensal') || document.getElementById('chartFaturamento');
+    if (!ctx) {
+      console.warn('⚠️ Canvas de faturamento mensal não encontrado (IDs: graficoFaturamentoMensal, chartFaturamento)');
+      return;
+    }
+
+    // Buscar dados
+    const res = await fetch('/api/orcamentos', {credentials: 'include'});
+
+    if (!res.ok) {
+      console.error(`❌ Erro HTTP ao buscar orçamentos: ${res.status}`);
+      return;
+    }
+
+    const data = await res.json();
+    console.log('📦 Dados recebidos:', { success: data.success, total_orcamentos: data.orcamentos?.length });
+
+    if (!data.success || !data.orcamentos) {
+      console.warn('⚠️ Resposta da API não contém orçamentos');
+      renderizarGraficoFaturamentoVazio(ctx, 'Nenhum orçamento disponível');
+      return;
+    }
 
     // Filtrar aprovados dos últimos 12 meses
     const hoje = new Date();
     const doze_meses_atras = new Date(hoje.getFullYear(), hoje.getMonth() - 11, 1);
 
     const aprovados = data.orcamentos.filter(o => {
-      if (o.status !== 'Aprovado') return false;
-      const dataOrc = new Date(o.created_at);
-      return dataOrc >= doze_meses_atras;
+      if (!o || o.status !== 'Aprovado') return false;
+      try {
+        const dataOrc = new Date(o.created_at || o.data_criacao || o.data);
+        return dataOrc >= doze_meses_atras && dataOrc <= hoje;
+      } catch (err) {
+        console.warn('⚠️ Erro ao parsear data do orçamento:', o);
+        return false;
+      }
     });
 
-    // Agrupar por mês
+    console.log(`✅ Orçamentos aprovados nos últimos 12 meses: ${aprovados.length}`);
+
+    // Agrupar por mês (últimos 12 meses)
     const faturamentoPorMes = {};
+    const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const labelsFormatados = [];
+
     for (let i = 11; i >= 0; i--) {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
       const mesAno = `${mes.getMonth() + 1}/${mes.getFullYear()}`;
+      const mesAnoFormatado = `${mesesNomes[mes.getMonth()]}/${mes.getFullYear().toString().slice(-2)}`;
       faturamentoPorMes[mesAno] = 0;
+      labelsFormatados.push(mesAnoFormatado);
     }
 
+    // Acumular valores
     aprovados.forEach(orc => {
-      const data = new Date(orc.created_at);
-      const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
-      if (faturamentoPorMes[mesAno] !== undefined) {
-        faturamentoPorMes[mesAno] += orc.total || orc.total_final || 0;
+      try {
+        const data = new Date(orc.created_at || orc.data_criacao || orc.data);
+        const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
+        if (faturamentoPorMes[mesAno] !== undefined) {
+          const valor = parseFloat(orc.total || orc.total_final || orc.valor_total || 0);
+          faturamentoPorMes[mesAno] += valor;
+        }
+      } catch (err) {
+        console.warn('⚠️ Erro ao processar orçamento:', orc, err);
       }
     });
 
-    const labels = Object.keys(faturamentoPorMes);
     const valores = Object.values(faturamentoPorMes);
+    const totalFaturamento = valores.reduce((sum, val) => sum + val, 0);
+    console.log(`💰 Faturamento total (12 meses): R$ ${totalFaturamento.toFixed(2)}`);
 
-    // Criar gráfico (suporta ambos IDs: Relatórios e Financeiro)
-    const ctx = document.getElementById('graficoFaturamentoMensal') || document.getElementById('chartFaturamento');
-    if (ctx && window.Chart) {
-      if (window.chartFaturamentoInstance) {
-        window.chartFaturamentoInstance.destroy();
-      }
+    // Destruir gráfico anterior se existir
+    if (window.chartFaturamentoInstance) {
+      window.chartFaturamentoInstance.destroy();
+    }
 
-      window.chartFaturamentoInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Faturamento (R$)',
-            data: valores,
-            backgroundColor: 'rgba(16, 185, 129, 0.7)',
-            borderColor: 'rgba(16, 185, 129, 1)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            legend: { display: false }
+    // Criar gráfico
+    window.chartFaturamentoInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labelsFormatados,
+        datasets: [{
+          label: 'Faturamento (R$)',
+          data: valores,
+          backgroundColor: 'rgba(16, 185, 129, 0.7)',
+          borderColor: 'rgba(16, 185, 129, 1)',
+          borderWidth: 2,
+          borderRadius: 6,
+          hoverBackgroundColor: 'rgba(16, 185, 129, 0.9)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              font: { size: 12, weight: 'bold' }
+            }
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: function(value) {
-                  return 'R$ ' + value.toFixed(0);
-                }
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return `Faturamento: R$ ${context.parsed.y.toFixed(2).replace('.', ',')}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0});
               }
             }
           }
         }
-      });
-    }
+      }
+    });
+
+    console.log('✅ Gráfico de faturamento mensal renderizado com sucesso');
+
   } catch (error) {
-    console.error('Erro ao carregar faturamento mensal:', error);
+    console.error('❌ Erro ao carregar faturamento mensal:', error);
+    const ctx = document.getElementById('graficoFaturamentoMensal') || document.getElementById('chartFaturamento');
+    if (ctx) {
+      renderizarGraficoFaturamentoVazio(ctx, `Erro ao carregar dados: ${error.message}`);
+    }
   }
+}
+
+// Função auxiliar para renderizar gráfico vazio com mensagem
+function renderizarGraficoFaturamentoVazio(ctx, mensagem) {
+  if (window.chartFaturamentoInstance) {
+    window.chartFaturamentoInstance.destroy();
+  }
+
+  window.chartFaturamentoInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Sem dados'],
+      datasets: [{
+        label: 'Faturamento (R$)',
+        data: [0],
+        backgroundColor: 'rgba(156, 163, 175, 0.5)',
+        borderColor: 'rgba(156, 163, 175, 1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: mensagem,
+          color: 'rgba(156, 163, 175, 1)',
+          font: { size: 14 }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            callback: function(value) {
+              return 'R$ ' + value;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 // Carregar serviços mais vendidos
