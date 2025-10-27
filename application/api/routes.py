@@ -1274,8 +1274,8 @@ def profissional_avaliacoes(id):
 @bp.route('/api/profissionais/<id>/upload-foto', methods=['POST'])
 @login_required
 def upload_foto_profissional(id):
-    db = get_db()
     """Upload de foto de perfil para profissionais (Diretriz #12)"""
+    db = get_db()
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
 

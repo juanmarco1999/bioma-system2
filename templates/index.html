@@ -1722,7 +1722,15 @@
         <div id="section-servicos" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-scissors"></i> Serviços</h1>
-                <button class="btn btn-primary" onclick="showModalServico()"><i class="bi bi-plus-circle"></i> Novo</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success btn-sm" onclick="ativarTodosServicos()" title="Ativar todos os serviços">
+                        <i class="bi bi-check-circle-fill"></i> Ativar Todos
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="desativarTodosServicos()" title="Desativar todos os serviços">
+                        <i class="bi bi-x-circle-fill"></i> Desativar Todos
+                    </button>
+                    <button class="btn btn-primary" onclick="showModalServico()"><i class="bi bi-plus-circle"></i> Novo</button>
+                </div>
             </div>
 
             <!-- Sub-tabs para Serviços -->
@@ -1839,7 +1847,15 @@
         <div id="section-produtos" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-box-seam"></i> Produtos</h1>
-                <button class="btn btn-primary" onclick="showModalProduto()"><i class="bi bi-plus-circle"></i> Novo</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-success btn-sm" onclick="ativarTodosProdutos()" title="Ativar todos os produtos">
+                        <i class="bi bi-check-circle-fill"></i> Ativar Todos
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="desativarTodosProdutos()" title="Desativar todos os produtos">
+                        <i class="bi bi-x-circle-fill"></i> Desativar Todos
+                    </button>
+                    <button class="btn btn-primary" onclick="showModalProduto()"><i class="bi bi-plus-circle"></i> Novo</button>
+                </div>
             </div>
 
             <!-- Sub-tabs para Produtos -->
@@ -4890,6 +4906,90 @@ function showModalServico(){
     });
 }
 
+// Função para ativar todos os serviços
+async function ativarTodosServicos() {
+    const result = await Swal.fire({
+        title: 'Ativar Todos os Serviços?',
+        text: 'Esta ação irá ativar todos os serviços cadastrados no sistema.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Sim, Ativar Todos',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await fetch('/api/servicos/toggle-todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ativo: true })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Serviços Ativados!',
+                    text: data.message || `${data.count} serviços foram ativados com sucesso.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadServicosLista();
+            } else {
+                Swal.fire('Erro', data.message || 'Não foi possível ativar os serviços', 'error');
+            }
+        } catch (e) {
+            console.error('Erro ao ativar serviços:', e);
+            Swal.fire('Erro', 'Falha ao ativar serviços', 'error');
+        }
+    }
+}
+
+// Função para desativar todos os serviços
+async function desativarTodosServicos() {
+    const result = await Swal.fire({
+        title: 'Desativar Todos os Serviços?',
+        text: 'Esta ação irá desativar todos os serviços cadastrados no sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-x-circle-fill"></i> Sim, Desativar Todos',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await fetch('/api/servicos/toggle-todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ativo: false })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Serviços Desativados!',
+                    text: data.message || `${data.count} serviços foram desativados com sucesso.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadServicosLista();
+            } else {
+                Swal.fire('Erro', data.message || 'Não foi possível desativar os serviços', 'error');
+            }
+        } catch (e) {
+            console.error('Erro ao desativar serviços:', e);
+            Swal.fire('Erro', 'Falha ao desativar serviços', 'error');
+        }
+    }
+}
+
 async function loadProdutosLista(){
     const key = 'loadProdutosLista';
     if (isLoading(key)) {
@@ -4974,6 +5074,90 @@ function showModalProduto(){
             }
         }
     });
+}
+
+// Função para ativar todos os produtos
+async function ativarTodosProdutos() {
+    const result = await Swal.fire({
+        title: 'Ativar Todos os Produtos?',
+        text: 'Esta ação irá ativar todos os produtos cadastrados no sistema.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-check-circle-fill"></i> Sim, Ativar Todos',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await fetch('/api/produtos/toggle-todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ativo: true })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Produtos Ativados!',
+                    text: data.message || `${data.count} produtos foram ativados com sucesso.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadProdutosLista();
+            } else {
+                Swal.fire('Erro', data.message || 'Não foi possível ativar os produtos', 'error');
+            }
+        } catch (e) {
+            console.error('Erro ao ativar produtos:', e);
+            Swal.fire('Erro', 'Falha ao ativar produtos', 'error');
+        }
+    }
+}
+
+// Função para desativar todos os produtos
+async function desativarTodosProdutos() {
+    const result = await Swal.fire({
+        title: 'Desativar Todos os Produtos?',
+        text: 'Esta ação irá desativar todos os produtos cadastrados no sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-x-circle-fill"></i> Sim, Desativar Todos',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await fetch('/api/produtos/toggle-todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ativo: false })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Produtos Desativados!',
+                    text: data.message || `${data.count} produtos foram desativados com sucesso.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadProdutosLista();
+            } else {
+                Swal.fire('Erro', data.message || 'Não foi possível desativar os produtos', 'error');
+            }
+        } catch (e) {
+            console.error('Erro ao desativar produtos:', e);
+            Swal.fire('Erro', 'Falha ao desativar produtos', 'error');
+        }
+    }
 }
 
 async function loadConsultar(){
