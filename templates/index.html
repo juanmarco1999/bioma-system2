@@ -4686,6 +4686,14 @@ async function marcarComissaoPaga(comissaoId) {
             confirmButtonText: 'OK'
         });
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 // ========== FUNÇÃO: CARREGAR ASSISTENTES ==========
@@ -5921,6 +5929,14 @@ async function deleteCliente(id){
             Swal.fire('Erro','','error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 function filtrarClientes(){
@@ -6355,7 +6371,7 @@ async function deleteAssistente(id) {
         icon: 'warning',
         showCancelButton: true
     });
-    
+
     if (result.isConfirmed) {
         try {
             await fetch(`/api/assistentes/${id}`, {method: 'DELETE', credentials: 'include'});
@@ -6365,6 +6381,14 @@ async function deleteAssistente(id) {
             Swal.fire('Erro', '', 'error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 async function deleteProfissional(id){
@@ -6378,6 +6402,14 @@ async function deleteProfissional(id){
             Swal.fire('Erro','','error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 function showModalProfissional(){
@@ -6714,6 +6746,14 @@ async function deleteProduto(id){
             Swal.fire('Erro','','error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 function showModalProduto(){
@@ -7442,7 +7482,7 @@ async function chamarProximo(id){
         confirmButtonText: 'Sim, chamar',
         cancelButtonText: 'Cancelar'
     });
-    
+
     if(result.isConfirmed){
         try{
             await fetch(`/api/fila/${id}`,{method:'DELETE',credentials:'include'});
@@ -7457,6 +7497,14 @@ async function chamarProximo(id){
             Swal.fire('Erro','Não foi possível processar','error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 async function removeFila(id){
@@ -7469,7 +7517,7 @@ async function removeFila(id){
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#EF4444'
     });
-    
+
     if(result.isConfirmed){
         try{
             await fetch(`/api/fila/${id}`,{method:'DELETE',credentials:'include'});
@@ -7485,6 +7533,14 @@ async function removeFila(id){
             Swal.fire('Erro','Não foi possível remover da fila','error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 function showModalFila(){
@@ -7689,6 +7745,14 @@ async function cancelarAgendamento(id){
             Swal.fire('Erro','Não foi possível cancelar o agendamento','error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 async function visualizarAgendamento(id){
@@ -10006,6 +10070,14 @@ async function doLogout(){
         localStorage.removeItem('bioma_remember');
         location.reload();
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 function switchTab(which){ const login=$('#loginForm'), reg=$('#registerForm'); if(which==='login'){ login.style.display='block'; reg.style.display='none'; $('#loginTab').classList.add('active'); $('#registerTab').classList.remove('active'); } else { login.style.display='none'; reg.style.display='block'; $('#registerTab').classList.add('active'); $('#loginTab').classList.remove('active'); } }
 
@@ -11406,24 +11478,32 @@ async function deletarAnamnese(id) {
         confirmButtonText: 'Sim, deletar!',
         cancelButtonText: 'Cancelar'
     });
-    
+
     if (result.isConfirmed) {
         try {
             const res = await fetch(`/api/clientes/${currentClienteCPF}/anamnese/${id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
-            
+
             if (!res.ok) throw new Error('Erro ao deletar anamnese');
-            
+
             Swal.fire('Deletado!', 'Anamnese removida com sucesso', 'success');
             buscarAnamnesesCliente(); // Recarregar lista
-            
+
         } catch (error) {
             console.error('Erro:', error);
             Swal.fire('Erro', 'Não foi possível deletar a anamnese', 'error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 // ========== PRONTUÁRIO ==========
@@ -11673,24 +11753,32 @@ async function deletarProntuario(id) {
         confirmButtonText: 'Sim, deletar!',
         cancelButtonText: 'Cancelar'
     });
-    
+
     if (result.isConfirmed) {
         try {
             const res = await fetch(`/api/clientes/${currentClienteCPF}/prontuario/${id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
-            
+
             if (!res.ok) throw new Error('Erro ao deletar prontuário');
-            
+
             Swal.fire('Deletado!', 'Prontuário removido com sucesso', 'success');
             buscarProntuariosCliente(); // Recarregar lista
-            
+
         } catch (error) {
             console.error('Erro:', error);
             Swal.fire('Erro', 'Não foi possível deletar o prontuário', 'error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 // ========== FIM ANAMNESE E PRONTUÁRIO ==========
 
@@ -12435,6 +12523,14 @@ async function toggleStatusProduto(id, statusAtual) {
             Swal.fire('Erro', 'Não foi possível atualizar o produto', 'error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 // ========== FIM SUB-TABS PRODUTOS ==========
 
@@ -12603,6 +12699,14 @@ async function toggleStatusServico(id, statusAtual) {
             Swal.fire('Erro', 'Não foi possível atualizar o serviço', 'error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 // ========== FIM SUB-TABS SERVIÇOS ==========
 
@@ -13518,6 +13622,14 @@ async function excluirDespesa(id){
             toast('❌ Erro ao excluir despesa', 'error');
         }
     }
+
+    // Limpeza de backdrop residual
+    setTimeout(() => {
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            if (!Swal.isVisible()) el.remove();
+        });
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+    }, 100);
 }
 
 async function carregarDespesas(){
