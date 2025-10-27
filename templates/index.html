@@ -12968,19 +12968,22 @@ async function carregarProdutosTodos() {
     const tbody = document.getElementById('produtosTodosBody');
     if (!tbody) return;
     if (window.loadingStates?.[FUNC_KEY]) return;
-    
+
     try {
         if (!window.loadingStates) window.loadingStates = {};
         window.loadingStates[FUNC_KEY] = true;
-        
+
         const res = await fetch('/api/produtos', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar produtos');
-        
+
         const data = await res.json();
         const produtos = data.produtos || data;
-        
+
+        // Armazenar dados globalmente para filtro
+        window.produtosTodosData = produtos;
+
         renderizarTabelaProdutos(produtos, tbody, true);
-        
+
     } catch (error) {
         console.error('❌ Erro:', error);
         Swal.fire('Erro', 'Falha ao carregar produtos', 'error');
@@ -13081,7 +13084,30 @@ function renderizarTabelaProdutos(produtos, tbody, incluirStatus) {
 }
 
 function filtrarProdutosTodos() {
-    // Implementar filtro local
+    const tbody = document.getElementById('produtosTodosBody');
+    const searchInput = document.getElementById('buscaProdutosTodos');
+    const statusFilter = document.getElementById('filtroProdutoStatus');
+
+    if (!tbody || !window.produtosTodosData) return;
+
+    const searchTerm = searchInput?.value?.toLowerCase() || '';
+    const statusValue = statusFilter?.value || '';
+
+    // Filtrar produtos
+    const produtosFiltrados = window.produtosTodosData.filter(produto => {
+        // Filtro de busca (nome ou marca)
+        const matchSearch = !searchTerm ||
+            (produto.nome && produto.nome.toLowerCase().includes(searchTerm)) ||
+            (produto.marca && produto.marca.toLowerCase().includes(searchTerm));
+
+        // Filtro de status
+        const matchStatus = !statusValue || produto.status === statusValue;
+
+        return matchSearch && matchStatus;
+    });
+
+    // Renderizar produtos filtrados
+    renderizarTabelaProdutos(produtosFiltrados, tbody, true);
 }
 
 function filtrarProdutosAtivos() {
@@ -13145,19 +13171,22 @@ async function carregarServicosTodos() {
     const tbody = document.getElementById('servicosTodosBody');
     if (!tbody) return;
     if (window.loadingStates?.[FUNC_KEY]) return;
-    
+
     try {
         if (!window.loadingStates) window.loadingStates = {};
         window.loadingStates[FUNC_KEY] = true;
-        
+
         const res = await fetch('/api/servicos', {credentials: 'include'});
         if (!res.ok) throw new Error('Erro ao carregar serviços');
-        
+
         const data = await res.json();
         const servicos = data.servicos || data;
-        
+
+        // Armazenar dados globalmente para filtro
+        window.servicosTodosData = servicos;
+
         renderizarTabelaServicos(servicos, tbody, true);
-        
+
     } catch (error) {
         console.error('❌ Erro:', error);
         Swal.fire('Erro', 'Falha ao carregar serviços', 'error');
@@ -13257,7 +13286,30 @@ function renderizarTabelaServicos(servicos, tbody, incluirStatus) {
 }
 
 function filtrarServicosTodos() {
-    // Implementar filtro local
+    const tbody = document.getElementById('servicosTodosBody');
+    const searchInput = document.getElementById('buscaServicosTodos');
+    const categoriaFilter = document.getElementById('filtroCategoria');
+
+    if (!tbody || !window.servicosTodosData) return;
+
+    const searchTerm = searchInput?.value?.toLowerCase() || '';
+    const categoriaValue = categoriaFilter?.value || '';
+
+    // Filtrar serviços
+    const servicosFiltrados = window.servicosTodosData.filter(servico => {
+        // Filtro de busca (nome ou categoria)
+        const matchSearch = !searchTerm ||
+            (servico.nome && servico.nome.toLowerCase().includes(searchTerm)) ||
+            (servico.categoria && servico.categoria.toLowerCase().includes(searchTerm));
+
+        // Filtro de categoria
+        const matchCategoria = !categoriaValue || servico.categoria === categoriaValue;
+
+        return matchSearch && matchCategoria;
+    });
+
+    // Renderizar serviços filtrados
+    renderizarTabelaServicos(servicosFiltrados, tbody, true);
 }
 
 function filtrarServicosAtivos() {
