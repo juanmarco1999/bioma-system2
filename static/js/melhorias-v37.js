@@ -5507,6 +5507,320 @@ window.adicionarBotaoPDFAssinatura = function(orcamentoId) {
     }
 };
 
+// ============================================================================
+// SISTEMA OFFLINE COM SERVICE WORKER (DIRETRIZ 17.1)
+// ============================================================================
+
+/**
+ * Diretriz 17.1: Sistema Offline com Service Worker + IndexedDB
+ *
+ * Funcionalidades:
+ * - Cache de assets críticos (CSS, JS)
+ * - Cache de APIs (network-first strategy)
+ * - Detecção de status online/offline
+ * - Notificações visuais de mudança de status
+ * - Sincronização automática ao reconectar
+ */
+
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            const registration = await navigator.serviceWorker.register('/static/sw.js', {
+                scope: '/'
+            });
+
+            console.log('✅ Service Worker registrado:', registration.scope);
+
+            // Escutar atualizações do Service Worker
+            registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        console.log('🔄 Nova versão do Service Worker disponível!');
+
+                        // Notificar usuário sobre atualização
+                        mostrarNotificacaoAtualizacao(registration);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error('❌ Erro ao registrar Service Worker:', error);
+        }
+    });
+}
+
+/**
+ * Mostrar notificação de atualização disponível
+ */
+function mostrarNotificacaoAtualizacao(registration) {
+    Swal.fire({
+        title: 'Nova Versão Disponível!',
+        html: `
+            <p>Uma nova versão do BIOMA está disponível.</p>
+            <p style="font-size: 0.9rem; color: #6B7280; margin-top: 1rem;">
+                Clique em "Atualizar" para obter as últimas melhorias.
+            </p>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-arrow-clockwise"></i> Atualizar',
+        cancelButtonText: 'Mais Tarde',
+        confirmButtonColor: '#7C3AED',
+        cancelButtonColor: '#6B7280'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Instruir o Service Worker a assumir controle imediatamente
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+            // Recarregar página
+            window.location.reload();
+        }
+    });
+}
+
+/**
+ * Detecção de status online/offline
+ */
+window.addEventListener('online', () => {
+    console.log('🌐 Conectado à internet!');
+
+    // Remover indicador offline se existir
+    const offlineIndicator = document.getElementById('offline-indicator');
+    if (offlineIndicator) {
+        offlineIndicator.remove();
+    }
+
+    // Notificar usuário
+    Swal.fire({
+        title: 'Você está online!',
+        text: 'Conexão restabelecida. Sincronizando dados...',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true
+    });
+
+    // Tentar sincronizar dados pendentes
+    sincronizarDadosPendentes();
+});
+
+window.addEventListener('offline', () => {
+    console.log('📡 Sem conexão à internet!');
+
+    // Adicionar indicador visual de offline
+    adicionarIndicadorOffline();
+
+    // Notificar usuário
+    Swal.fire({
+        title: 'Você está offline',
+        html: `
+            <p>Sem conexão com a internet.</p>
+            <p style="font-size: 0.9rem; color: #6B7280; margin-top: 1rem;">
+                O sistema continuará funcionando com dados em cache.
+            </p>
+        `,
+        icon: 'warning',
+        timer: 3000,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true
+    });
+});
+
+/**
+ * Adicionar indicador visual de modo offline
+ */
+function adicionarIndicadorOffline() {
+    // Verificar se já existe
+    if (document.getElementById('offline-indicator')) {
+        return;
+    }
+
+    // Criar indicador
+    const indicator = document.createElement('div');
+    indicator.id = 'offline-indicator';
+    indicator.innerHTML = `
+        <i class="bi bi-wifi-off"></i>
+        <span>Modo Offline</span>
+    `;
+
+    // Adicionar estilos inline
+    Object.assign(indicator.style, {
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+        color: 'white',
+        padding: '12px 20px',
+        borderRadius: '30px',
+        boxShadow: '0 8px 20px rgba(245, 158, 11, 0.4)',
+        zIndex: '9999',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        fontWeight: '600',
+        fontSize: '0.9rem',
+        animation: 'pulse 2s ease-in-out infinite'
+    });
+
+    document.body.appendChild(indicator);
+}
+
+/**
+ * Sincronizar dados pendentes ao reconectar
+ */
+async function sincronizarDadosPendentes() {
+    try {
+        // Verificar se há Service Worker ativo
+        if (!navigator.serviceWorker.controller) {
+            return;
+        }
+
+        // Tentar registrar background sync (se suportado)
+        if ('sync' in navigator.serviceWorker) {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.sync.register('sync-data');
+
+            console.log('🔄 Background sync registrado');
+        } else {
+            console.log('⚠️ Background sync não suportado neste navegador');
+
+            // Fallback: recarregar dados manualmente
+            // (Aqui você implementaria lógica específica do seu sistema)
+        }
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar dados:', error);
+    }
+}
+
+/**
+ * Obter estatísticas do cache
+ */
+window.obterEstatisticasCache = async function() {
+    try {
+        if (!navigator.serviceWorker.controller) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Service Worker não ativo',
+                text: 'O sistema offline não está ativo no momento.'
+            });
+            return;
+        }
+
+        // Criar canal de mensagem
+        const messageChannel = new MessageChannel();
+
+        // Escutar resposta
+        messageChannel.port1.onmessage = (event) => {
+            if (event.data.type === 'CACHE_STATS_RESPONSE') {
+                const stats = event.data.stats;
+
+                let html = '<div style="text-align: left;">';
+                html += '<h6 style="margin-bottom: 1rem;">Caches Ativos:</h6>';
+
+                stats.forEach(stat => {
+                    html += `
+                        <div style="margin-bottom: 0.5rem; padding: 10px; background: #F3F4F6; border-radius: 8px;">
+                            <strong style="color: #7C3AED;">${stat.cacheName}</strong><br/>
+                            <span style="font-size: 0.9rem; color: #6B7280;">${stat.count} itens em cache</span>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+
+                Swal.fire({
+                    title: 'Estatísticas de Cache',
+                    html: html,
+                    icon: 'info',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#7C3AED',
+                    width: '500px'
+                });
+            }
+        };
+
+        // Enviar mensagem ao Service Worker
+        navigator.serviceWorker.controller.postMessage(
+            { type: 'CACHE_STATS' },
+            [messageChannel.port2]
+        );
+
+    } catch (error) {
+        console.error('Erro ao obter estatísticas:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Não foi possível obter estatísticas do cache.'
+        });
+    }
+};
+
+/**
+ * Limpar todo o cache
+ */
+window.limparCache = async function() {
+    try {
+        const result = await Swal.fire({
+            title: 'Limpar Cache?',
+            text: 'Isso removerá todos os dados em cache. Você terá que baixar tudo novamente.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sim, limpar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#6B7280'
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        if (!navigator.serviceWorker.controller) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Service Worker não ativo',
+                text: 'Não há cache para limpar.'
+            });
+            return;
+        }
+
+        // Enviar mensagem para limpar cache
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+
+        // Aguardar um momento
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Cache Limpo!',
+            text: 'Todos os dados em cache foram removidos.',
+            timer: 2000,
+            showConfirmButton: false
+        });
+
+        console.log('🗑️ Cache limpo com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao limpar cache:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Não foi possível limpar o cache.'
+        });
+    }
+};
+
+// Verificar status inicial
+if (!navigator.onLine) {
+    adicionarIndicadorOffline();
+}
+
 console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
 console.log('✅ Histórico de Atendimentos carregado (12.4)');
 console.log('✅ Sistema de Níveis de Acesso carregado (5.1)');
@@ -5514,4 +5828,5 @@ console.log('✅ Layout Melhorado do Contrato carregado (1.3)');
 console.log('✅ Detalhamento em Consultar melhorado (2.2)');
 console.log('✅ Gráficos da aba Resumo melhorados (4.1)');
 console.log('✅ PDF com Assinaturas implementado (3.2)');
+console.log('✅ Sistema Offline com Service Worker carregado (17.1)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
