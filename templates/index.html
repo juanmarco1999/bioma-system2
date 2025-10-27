@@ -13,8 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- BIOMA v4.0 - Melhorias e Correções -->
-    <link rel="stylesheet" href="/static/css/correcoes-v37.css">
+    <!-- BIOMA v4.0 - Sistema Consolidado -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- SheetJS para exportação Excel -->
@@ -217,29 +216,31 @@
 
         /* ========== LOGO PERSONALIZADO: DINÂMICO E SEM FUNDO ========== */
         .sidebar-logo {
-            padding: 25px 20px !important;
+            padding: 20px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
-            background: linear-gradient(135deg,var(--primary),var(--secondary)) !important;
-            border-bottom: 5px solid var(--accent) !important;
-            min-height: 180px !important;
+            background: var(--bg-sidebar) !important; /* Fundo da sidebar sem gradiente */
+            border-bottom: none !important; /* Remove borda */
+            min-height: 200px !important;
             max-height: none !important;
             overflow: visible !important;
             transition: all 0.3s ease !important;
         }
 
         #sidebarLogoImage {
-            width: 100%;
-            max-width: 100%;
+            width: 90%;
+            max-width: 200px;
             height: auto;
-            max-height: 400px;
             object-fit: contain;
             display: block;
             margin: 0 auto;
-            padding: 30px 20px;
-            /* Logo grande e bem visível */
+            padding: 15px;
+            background: transparent !important; /* Sem background */
+            border-radius: 50% !important; /* Arredondado */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Sombra suave */
+            /* Logo arredondado, intuitivo, sem fundo roxo */
         }
 
         /* Quando há logo personalizado, esconder texto */
@@ -11054,9 +11055,6 @@ console.log('✅ Sistema de auto-atualização inicializado (Diretriz 0.1)');
 // ========== FIM AUTO-ATUALIZAÇÃO ==========
 
 </script>
-
-<!-- BIOMA v4.0 - Melhorias e Correções JavaScript -->
-<script src="/static/js/melhorias-v37.js"></script>
 
 <!-- BIOMA v4.0 - Document Generator (PDF & Excel profissionais) -->
 <script src="/static/js/document-generator.js"></script>
