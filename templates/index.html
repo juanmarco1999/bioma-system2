@@ -1194,8 +1194,389 @@
 
 </style>
 
+<!-- ========== MELHORIAS DE UX E ANIMAÇÕES V4.1 ========== -->
+<style>
+    /* ========== TRANSIÇÕES SUAVES ENTRE PÁGINAS ========== */
+    .content-section {
+        opacity: 0;
+        transform: translateX(-30px);
+        transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                    transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .content-section.active {
+        opacity: 1;
+        transform: translateX(0);
+        animation: smoothPageIn 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes smoothPageIn {
+        0% {
+            opacity: 0;
+            transform: translateX(-50px) scale(0.96);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    /* ========== ANIMAÇÕES HOVER MODERNAS PARA BOTÕES ========== */
+    .btn {
+        position: relative;
+        overflow: hidden;
+        transform-style: preserve-3d;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    .btn:hover {
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 15px 40px rgba(124, 58, 237, 0.6) !important;
+    }
+
+    .btn:active {
+        transform: translateY(-2px) scale(0.98);
+    }
+
+    /* Botões com animação de pulso */
+    .btn-primary {
+        animation: subtlePulse 3s ease-in-out infinite;
+    }
+
+    @keyframes subtlePulse {
+        0%, 100% {
+            box-shadow: 0 5px 20px rgba(124, 58, 237, 0.3);
+        }
+        50% {
+            box-shadow: 0 5px 30px rgba(124, 58, 237, 0.5);
+        }
+    }
+
+    /* ========== SUB-TABS COM TRANSIÇÕES SUAVES ========== */
+    .sub-tab-content {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+        pointer-events: none;
+    }
+
+    .sub-tab-content.active {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+        animation: tabSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes tabSlideIn {
+        0% {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* ========== MELHORIAS NAS TABELAS ========== */
+    table tbody tr {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    table tbody tr:hover {
+        transform: translateX(4px) !important;
+        background: linear-gradient(90deg,
+            rgba(124, 58, 237, 0.05),
+            transparent) !important;
+        box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+    }
+
+    /* ========== INDICADOR DE AUTO-REFRESH ========== */
+    #auto-refresh-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        padding: 12px 20px;
+        border-radius: 50px;
+        box-shadow: 0 5px 25px rgba(124, 58, 237, 0.4);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        animation: slideInFromTop 0.4s ease, pulse 2s ease-in-out infinite;
+    }
+
+    #auto-refresh-indicator.show {
+        display: flex;
+    }
+
+    #auto-refresh-indicator .spinner-small {
+        width: 16px;
+        height: 16px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes slideInFromTop {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* ========== DARK MODE APRIMORADO ========== */
+    :root[data-theme="dark"] {
+        --primary: #A78BFA;
+        --primary-dark: #8B5CF6;
+        --secondary: #F472B6;
+        --accent: #FDE047;
+        --success: #4ADE80;
+        --danger: #F87171;
+        --warning: #FBBF24;
+        --info: #38BDF8;
+        --bg-main: #0F1419;
+        --bg-card: #1A1F2E;
+        --bg-sidebar: #0A0E14;
+        --bg-sidebar-hover: #1A1F2E;
+        --text-primary: #F3F4F6;
+        --text-secondary: #D1D5DB;
+        --text-muted: #9CA3AF;
+        --border-color: #374151;
+        --shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        --shadow-hover: 0 8px 40px rgba(167, 139, 250, 0.4);
+    }
+
+    /* Garantir contraste no dark mode */
+    :root[data-theme="dark"] .card-header,
+    :root[data-theme="dark"] table thead th {
+        background: linear-gradient(135deg, #6D28D9, #8B5CF6);
+    }
+
+    :root[data-theme="dark"] .stat-card h3 {
+        color: var(--primary);
+        -webkit-text-fill-color: var(--primary);
+    }
+
+    :root[data-theme="dark"] input,
+    :root[data-theme="dark"] select,
+    :root[data-theme="dark"] textarea {
+        background: var(--bg-main);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    :root[data-theme="dark"] .badge {
+        filter: brightness(1.2);
+    }
+
+    /* ========== SCROLL OTIMIZADO ========== */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary) var(--bg-main);
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--bg-main);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, var(--primary), var(--secondary));
+        border-radius: 10px;
+        border: 2px solid var(--bg-main);
+        transition: none;
+    }
+
+    ::-webkit-scrollbar-thumb:active {
+        background: var(--primary-dark);
+    }
+
+    /* Remove hover flicker */
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, var(--primary), var(--secondary));
+    }
+
+    /* ========== CARDS COM ANIMAÇÕES ========== */
+    .stat-card {
+        animation: cardFloat 6s ease-in-out infinite;
+    }
+
+    .stat-card:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .stat-card:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    .stat-card:nth-child(4) {
+        animation-delay: 0.6s;
+    }
+
+    @keyframes cardFloat {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-5px);
+        }
+    }
+
+    /* ========== BADGES COM ANIMAÇÕES ========== */
+    .badge {
+        animation: badgePop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    @keyframes badgePop {
+        0% {
+            transform: scale(0);
+        }
+        80% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    /* ========== SIDEBAR MENU ANIMAÇÕES ========== */
+    .sidebar-menu li a {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-menu li a:hover {
+        transform: translateX(8px);
+        background: linear-gradient(90deg,
+            var(--bg-sidebar-hover),
+            rgba(124, 58, 237, 0.1));
+    }
+
+    .sidebar-menu li a.active {
+        animation: activeMenuPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes activeMenuPulse {
+        0%, 100% {
+            box-shadow: inset 5px 0 0 var(--primary);
+        }
+        50% {
+            box-shadow: inset 8px 0 0 var(--primary);
+        }
+    }
+
+    /* ========== FORM CONTROLS COM FOCO SUAVE ========== */
+    .form-control:focus,
+    .form-select:focus {
+        transform: scale(1.02);
+        transition: all 0.3s ease;
+    }
+
+    /* ========== LOADING STATES ELEGANTES ========== */
+    .spinner {
+        animation: spin 1s linear infinite, colorChange 3s ease-in-out infinite;
+    }
+
+    @keyframes colorChange {
+        0%, 100% {
+            border-top-color: var(--primary);
+        }
+        33% {
+            border-top-color: var(--secondary);
+        }
+        66% {
+            border-top-color: var(--accent);
+        }
+    }
+
+    /* ========== PERFORMANCE OTIMIZAÇÃO ========== */
+    .main-content {
+        will-change: scroll-position;
+    }
+
+    .content-section.active {
+        will-change: transform, opacity;
+    }
+
+    table tbody tr {
+        will-change: auto;
+    }
+
+    /* ========== COMUNIDADE ANIMAÇÕES ========== */
+    .mapa-dia {
+        animation: cardFadeIn 0.6s ease forwards;
+        opacity: 0;
+    }
+
+    .mapa-dia:nth-child(1) { animation-delay: 0.05s; }
+    .mapa-dia:nth-child(2) { animation-delay: 0.1s; }
+    .mapa-dia:nth-child(3) { animation-delay: 0.15s; }
+    .mapa-dia:nth-child(4) { animation-delay: 0.2s; }
+    .mapa-dia:nth-child(5) { animation-delay: 0.25s; }
+
+    @keyframes cardFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* ========== THEME TOGGLE MELHORADO ========== */
+    .theme-toggle button:hover {
+        transform: scale(1.05) rotate(180deg);
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 5px 20px rgba(124, 58, 237, 0.5);
+    }
+
+    .theme-toggle button {
+        transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+</style>
+
 </head>
 <body>
+
+<!-- ========== INDICADOR DE AUTO-REFRESH ========== -->
+<div id="auto-refresh-indicator">
+    <div class="spinner-small"></div>
+    <span>Atualizando dados...</span>
+</div>
 
 <!-- SAFE SWAL SIMPLIFICADO: Previne modais empilhados -->
 <script>
@@ -12786,9 +13167,16 @@ function disableAutoUpdate() {
 
 async function performAutoUpdate() {
     try {
+        // Mostrar indicador de atualização
+        const indicator = document.getElementById('auto-refresh-indicator');
+        if (indicator) indicator.classList.add('show');
+
         // Detectar seção ativa
         const activeSection = document.querySelector('.content-section.active');
-        if (!activeSection) return;
+        if (!activeSection) {
+            if (indicator) indicator.classList.remove('show');
+            return;
+        }
 
         const sectionId = activeSection.id.replace('section-', '');
         lastActiveSection = sectionId;
@@ -12849,6 +13237,12 @@ async function performAutoUpdate() {
 
     } catch (err) {
         console.error('❌ Erro na auto-atualização:', err);
+    } finally {
+        // Ocultar indicador após 2 segundos
+        setTimeout(() => {
+            const indicator = document.getElementById('auto-refresh-indicator');
+            if (indicator) indicator.classList.remove('show');
+        }, 2000);
     }
 }
 
