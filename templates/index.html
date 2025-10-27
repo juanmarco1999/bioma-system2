@@ -3066,56 +3066,10 @@ function switchTab(tab){
     }
 }
 
-async function handleLogin(e){
-    e.preventDefault();
-    const username=document.getElementById('loginUsername').value.trim();
-    const password=document.getElementById('loginPassword').value.trim();
-    try{
-        const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({username,password})});
-        const data=await res.json();
-        if(data.success&&data.user){
-            currentUser=data.user;
-            currentTheme=data.user.theme||'light';
-            Swal.fire({icon:'success',title:'✅ Bem-vindo!',text:`Olá, ${currentUser.name}!`,timer:1500,showConfirmButton:false});
-            setTimeout(()=>{applyTheme(currentTheme);showApp();},500);
-        }else{
-            Swal.fire('Erro',data.message||'Credenciais inválidas','error');
-        }
-    }catch(e){
-        Swal.fire('Erro','Não foi possível conectar','error');
-    }
-    return false;
-}
-
-async function handleRegister(e){
-    e.preventDefault();
-    const name=document.getElementById('registerName').value.trim();
-    const username=document.getElementById('registerUsername').value.trim();
-    const email=document.getElementById('registerEmail').value.trim();
-    const telefone=document.getElementById('registerTelefone').value.trim();
-    const password=document.getElementById('registerPassword').value.trim();
-    try{
-        const res=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name,username,email,telefone,password})});
-        const data=await res.json();
-        if(data.success){
-            Swal.fire({icon:'success',title:'✅ Conta Criada!',html:'<p>Conta criada com privilégios de ADMIN!</p><p>Faça login agora.</p>',timer:3000}).then(()=>{switchTab('login');document.getElementById('loginUsername').value=username;});
-        }else{
-            Swal.fire('Erro',data.message,'error');
-        }
-    }catch(e){
-        Swal.fire('Erro','Erro ao criar conta','error');
-    }
-    return false;
-}
-
-async function doLogout(){
-    const result=await Swal.fire({title:'Deseja sair?',icon:'question',showCancelButton:true,confirmButtonText:'Sim',cancelButtonText:'Cancelar'});
-    if(result.isConfirmed){
-        await fetch('/api/logout',{method:'POST',credentials:'include'});
-        Swal.fire({icon:'success',title:'Até logo!',timer:1000,showConfirmButton:false});
-        setTimeout(()=>{currentUser=null;location.reload();},500);
-    }
-}
+// ===== FUNÇÕES ANTIGAS REMOVIDAS =====
+// handleLogin(), handleRegister() e doLogout() foram movidas para o final do arquivo
+// com implementações melhoradas (linhas 7882+)
+// Remoção feita para evitar duplicação e vazamento de mensagens SweetAlert
 
 function applyTheme(theme){
     document.documentElement.setAttribute('data-theme',theme);

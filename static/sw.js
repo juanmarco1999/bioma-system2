@@ -1,23 +1,31 @@
 /**
- * BIOMA v3.7 - Service Worker para Sistema Offline
- * Diretriz 17.1: Implementação de cache e funcionalidade offline
+ * BIOMA v4.0 - Service Worker para Sistema Offline Completo
+ * Sistema PWA com cache inteligente e sincronização de dados
  *
  * Estratégia de Cache:
- * - Cache-first para assets estáticos (CSS, JS, images)
- * - Network-first para APIs
- * - Fallback para páginas offline
+ * - Cache-first para assets estáticos (CSS, JS, images, fonts)
+ * - Network-first para APIs com fallback
+ * - Stale-while-revalidate para dados dinâmicos
+ * - IndexedDB para armazenamento de dados offline
  */
 
-const CACHE_VERSION = 'bioma-v3.7-cache-v1';
-const ASSETS_CACHE = 'bioma-assets-v1';
-const API_CACHE = 'bioma-api-v1';
+const CACHE_VERSION = 'bioma-v4.0-cache-v1';
+const ASSETS_CACHE = 'bioma-assets-v4';
+const API_CACHE = 'bioma-api-v4';
+const IMAGES_CACHE = 'bioma-images-v4';
 
 // Assets críticos para funcionalidade offline
 const CRITICAL_ASSETS = [
     '/',
     '/static/css/correcoes-v37.css',
     '/static/js/melhorias-v37.js',
-    '/static/js/app.js'
+    '/static/js/app.js',
+    // CDN assets (fallbacks)
+    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
+    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css',
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js',
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+    'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js'
 ];
 
 /**
