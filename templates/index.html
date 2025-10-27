@@ -8258,132 +8258,84 @@ async function safeCall(key, asyncFunc) {
 }
 
 // ===== Auth =====
+/**
+ * SISTEMA DE LOGIN REFATORADO - v4.1
+ * - Mais robusto e sem travamentos
+ * - Melhor tratamento de erros
+ * - Toast notifications em vez de modais pesados
+ */
 async function handleLogin(e){
     e?.preventDefault?.();
 
+    const btnLogin = document.getElementById('btnLogin');
+    const btnContent = btnLogin?.querySelector('.btn-content');
+    const btnLoading = btnLogin?.querySelector('.btn-loading');
+
     try{
-        const username = $('#loginUsername').value.trim();
-        const password = $('#loginPassword').value;
+        // Validação de campos
+        const username = $('#loginUsername')?.value?.trim();
+        const password = $('#loginPassword')?.value;
         const rememberMe = $('#rememberMe')?.checked || false;
 
-        // Mostrar spinner moderno no botão
-        const btnLogin = document.getElementById('btnLogin');
-        const btnContent = btnLogin.querySelector('.btn-content');
-        const btnLoading = btnLogin.querySelector('.btn-loading');
+        if(!username || !password){
+            toast('Por favor, preencha todos os campos', 'warning');
+            return false;
+        }
 
-        btnLogin.disabled = true;
-        btnContent.style.display = 'none';
-        btnLoading.style.display = 'flex';
+        // Mostrar loading no botão
+        if(btnLogin){
+            btnLogin.disabled = true;
+            if(btnContent) btnContent.style.display = 'none';
+            if(btnLoading) btnLoading.style.display = 'flex';
+        }
 
-        const data = {username, password};
-        const r = await API.post('/api/login', data);
+        // Fazer login
+        const r = await API.post('/api/login', {username, password});
 
         if(r.success){
             // Salvar sessão
             sessionStorage.setItem('bioma_user', JSON.stringify(r.user));
 
-            // Lembrar por 7 dias
+            // Lembrar por 7 dias se marcado
             if(rememberMe){
                 const expiryDate = new Date();
                 expiryDate.setDate(expiryDate.getDate() + 7);
-
-                const rememberData = {
+                localStorage.setItem('bioma_remember', JSON.stringify({
                     username: username,
-                    password: btoa(password), // Base64 encoding (não é seguro, mas melhor que plaintext)
+                    password: btoa(password),
                     expiry: expiryDate.toISOString()
-                };
-
-                localStorage.setItem('bioma_remember', JSON.stringify(rememberData));
+                }));
             } else {
-                // Limpar se não marcou
                 localStorage.removeItem('bioma_remember');
             }
 
-            // Mensagem de sucesso
-            Swal.fire({
-                icon: 'success',
-                title: '<strong style="color: #10B981;">Login Realizado!</strong>',
-                html: `
-                    <div style="text-align: left; padding: 20px;">
-                        <div style="background: linear-gradient(135deg, #D1FAE5, #A7F3D0); padding: 20px; border-radius: 15px; margin-bottom: 15px;">
-                            <h4 style="margin: 0; color: #065F46; display: flex; align-items: center; gap: 10px;">
-                                <i class="bi bi-person-circle" style="font-size: 2rem;"></i>
-                                Bem-vindo, ${r.user.name || r.user.username}!
-                            </h4>
-                        </div>
-                        <p style="margin: 10px 0; color: #6B7280; display: flex; align-items: center; gap: 8px;">
-                            <i class="bi bi-shield-check"></i> <strong>Tipo de Acesso:</strong> ${r.user.tipo_acesso || r.user.role || 'Admin'}
-                        </p>
-                        ${rememberMe ? `
-                            <p style="margin: 10px 0; color: #7C3AED; display: flex; align-items: center; gap: 8px;">
-                                <i class="bi bi-clock-history"></i> Login salvo por 7 dias
-                            </p>
-                        ` : ''}
-                        <p style="margin-top: 15px; font-size: 0.9rem; color: #9CA3AF;">
-                            Redirecionando para o sistema...
-                        </p>
-                    </div>
-                `,
-                showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true,
-                allowOutsideClick: false
-            }).then(() => {
-                initApp(r.user);
-            });
-        } else {
-            // Mensagem de erro
-            Swal.fire({
-                icon: 'error',
-                title: '<strong style="color: #EF4444;">Falha no Login</strong>',
-                html: `
-                    <div style="text-align: center; padding: 20px;">
-                        <div style="background: linear-gradient(135deg, #FEE2E2, #FECACA); padding: 20px; border-radius: 15px; margin-bottom: 15px;">
-                            <p style="margin: 0; color: #991B1B; font-weight: 700; font-size: 1.1rem;">
-                                ${r.message || 'Usuário ou senha incorretos'}
-                            </p>
-                        </div>
-                        <p style="color: #6B7280; margin: 10px 0;">
-                            <i class="bi bi-exclamation-triangle"></i> Verifique suas credenciais e tente novamente.
-                        </p>
-                    </div>
-                `,
-                confirmButtonText: 'Tentar Novamente',
-                confirmButtonColor: '#7C3AED'
-            });
+            // Mensagem de sucesso SIMPLES
+            console.log('✅ Login bem-sucedido:', r.user.name || r.user.username);
+            toast(`Bem-vindo, ${r.user.name || r.user.username}!`, 'success');
 
-            // Reset botão em caso de erro
-            btnLogin.disabled = false;
-            btnContent.style.display = 'flex';
-            btnLoading.style.display = 'none';
+            // Redirecionar após 500ms
+            setTimeout(() => {
+                initApp(r.user);
+            }, 500);
+
+        } else {
+            // Erro de credenciais
+            toast(r.message || 'Usuário ou senha incorretos', 'error');
+
+            // Reset botão
+            if(btnLogin){
+                btnLogin.disabled = false;
+                if(btnContent) btnContent.style.display = 'flex';
+                if(btnLoading) btnLoading.style.display = 'none';
+            }
         }
     }catch(err){
-        console.error('Login error:', err);
-        Swal.fire({
-            icon: 'error',
-            title: '<strong style="color: #EF4444;">Erro no Sistema</strong>',
-            html: `
-                <div style="text-align: center; padding: 20px;">
-                    <div style="background: linear-gradient(135deg, #FEE2E2, #FECACA); padding: 20px; border-radius: 15px; margin-bottom: 15px;">
-                        <p style="margin: 0; color: #991B1B; font-weight: 700;">
-                            Não foi possível conectar ao servidor
-                        </p>
-                    </div>
-                    <p style="color: #6B7280; font-size: 0.9rem;">
-                        Por favor, verifique sua conexão e tente novamente.
-                    </p>
-                </div>
-            `,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#7C3AED'
-        });
+        console.error('❌ Login error:', err);
+        toast('Erro ao conectar ao servidor', 'error');
 
-        // Reset botão em caso de exceção
-        const btnLogin = document.getElementById('btnLogin');
+        // CRITICAL: Reset botão sempre
         if(btnLogin){
             btnLogin.disabled = false;
-            const btnContent = btnLogin.querySelector('.btn-content');
-            const btnLoading = btnLogin.querySelector('.btn-loading');
             if(btnContent) btnContent.style.display = 'flex';
             if(btnLoading) btnLoading.style.display = 'none';
         }
@@ -8392,61 +8344,48 @@ async function handleLogin(e){
     return false;
 }
 async function handleRegister(e){ e?.preventDefault?.(); try{ const data = {name:$('#registerName').value, username:$('#registerUsername').value, email:$('#registerEmail').value, telefone:$('#registerTelefone').value, password:$('#registerPassword').value}; const r = await API.post('/api/register', data); if(r.success){ toast('Conta criada! Faça login.','success'); $('#loginTab').click(); } else { toast(r.message||'Erro ao registrar','error'); } }catch(err){ toast('Erro ao registrar','error'); } return false; }
+/**
+ * LOGOUT REFATORADO - v4.1
+ * - Mais simples e direto
+ * - Sem modais pesados que podem travar
+ */
 async function doLogout(){
     try{
-        // Confirmar logout
+        // Confirmar com modal simples
         const result = await Swal.fire({
-            title: '<strong>Confirmar Logout</strong>',
-            html: `
-                <div style="padding: 20px;">
-                    <p style="margin-bottom: 15px; color: #6B7280;">Deseja realmente sair do sistema?</p>
-                    <div style="background: linear-gradient(135deg, #FEF3C7, #FDE68A); padding: 15px; border-radius: 12px; margin-top: 15px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
-                            <input type="checkbox" id="clearRememberMe" style="width: 18px; height: 18px; cursor: pointer; accent-color: #F59E0B;">
-                            <span style="color: #92400E; font-weight: 600; font-size: 0.95rem;">
-                                <i class="bi bi-trash"></i> Esquecer login salvo
-                            </span>
-                        </label>
-                    </div>
-                </div>
-            `,
+            title: 'Confirmar Logout',
+            text: 'Deseja realmente sair do sistema?',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: '<i class="bi bi-box-arrow-right"></i> Sim, Sair',
-            cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
+            confirmButtonText: 'Sim, Sair',
+            cancelButtonText: 'Cancelar',
             confirmButtonColor: '#EF4444',
             cancelButtonColor: '#6B7280',
             reverseButtons: true
         });
 
         if(result.isConfirmed){
-            const clearRemember = document.getElementById('clearRememberMe')?.checked || false;
-
-            // Limpar remember me se marcado
-            if(clearRemember){
-                localStorage.removeItem('bioma_remember');
-                console.log('🗑️ Login salvo removido');
-            }
-
-            // Logout
+            // Fazer logout
             await API.post('/api/logout',{});
-            sessionStorage.removeItem('bioma_user');
 
-            // Mensagem de despedida
-            Swal.fire({
-                icon: 'success',
-                title: '<strong style="color: #10B981;">Até Logo!</strong>',
-                html: '<p style="color: #6B7280;">Você foi desconectado com sucesso.</p>',
-                timer: 1500,
-                showConfirmButton: false,
-                timerProgressBar: true
-            }).then(() => {
+            // Limpar dados locais
+            sessionStorage.removeItem('bioma_user');
+            localStorage.removeItem('bioma_remember');
+
+            console.log('✅ Logout bem-sucedido');
+            toast('Até logo!', 'success');
+
+            // Reload após 500ms
+            setTimeout(() => {
                 location.reload();
-            });
+            }, 500);
         }
     }catch(err){
-        console.error('Logout error:', err);
+        console.error('❌ Logout error:', err);
+
+        // Forçar logout mesmo em caso de erro
         sessionStorage.removeItem('bioma_user');
+        localStorage.removeItem('bioma_remember');
         location.reload();
     }
 }
