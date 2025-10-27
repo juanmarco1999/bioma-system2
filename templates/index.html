@@ -213,31 +213,34 @@
 
         /* ========== LOGO PERSONALIZADO: DINÂMICO E SEM FUNDO ========== */
         .sidebar-logo {
-            padding: 20px 15px !important;
+            padding: 25px 20px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
             background: linear-gradient(135deg,var(--primary),var(--secondary)) !important;
             border-bottom: 5px solid var(--accent) !important;
-            min-height: 140px !important;
+            min-height: 180px !important;
             max-height: none !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             transition: all 0.3s ease !important;
         }
 
         #sidebarLogoImage {
-            width: auto !important;
-            max-width: 240px !important;
+            width: 100% !important;
+            min-width: 200px !important;
+            max-width: 250px !important;
             height: auto !important;
-            min-height: 100px !important;
-            max-height: 120px !important;
-            object-fit: contain !important;
+            min-height: 120px !important;
+            max-height: 140px !important;
+            object-fit: cover !important;
             object-position: center !important;
             display: block !important;
             margin: 0 auto !important;
+            padding: 10px !important;
             background: transparent !important;
-            filter: brightness(1.15) contrast(1.1) drop-shadow(0 2px 10px rgba(0,0,0,0.3)) !important;
+            filter: brightness(1.2) contrast(1.15) drop-shadow(0 3px 15px rgba(0,0,0,0.4)) !important;
+            border-radius: 10px !important;
         }
 
         /* Quando há logo personalizado, esconder texto */
@@ -3193,6 +3196,10 @@ async function checkAuth(){
 }
 
 function showAuth(){
+    // SEMPRE forçar light mode na tela de login
+    document.documentElement.setAttribute('data-theme', 'light');
+    console.log('🌞 Tela de login: forçando light mode');
+
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('app').style.display='none';
 }
@@ -7188,13 +7195,23 @@ const ExportLibrary = {
         link.click();
         URL.revokeObjectURL(link.href);
 
-        Swal.fire({
-            icon: 'success',
-            title: 'CSV Exportado!',
-            text: `${data.length} registros exportados com sucesso`,
-            timer: 2000,
-            showConfirmButton: false
-        });
+        // Fechar qualquer modal anterior primeiro
+        Swal.close();
+
+        setTimeout(() => {
+            Swal.fire({
+                icon: 'success',
+                title: 'CSV Exportado!',
+                text: `${data.length} registros exportados com sucesso`,
+                timer: 2000,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                didClose: () => {
+                    console.log('✅ Modal CSV fechado');
+                }
+            });
+        }, 100);
     },
 
     /**
@@ -7268,13 +7285,23 @@ const ExportLibrary = {
             // Gerar arquivo
             XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Excel Gerado!',
-                text: `${data.length} registros exportados com sucesso`,
-                timer: 2000,
-                showConfirmButton: false
-            });
+            // Fechar qualquer modal anterior primeiro
+            Swal.close();
+
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Excel Gerado!',
+                    text: `${data.length} registros exportados com sucesso`,
+                    timer: 2000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    didClose: () => {
+                        console.log('✅ Modal de exportação fechado');
+                    }
+                });
+            }, 100);
 
         } catch (error) {
             console.error('Erro ao gerar Excel:', error);
