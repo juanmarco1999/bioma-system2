@@ -3567,6 +3567,691 @@ function formatarPermissao(permissao) {
     return map[permissao] || permissao;
 }
 
+// ==================== LAYOUT MELHORADO DO CONTRATO (Diretriz 1.3) ====================
+
+/**
+ * Imprimir contrato com layout profissional melhorado
+ */
+window.imprimirContratoMelhorado = async function(orcamentoId) {
+    try {
+        Swal.fire({
+            title: 'Gerando contrato...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Buscar orçamento
+        const response = await fetch(`/api/orcamentos/${orcamentoId}`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success || !data.orcamento) {
+            Swal.fire('Erro', 'Orçamento não encontrado', 'error');
+            return;
+        }
+
+        const orc = data.orcamento;
+
+        // Tentar gerar PDF via backend primeiro
+        const pdfRes = await fetch(`/api/orcamentos/${orcamentoId}/pdf`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (pdfRes.ok) {
+            // PDF gerado com sucesso - baixar
+            const blob = await pdfRes.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `contrato_${orc.numero || orcamentoId}_bioma.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Contrato Gerado!',
+                text: 'O PDF do contrato foi baixado com sucesso',
+                timer: 2500,
+                showConfirmButton: false
+            });
+        } else {
+            // Fallback: HTML melhorado
+            Swal.close();
+            gerarContratoHTML(orc, orcamentoId);
+        }
+
+    } catch (error) {
+        console.error('Erro ao imprimir contrato:', error);
+        Swal.fire('Erro', 'Não foi possível gerar o contrato', 'error');
+    }
+};
+
+/**
+ * Gerar HTML melhorado do contrato
+ */
+function gerarContratoHTML(orc, orcamentoId) {
+    const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    // Calcular totais
+    const subtotalServicos = (orc.servicos || []).reduce((acc, s) =>
+        acc + ((s.quantidade || 1) * (s.preco || 0)), 0);
+    const subtotalProdutos = (orc.produtos || []).reduce((acc, p) =>
+        acc + ((p.quantidade || 1) * (p.preco || 0)), 0);
+    const subtotal = subtotalServicos + subtotalProdutos;
+    const desconto = orc.desconto_global || 0;
+    const cashback = orc.cashback_valor || 0;
+    const total = orc.total_final || subtotal - desconto;
+
+    // Status badge
+    const statusColors = {
+        'pendente': '#FFA500',
+        'aprovado': '#28A745',
+        'cancelado': '#DC3545',
+        'em_andamento': '#007BFF'
+    };
+    const statusColor = statusColors[orc.status?.toLowerCase()] || '#6C757D';
+
+    const printWindow = window.open('', '_blank', 'width=1024,height=768');
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contrato de Serviços - BIOMA #${orc.numero || orcamentoId}</title>
+    <style>
+        /* Reset e Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20mm;
+            background: white;
+        }
+
+        /* Cabeçalho */
+        .header {
+            border-bottom: 4px solid #7C3AED;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .logo-section {
+            flex: 1;
+        }
+
+        .logo-placeholder {
+            width: 120px;
+            height: 60px;
+            background: linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .company-info {
+            font-size: 9pt;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .document-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #7C3AED;
+            margin-bottom: 5px;
+        }
+
+        .document-number {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background-color: ${statusColor};
+            color: white;
+            border-radius: 20px;
+            font-size: 10pt;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Informações do Cliente */
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #7C3AED;
+            border-bottom: 2px solid #E9ECEF;
+            padding-bottom: 8px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .client-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px 30px;
+            background: #F8F9FA;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #7C3AED;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 9pt;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 11pt;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Tabelas */
+        .table-container {
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+            color: white;
+        }
+
+        th {
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        th:last-child,
+        td:last-child {
+            text-align: right;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #E9ECEF;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #F8F9FA;
+        }
+
+        tbody tr:hover {
+            background-color: #EDE9FE;
+        }
+
+        td {
+            padding: 12px;
+            font-size: 10pt;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .item-desc {
+            font-size: 9pt;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        /* Totais */
+        .totals-section {
+            margin-top: 30px;
+            background: #F8F9FA;
+            border-radius: 8px;
+            padding: 20px;
+            border: 2px solid #E9ECEF;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 11pt;
+        }
+
+        .total-row.subtotal {
+            border-bottom: 1px solid #DEE2E6;
+        }
+
+        .total-row.discount {
+            color: #28A745;
+        }
+
+        .total-row.cashback {
+            color: #FFA500;
+        }
+
+        .total-row.final {
+            border-top: 2px solid #7C3AED;
+            margin-top: 10px;
+            padding-top: 15px;
+            font-size: 16pt;
+            font-weight: bold;
+            color: #7C3AED;
+        }
+
+        .total-label {
+            font-weight: 600;
+        }
+
+        .total-value {
+            font-weight: 700;
+        }
+
+        /* Termos e Condições */
+        .terms-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+            border-radius: 4px;
+        }
+
+        .terms-title {
+            font-weight: bold;
+            color: #92400E;
+            margin-bottom: 10px;
+            font-size: 12pt;
+        }
+
+        .terms-content {
+            font-size: 9pt;
+            color: #78350F;
+            line-height: 1.5;
+        }
+
+        /* Assinaturas */
+        .signatures {
+            margin-top: 60px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .signature-box {
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 2px solid #333;
+            margin-bottom: 12px;
+            padding-top: 60px;
+        }
+
+        .signature-label {
+            font-weight: 600;
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .signature-sublabel {
+            font-size: 8pt;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        /* Rodapé */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E9ECEF;
+            text-align: center;
+            font-size: 8pt;
+            color: #999;
+        }
+
+        .footer-row {
+            margin: 5px 0;
+        }
+
+        /* Watermark Status */
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            font-weight: bold;
+            color: ${statusColor};
+            opacity: 0.08;
+            z-index: -1;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        /* Botão de Impressão */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .print-button:hover {
+            background: linear-gradient(135deg, #6D28D9 0%, #5B21B6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
+            .container {
+                max-width: 100%;
+                padding: 15mm;
+            }
+
+            .print-button {
+                display: none;
+            }
+
+            .signatures {
+                page-break-inside: avoid;
+            }
+
+            .table-container {
+                page-break-inside: avoid;
+            }
+
+            .totals-section {
+                page-break-inside: avoid;
+            }
+
+            .terms-box {
+                page-break-inside: avoid;
+            }
+
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">${orc.status?.toUpperCase() || 'PENDENTE'}</div>
+
+    <button class="print-button" onclick="window.print()">
+        🖨️ Imprimir Contrato
+    </button>
+
+    <div class="container">
+        <!-- Cabeçalho -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo-placeholder">BIOMA</div>
+                <div class="company-info">
+                    <strong>BIOMA Estética & Bem-Estar</strong><br>
+                    CNPJ: 00.000.000/0001-00<br>
+                    contato@bioma.com.br | (11) 0000-0000
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="document-title">CONTRATO DE SERVIÇOS</div>
+                <div class="document-number">#${orc.numero || orcamentoId}</div>
+                <span class="status-badge">${orc.status || 'Pendente'}</span>
+                <div style="margin-top: 10px; font-size: 9pt; color: #666;">
+                    ${hoje}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações do Cliente -->
+        <div class="section-title">📋 Dados do Cliente</div>
+        <div class="client-info">
+            <div class="info-item">
+                <span class="info-label">Nome Completo</span>
+                <span class="info-value">${orc.cliente_nome || 'Não informado'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">CPF</span>
+                <span class="info-value">${orc.cliente_cpf || 'Não informado'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">E-mail</span>
+                <span class="info-value">${orc.cliente_email || 'Não informado'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Telefone</span>
+                <span class="info-value">${orc.cliente_telefone || 'Não informado'}</span>
+            </div>
+            ${orc.profissional_nome ? `
+                <div class="info-item">
+                    <span class="info-label">Profissional Responsável</span>
+                    <span class="info-value">${orc.profissional_nome}</span>
+                </div>
+            ` : ''}
+            <div class="info-item">
+                <span class="info-label">Forma de Pagamento</span>
+                <span class="info-value">${orc.forma_pagamento || 'A definir'}</span>
+            </div>
+        </div>
+
+        <!-- Serviços Contratados -->
+        ${(orc.servicos && orc.servicos.length > 0) ? `
+            <div class="section-title">💼 Serviços Contratados</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">Descrição do Serviço</th>
+                            <th style="width: 15%; text-align: center;">Quantidade</th>
+                            <th style="width: 17.5%;">Valor Unit.</th>
+                            <th style="width: 17.5%;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${orc.servicos.map(s => {
+                            const qtd = s.quantidade || 1;
+                            const preco = s.preco || 0;
+                            const total = qtd * preco;
+                            return `
+                                <tr>
+                                    <td>
+                                        <div class="item-name">${s.nome || 'Serviço'}</div>
+                                        ${s.descricao ? `<div class="item-desc">${s.descricao}</div>` : ''}
+                                    </td>
+                                    <td style="text-align: center;">${qtd}</td>
+                                    <td>R$ ${preco.toFixed(2)}</td>
+                                    <td><strong>R$ ${total.toFixed(2)}</strong></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        ` : ''}
+
+        <!-- Produtos Inclusos -->
+        ${(orc.produtos && orc.produtos.length > 0) ? `
+            <div class="section-title">📦 Produtos Inclusos</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">Descrição do Produto</th>
+                            <th style="width: 15%; text-align: center;">Quantidade</th>
+                            <th style="width: 17.5%;">Valor Unit.</th>
+                            <th style="width: 17.5%;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${orc.produtos.map(p => {
+                            const qtd = p.quantidade || 1;
+                            const preco = p.preco || 0;
+                            const total = qtd * preco;
+                            return `
+                                <tr>
+                                    <td>
+                                        <div class="item-name">${p.nome || 'Produto'}</div>
+                                        ${p.descricao ? `<div class="item-desc">${p.descricao}</div>` : ''}
+                                    </td>
+                                    <td style="text-align: center;">${qtd}</td>
+                                    <td>R$ ${preco.toFixed(2)}</td>
+                                    <td><strong>R$ ${total.toFixed(2)}</strong></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        ` : ''}
+
+        <!-- Totais -->
+        <div class="totals-section">
+            <div class="total-row subtotal">
+                <span class="total-label">Subtotal</span>
+                <span class="total-value">R$ ${subtotal.toFixed(2)}</span>
+            </div>
+            ${desconto > 0 ? `
+                <div class="total-row discount">
+                    <span class="total-label">Desconto Aplicado</span>
+                    <span class="total-value">- R$ ${desconto.toFixed(2)}</span>
+                </div>
+            ` : ''}
+            ${cashback > 0 ? `
+                <div class="total-row cashback">
+                    <span class="total-label">Cashback (a receber)</span>
+                    <span class="total-value">R$ ${cashback.toFixed(2)}</span>
+                </div>
+            ` : ''}
+            <div class="total-row final">
+                <span class="total-label">VALOR TOTAL</span>
+                <span class="total-value">R$ ${total.toFixed(2)}</span>
+            </div>
+        </div>
+
+        <!-- Termos e Condições -->
+        <div class="terms-box">
+            <div class="terms-title">📜 Termos e Condições</div>
+            <div class="terms-content">
+                ${orc.observacoes || `
+                    Este contrato é válido conforme os termos gerais de prestação de serviços da BIOMA.
+                    O cliente está ciente dos procedimentos a serem realizados e concorda com os valores apresentados.
+                    Os serviços serão executados conforme agendamento prévio e disponibilidade.
+                    Pagamentos devem ser realizados conforme a forma acordada.
+                `}
+            </div>
+        </div>
+
+        <!-- Assinaturas -->
+        <div class="signatures">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">${orc.cliente_nome || 'Cliente'}</div>
+                <div class="signature-sublabel">CPF: ${orc.cliente_cpf || '__________________'}</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-label">BIOMA Estética & Bem-Estar</div>
+                <div class="signature-sublabel">Representante Legal</div>
+            </div>
+        </div>
+
+        <!-- Rodapé -->
+        <div class="footer">
+            <div class="footer-row">
+                <strong>BIOMA Estética & Bem-Estar</strong> | CNPJ: 00.000.000/0001-00
+            </div>
+            <div class="footer-row">
+                Endereço: Rua Exemplo, 123 - Bairro - Cidade/UF - CEP 00000-000
+            </div>
+            <div class="footer-row">
+                contato@bioma.com.br | (11) 0000-0000 | www.bioma.com.br
+            </div>
+            <div class="footer-row" style="margin-top: 10px; font-size: 7pt;">
+                Documento gerado em ${new Date().toLocaleString('pt-BR')} | Contrato #${orc.numero || orcamentoId}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    `);
+
+    printWindow.document.close();
+}
+
 // Carregar perfil automaticamente ao carregar a página
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', carregarPerfilUsuario);
@@ -3577,4 +4262,5 @@ if (document.readyState === 'loading') {
 console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
 console.log('✅ Histórico de Atendimentos carregado (12.4)');
 console.log('✅ Sistema de Níveis de Acesso carregado (5.1)');
+console.log('✅ Layout Melhorado do Contrato carregado (1.3)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
