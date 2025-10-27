@@ -2312,4 +2312,441 @@ window.deletarMulticomissao = async function(regraId) {
 };
 
 console.log('✅ Sistema de Multicomissão carregado (12.1)');
+
+// ============================================================================
+// MELHORIAS NOS PROFISSIONAIS (Diretrizes 12.2 e 12.3)
+// ============================================================================
+
+/**
+ * Visualizar profissional com detalhes completos
+ * Diretriz 12.2: Detalhes muito mais completos
+ */
+window.visualizarProfissionalCompleto = async function(profissionalId) {
+    try {
+        Swal.fire({
+            title: 'Carregando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Carregar dados completos do profissional
+        const response = await fetch(`/api/profissionais/${profissionalId}/completo`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Erro', 'Profissional não encontrado', 'error');
+            return;
+        }
+
+        const prof = data.profissional;
+        const stats = data.estatisticas || {};
+
+        // Formatação de valores
+        const formatMoney = (val) => `R$ ${(val || 0).toFixed(2)}`;
+        const formatPercent = (val) => `${(val || 0).toFixed(1)}%`;
+
+        Swal.fire({
+            title: `<i class="bi bi-person-badge"></i> ${prof.nome}`,
+            html: `
+                <div style="text-align: left; max-height: 700px; overflow-y: auto; padding: 15px;">
+
+                    <!-- Informações Básicas -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <p style="margin: 5px 0;"><strong>CPF:</strong> ${prof.cpf || 'Não informado'}</p>
+                        <p style="margin: 5px 0;"><strong>Telefone:</strong> ${prof.telefone || 'Não informado'}</p>
+                        <p style="margin: 5px 0;"><strong>Email:</strong> ${prof.email || 'Não informado'}</p>
+                        <p style="margin: 5px 0;"><strong>Especialidade:</strong> ${prof.especialidade || 'Não informado'}</p>
+                        <p style="margin: 5px 0;"><strong>Comissão:</strong> <span class="badge bg-success">${prof.comissao_percentual || 10}%</span></p>
+                    </div>
+
+                    <!-- Estatísticas de Performance -->
+                    <h5 style="color: #7C3AED; margin-bottom: 15px;">
+                        <i class="bi bi-graph-up"></i> Estatísticas de Performance
+                    </h5>
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #7C3AED;">
+                                <small class="text-muted">Total de Atendimentos</small>
+                                <h4 style="margin: 5px 0; color: #7C3AED;">${stats.total_atendimentos || 0}</h4>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #10B981;">
+                                <small class="text-muted">Faturamento Total</small>
+                                <h4 style="margin: 5px 0; color: #10B981;">${formatMoney(stats.faturamento_total)}</h4>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #3B82F6;">
+                                <small class="text-muted">Comissões Ganhas</small>
+                                <h4 style="margin: 5px 0; color: #3B82F6;">${formatMoney(stats.comissoes_total)}</h4>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #F59E0B;">
+                                <small class="text-muted">Ticket Médio</small>
+                                <h4 style="margin: 5px 0; color: #F59E0B;">${formatMoney(stats.ticket_medio)}</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Serviços Realizados -->
+                    <h5 style="color: #7C3AED; margin-bottom: 15px;">
+                        <i class="bi bi-list-check"></i> Top 5 Serviços
+                    </h5>
+                    <div class="mb-4">
+                        ${stats.top_servicos && stats.top_servicos.length > 0
+                            ? stats.top_servicos.map((s, idx) => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: ${idx % 2 === 0 ? '#f8f9fa' : '#fff'}; border-radius: 4px; margin-bottom: 5px;">
+                                    <span><strong>${idx + 1}.</strong> ${s.servico || 'N/A'}</span>
+                                    <span class="badge bg-primary">${s.quantidade} vezes</span>
+                                </div>
+                            `).join('')
+                            : '<p class="text-muted text-center">Nenhum serviço realizado ainda</p>'
+                        }
+                    </div>
+
+                    <!-- Agenda do Mês -->
+                    <h5 style="color: #7C3AED; margin-bottom: 15px;">
+                        <i class="bi bi-calendar-week"></i> Agenda do Mês
+                    </h5>
+                    <div class="mb-4">
+                        <p><strong>Agendamentos este mês:</strong> ${stats.agendamentos_mes || 0}</p>
+                        <p><strong>Dias trabalhados:</strong> ${stats.dias_trabalhados || 0}</p>
+                        <p><strong>Taxa de ocupação:</strong> <span class="badge bg-info">${formatPercent(stats.taxa_ocupacao)}</span></p>
+                    </div>
+
+                    <!-- Ações Rápidas -->
+                    <div style="margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h6 style="margin-bottom: 15px;"><i class="bi bi-lightning-fill"></i> Ações Rápidas</h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="enviarOrdemServico('${profissionalId}', '${prof.nome}', '${prof.email || ''}', '${prof.telefone || ''}')">
+                                <i class="bi bi-file-earmark-text"></i> Enviar Ordem de Serviço
+                            </button>
+                            <button class="btn btn-success" onclick="notificarProfissional('${profissionalId}', '${prof.nome}', '${prof.email || ''}', '${prof.telefone || ''}')">
+                                <i class="bi bi-bell"></i> Enviar Notificação
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            `,
+            width: '800px',
+            showCloseButton: true,
+            showConfirmButton: false,
+            customClass: {
+                popup: 'profissional-completo-modal'
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar profissional:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os dados do profissional', 'error');
+    }
+};
+
+/**
+ * Enviar ordem de serviço para profissional
+ * Diretriz 12.3: Email/WhatsApp para ordens de serviço
+ */
+window.enviarOrdemServico = async function(profissionalId, nomeProfissional, email, telefone) {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong>📋 Ordem de Serviço</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px; max-height: 600px; overflow-y: auto;">
+
+                <p><strong>Profissional:</strong> ${nomeProfissional}</p>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-calendar-event"></i> Data do Serviço *
+                    </label>
+                    <input type="date" id="os_data" class="form-control"
+                           value="${new Date().toISOString().split('T')[0]}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-clock"></i> Horário *
+                    </label>
+                    <input type="time" id="os_horario" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-person"></i> Cliente
+                    </label>
+                    <input type="text" id="os_cliente" class="form-control"
+                           placeholder="Nome do cliente">
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-list-task"></i> Serviço a Realizar *
+                    </label>
+                    <input type="text" id="os_servico" class="form-control"
+                           placeholder="Ex: Limpeza de Pele Profunda" required>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-geo-alt"></i> Local
+                    </label>
+                    <input type="text" id="os_local" class="form-control"
+                           placeholder="Endereço ou sala" value="Clínica Principal">
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        <i class="bi bi-chat-left-text"></i> Observações
+                    </label>
+                    <textarea id="os_observacoes" class="form-control" rows="3"
+                              placeholder="Instruções especiais, materiais necessários, etc..."></textarea>
+                </div>
+
+                <div class="mb-3" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">
+                        <i class="bi bi-send"></i> Enviar Ordem por (Diretriz 12.3)
+                    </label>
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="os_notif_whatsapp"
+                               ${telefone ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="os_notif_whatsapp">
+                            <i class="bi bi-whatsapp" style="color: #25D366;"></i> WhatsApp
+                            ${!telefone ? '<span class="text-muted">(sem telefone)</span>' : ''}
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="os_notif_email"
+                               ${email ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="os_notif_email">
+                            <i class="bi bi-envelope-fill" style="color: #3B82F6;"></i> Email
+                            ${!email ? '<span class="text-muted">(sem email)</span>' : ''}
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-send-fill"></i> Enviar Ordem',
+        cancelButtonText: 'Cancelar',
+        width: '650px',
+        preConfirm: () => {
+            const data = document.getElementById('os_data').value;
+            const horario = document.getElementById('os_horario').value;
+            const cliente = document.getElementById('os_cliente').value.trim();
+            const servico = document.getElementById('os_servico').value.trim();
+            const local = document.getElementById('os_local').value.trim();
+            const observacoes = document.getElementById('os_observacoes').value.trim();
+            const notifWhatsApp = document.getElementById('os_notif_whatsapp').checked;
+            const notifEmail = document.getElementById('os_notif_email').checked;
+
+            // Validações
+            if (!data || !horario || !servico) {
+                Swal.showValidationMessage('Data, horário e serviço são obrigatórios');
+                return false;
+            }
+
+            if (!notifWhatsApp && !notifEmail) {
+                Swal.showValidationMessage('Selecione pelo menos um método de envio');
+                return false;
+            }
+
+            return {
+                data,
+                horario,
+                cliente: cliente || 'Não especificado',
+                servico,
+                local: local || 'Não especificado',
+                observacoes: observacoes || '',
+                notificacoes: {
+                    whatsapp: notifWhatsApp,
+                    email: notifEmail
+                }
+            };
+        }
+    });
+
+    if (formValues) {
+        await processarOrdemServico(profissionalId, nomeProfissional, email, telefone, formValues);
+    }
+};
+
+/**
+ * Processar envio de ordem de serviço
+ */
+async function processarOrdemServico(profissionalId, nomeProfissional, email, telefone, dados) {
+    try {
+        Swal.fire({
+            title: 'Enviando...',
+            text: 'Processando ordem de serviço',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch(`/api/profissionais/${profissionalId}/ordem-servico`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                profissional_nome: nomeProfissional,
+                profissional_email: email,
+                profissional_telefone: telefone,
+                ...dados
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let mensagemSucesso = '<p><strong>Ordem de serviço enviada com sucesso!</strong></p>';
+
+            if (result.notificacoes_enviadas) {
+                mensagemSucesso += '<div style="margin-top: 10px; padding: 10px; background: #f0fdf4; border-radius: 4px;">';
+                mensagemSucesso += '<strong style="color: #059669;">Enviado por:</strong><br>';
+                if (result.notificacoes_enviadas.whatsapp) mensagemSucesso += '✓ WhatsApp<br>';
+                if (result.notificacoes_enviadas.email) mensagemSucesso += '✓ Email';
+                mensagemSucesso += '</div>';
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Enviado!',
+                html: mensagemSucesso,
+                timer: 3000
+            });
+
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível enviar a ordem', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao enviar ordem de serviço:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+/**
+ * Notificar profissional diretamente
+ * Diretriz 12.3: Notificações Email/WhatsApp
+ */
+window.notificarProfissional = async function(profissionalId, nomeProfissional, email, telefone) {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong>📧 Notificar Profissional</strong>',
+        html: `
+            <div style="text-align: left; padding: 10px;">
+                <p><strong>Profissional:</strong> ${nomeProfissional}</p>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Tipo de Notificação
+                    </label>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="prof_notif_whatsapp"
+                               ${telefone ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="prof_notif_whatsapp">
+                            <i class="bi bi-whatsapp" style="color: #25D366;"></i> WhatsApp
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="prof_notif_email"
+                               ${email ? 'checked' : 'disabled'}>
+                        <label class="form-check-label" for="prof_notif_email">
+                            <i class="bi bi-envelope-fill" style="color: #3B82F6;"></i> Email
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                        Mensagem
+                    </label>
+                    <textarea id="prof_notif_mensagem" class="form-control" rows="4"
+                              placeholder="Digite a mensagem para o profissional..."></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="bi bi-send"></i> Enviar',
+        cancelButtonText: 'Cancelar',
+        width: '550px',
+        preConfirm: () => {
+            const whatsapp = document.getElementById('prof_notif_whatsapp').checked;
+            const emailNotif = document.getElementById('prof_notif_email').checked;
+            const mensagem = document.getElementById('prof_notif_mensagem').value.trim();
+
+            if (!whatsapp && !emailNotif) {
+                Swal.showValidationMessage('Selecione pelo menos um tipo de notificação');
+                return false;
+            }
+
+            if (!mensagem) {
+                Swal.showValidationMessage('A mensagem é obrigatória');
+                return false;
+            }
+
+            return { whatsapp, email: emailNotif, mensagem };
+        }
+    });
+
+    if (formValues) {
+        await enviarNotificacaoProfissional(profissionalId, nomeProfissional, email, telefone, formValues);
+    }
+};
+
+/**
+ * Enviar notificação ao profissional
+ */
+async function enviarNotificacaoProfissional(profissionalId, nomeProfissional, email, telefone, dados) {
+    try {
+        Swal.fire({
+            title: 'Enviando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch(`/api/profissionais/${profissionalId}/notificar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                profissional_nome: nomeProfissional,
+                profissional_email: email,
+                profissional_telefone: telefone,
+                mensagem: dados.mensagem,
+                notificacoes: {
+                    whatsapp: dados.whatsapp,
+                    email: dados.email
+                }
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            let msg = '<strong>Notificação enviada com sucesso!</strong><br>';
+            if (result.notificacoes_enviadas.whatsapp) msg += '✓ WhatsApp<br>';
+            if (result.notificacoes_enviadas.email) msg += '✓ Email';
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Enviado!',
+                html: msg,
+                timer: 2500
+            });
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível enviar a notificação', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao enviar notificação:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
