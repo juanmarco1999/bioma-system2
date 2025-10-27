@@ -1906,4 +1906,410 @@ async function enviarNotificacaoCliente(cpf, nomeCliente, email, telefone, dados
 }
 
 console.log('✅ Sistema de Anamnese/Prontuário completo carregado (11.1, 11.3, 11.4)');
+
+// ============================================================================
+// SISTEMA DE MULTICOMISSÃO (Diretriz 12.1)
+// ============================================================================
+
+/**
+ * Carregar regras de multicomissão
+ * Diretriz 12.1: Comissão sobre comissão (assistente recebe % da comissão do profissional)
+ */
+window.carregarMulticomissoes = async function() {
+    try {
+        const response = await fetch('/api/multicomissao/regras', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const regras = data.regras || [];
+            const container = document.getElementById('multicomissoesBody');
+
+            if (regras.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            <i class="bi bi-info-circle"></i> Nenhuma regra de multicomissão cadastrada
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            container.innerHTML = regras.map(regra => {
+                const statusBadge = regra.ativa
+                    ? '<span class="badge bg-success">Ativa</span>'
+                    : '<span class="badge bg-secondary">Inativa</span>';
+
+                return `
+                    <tr>
+                        <td><strong>${regra.profissional_principal_nome || 'N/A'}</strong></td>
+                        <td>${regra.assistente_nome || 'N/A'}</td>
+                        <td><span class="badge bg-primary">${regra.percentual_assistente}%</span></td>
+                        <td>${regra.servicos_especificos ? 'Específicos' : 'Todos'}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="visualizarMulticomissao('${regra._id}')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="editarMulticomissao('${regra._id}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm ${regra.ativa ? 'btn-secondary' : 'btn-success'}"
+                                    onclick="toggleMulticomissao('${regra._id}', ${!regra.ativa})">
+                                <i class="bi bi-${regra.ativa ? 'pause' : 'play'}-fill"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deletarMulticomissao('${regra._id}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+        } else {
+            console.error('Erro ao carregar multicomissões:', data.message);
+        }
+
+    } catch (error) {
+        console.error('Erro ao carregar multicomissões:', error);
+    }
+};
+
+/**
+ * Modal para nova regra de multicomissão
+ */
+window.novaMulticomissao = async function() {
+    try {
+        // Carregar profissionais
+        const profRes = await fetch('/api/profissionais', { credentials: 'include' });
+        const profData = await profRes.json();
+        const profissionais = profData.profissionais || [];
+
+        if (profissionais.length < 2) {
+            Swal.fire('Atenção', 'É necessário ter pelo menos 2 profissionais cadastrados', 'warning');
+            return;
+        }
+
+        const profOptions = profissionais.map(p =>
+            `<option value="${p._id}">${p.nome} - ${p.especialidade || 'Geral'}</option>`
+        ).join('');
+
+        const { value: formValues } = await Swal.fire({
+            title: '<strong>💰 Nova Regra de Multicomissão</strong>',
+            html: `
+                <div style="text-align: left; padding: 10px; max-height: 600px; overflow-y: auto;">
+
+                    <div class="alert alert-info" style="font-size: 0.9rem;">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Como funciona:</strong> O assistente receberá uma porcentagem da comissão
+                        que o profissional principal recebe em cada atendimento.
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-person-fill"></i> Profissional Principal *
+                        </label>
+                        <select id="multi_profissional_principal" class="form-control" required>
+                            <option value="">-- Selecione o profissional principal --</option>
+                            ${profOptions}
+                        </select>
+                        <small class="text-muted">Quem realiza o atendimento</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-person-badge"></i> Assistente *
+                        </label>
+                        <select id="multi_assistente" class="form-control" required>
+                            <option value="">-- Selecione o assistente --</option>
+                            ${profOptions}
+                        </select>
+                        <small class="text-muted">Quem auxilia no atendimento</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-percent"></i> Percentual da Comissão do Profissional *
+                        </label>
+                        <input type="number" id="multi_percentual" class="form-control"
+                               min="1" max="100" step="0.5" value="20" required>
+                        <small class="text-muted">
+                            Exemplo: Se o profissional recebe 10% de comissão e você configurar 20%,
+                            o assistente receberá 2% do valor total (20% de 10%)
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-calendar-range"></i> Período de Vigência
+                        </label>
+                        <div class="row">
+                            <div class="col-6">
+                                <label>Data Início</label>
+                                <input type="date" id="multi_data_inicio" class="form-control"
+                                       value="${new Date().toISOString().split('T')[0]}">
+                            </div>
+                            <div class="col-6">
+                                <label>Data Fim (opcional)</label>
+                                <input type="date" id="multi_data_fim" class="form-control">
+                            </div>
+                        </div>
+                        <small class="text-muted">Deixe a data fim vazia para vigência indeterminada</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">
+                            <i class="bi bi-list-task"></i> Observações (opcional)
+                        </label>
+                        <textarea id="multi_observacoes" class="form-control" rows="2"
+                                  placeholder="Detalhes sobre esta regra..."></textarea>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="multi_ativa" checked>
+                        <label class="form-check-label" for="multi_ativa">
+                            <strong>Regra ativa</strong>
+                        </label>
+                    </div>
+
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-check-circle"></i> Criar Regra',
+            cancelButtonText: 'Cancelar',
+            width: '700px',
+            preConfirm: () => {
+                const profPrincipalId = document.getElementById('multi_profissional_principal').value;
+                const assistenteId = document.getElementById('multi_assistente').value;
+                const percentual = parseFloat(document.getElementById('multi_percentual').value);
+                const dataInicio = document.getElementById('multi_data_inicio').value;
+                const dataFim = document.getElementById('multi_data_fim').value;
+                const observacoes = document.getElementById('multi_observacoes').value.trim();
+                const ativa = document.getElementById('multi_ativa').checked;
+
+                // Validações
+                if (!profPrincipalId || !assistenteId) {
+                    Swal.showValidationMessage('Profissional principal e assistente são obrigatórios');
+                    return false;
+                }
+
+                if (profPrincipalId === assistenteId) {
+                    Swal.showValidationMessage('Profissional principal e assistente não podem ser a mesma pessoa');
+                    return false;
+                }
+
+                if (!percentual || percentual < 1 || percentual > 100) {
+                    Swal.showValidationMessage('Percentual deve estar entre 1% e 100%');
+                    return false;
+                }
+
+                if (!dataInicio) {
+                    Swal.showValidationMessage('Data de início é obrigatória');
+                    return false;
+                }
+
+                return {
+                    profissional_principal_id: profPrincipalId,
+                    assistente_id: assistenteId,
+                    percentual_assistente: percentual,
+                    data_inicio: dataInicio,
+                    data_fim: dataFim || null,
+                    observacoes: observacoes || null,
+                    ativa: ativa
+                };
+            }
+        });
+
+        if (formValues) {
+            await salvarMulticomissao(formValues);
+        }
+
+    } catch (error) {
+        console.error('Erro ao abrir modal de multicomissão:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os dados', 'error');
+    }
+};
+
+/**
+ * Salvar regra de multicomissão
+ */
+async function salvarMulticomissao(dados) {
+    try {
+        Swal.fire({
+            title: 'Salvando...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch('/api/multicomissao/regras', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(dados)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Regra Criada!',
+                html: `
+                    <p><strong>Profissional:</strong> ${result.profissional_principal_nome}</p>
+                    <p><strong>Assistente:</strong> ${result.assistente_nome}</p>
+                    <p><strong>Comissão do Assistente:</strong> ${result.percentual_assistente}% da comissão do profissional</p>
+                `,
+                timer: 3000
+            });
+
+            // Recarregar lista
+            if (typeof carregarMulticomissoes === 'function') {
+                carregarMulticomissoes();
+            }
+
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível criar a regra', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao salvar multicomissão:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+}
+
+/**
+ * Visualizar detalhes da regra de multicomissão
+ */
+window.visualizarMulticomissao = async function(regraId) {
+    try {
+        const response = await fetch(`/api/multicomissao/regras/${regraId}`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const regra = data.regra;
+            const calculos = data.calculos || {};
+
+            Swal.fire({
+                title: '<i class="bi bi-graph-up"></i> Detalhes da Multicomissão',
+                html: `
+                    <div style="text-align: left; padding: 15px;">
+                        <h5 style="color: #7C3AED; margin-bottom: 15px;">Configuração</h5>
+                        <p><strong>Profissional Principal:</strong> ${regra.profissional_principal_nome}</p>
+                        <p><strong>Assistente:</strong> ${regra.assistente_nome}</p>
+                        <p><strong>Percentual:</strong> <span class="badge bg-primary">${regra.percentual_assistente}%</span> da comissão do profissional</p>
+                        <p><strong>Período:</strong> ${regra.data_inicio} ${regra.data_fim ? 'até ' + regra.data_fim : '(indeterminado)'}</p>
+                        <p><strong>Status:</strong> ${regra.ativa ? '<span class="badge bg-success">Ativa</span>' : '<span class="badge bg-secondary">Inativa</span>'}</p>
+                        ${regra.observacoes ? `<p><strong>Observações:</strong> ${regra.observacoes}</p>` : ''}
+
+                        <hr>
+
+                        <h5 style="color: #7C3AED; margin-bottom: 15px;">Estatísticas</h5>
+                        <p><strong>Total de Atendimentos:</strong> ${calculos.total_atendimentos || 0}</p>
+                        <p><strong>Valor Total Gerado:</strong> R$ ${(calculos.valor_total || 0).toFixed(2)}</p>
+                        <p><strong>Comissão do Profissional:</strong> R$ ${(calculos.comissao_profissional || 0).toFixed(2)}</p>
+                        <p><strong>Comissão do Assistente:</strong> <span style="color: #10B981; font-weight: bold;">R$ ${(calculos.comissao_assistente || 0).toFixed(2)}</span></p>
+                    </div>
+                `,
+                width: '600px',
+                showCloseButton: true,
+                showConfirmButton: false
+            });
+
+        } else {
+            Swal.fire('Erro', data.message || 'Não foi possível carregar os detalhes', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao visualizar multicomissão:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os dados', 'error');
+    }
+};
+
+/**
+ * Ativar/Desativar regra de multicomissão
+ */
+window.toggleMulticomissao = async function(regraId, novoStatus) {
+    try {
+        const response = await fetch(`/api/multicomissao/regras/${regraId}/toggle`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ ativa: novoStatus })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: novoStatus ? 'Regra Ativada!' : 'Regra Desativada!',
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            // Recarregar lista
+            if (typeof carregarMulticomissoes === 'function') {
+                carregarMulticomissoes();
+            }
+
+        } else {
+            Swal.fire('Erro', result.message || 'Não foi possível alterar o status', 'error');
+        }
+
+    } catch (error) {
+        console.error('Erro ao toggle multicomissão:', error);
+        Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+    }
+};
+
+/**
+ * Deletar regra de multicomissão
+ */
+window.deletarMulticomissao = async function(regraId) {
+    const result = await Swal.fire({
+        title: 'Confirmar exclusão?',
+        text: 'Esta ação não pode ser desfeita!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sim, deletar!',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const response = await fetch(`/api/multicomissao/regras/${regraId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                Swal.fire('Deletado!', 'Regra removida com sucesso', 'success');
+
+                // Recarregar lista
+                if (typeof carregarMulticomissoes === 'function') {
+                    carregarMulticomissoes();
+                }
+
+            } else {
+                Swal.fire('Erro', data.message || 'Não foi possível deletar a regra', 'error');
+            }
+
+        } catch (error) {
+            console.error('Erro ao deletar multicomissão:', error);
+            Swal.fire('Erro', 'Não foi possível processar a solicitação', 'error');
+        }
+    }
+};
+
+console.log('✅ Sistema de Multicomissão carregado (12.1)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');

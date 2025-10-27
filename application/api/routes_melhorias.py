@@ -1927,6 +1927,294 @@ Equipe BIOMA"""
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ==================== MULTICOMISSÃO (Diretriz 12.1) ====================
+
+@bp.route('/api/multicomissao/regras', methods=['GET'])
+def get_multicomissao_regras():
+    """
+    Listar todas as regras de multicomissão
+    Diretriz 12.1: Comissão sobre comissão
+    """
+    try:
+        db = get_db()
+
+        # Buscar todas as regras
+        regras = list(db.multicomissao.find().sort('created_at', -1))
+
+        # Enricher com nomes dos profissionais
+        for regra in regras:
+            prof_principal = db.profissionais.find_one({'_id': ObjectId(regra['profissional_principal_id'])})
+            assistente = db.profissionais.find_one({'_id': ObjectId(regra['assistente_id'])})
+
+            regra['profissional_principal_nome'] = prof_principal.get('nome') if prof_principal else 'N/A'
+            regra['assistente_nome'] = assistente.get('nome') if assistente else 'N/A'
+
+        return jsonify({
+            'success': True,
+            'regras': convert_objectid(regras)
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao listar regras de multicomissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/multicomissao/regras', methods=['POST'])
+def criar_multicomissao_regra():
+    """
+    Criar nova regra de multicomissão
+    Diretriz 12.1: Assistente recebe % da comissão do profissional
+    """
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        # Validações
+        prof_principal_id = data.get('profissional_principal_id')
+        assistente_id = data.get('assistente_id')
+        percentual_assistente = data.get('percentual_assistente')
+
+        if not prof_principal_id or not assistente_id:
+            return jsonify({'success': False, 'message': 'Profissional e assistente são obrigatórios'}), 400
+
+        if prof_principal_id == assistente_id:
+            return jsonify({'success': False, 'message': 'Profissional e assistente não podem ser a mesma pessoa'}), 400
+
+        if not percentual_assistente or percentual_assistente < 1 or percentual_assistente > 100:
+            return jsonify({'success': False, 'message': 'Percentual deve estar entre 1% e 100%'}), 400
+
+        # Buscar informações dos profissionais
+        prof_principal = db.profissionais.find_one({'_id': ObjectId(prof_principal_id)})
+        assistente = db.profissionais.find_one({'_id': ObjectId(assistente_id)})
+
+        if not prof_principal or not assistente:
+            return jsonify({'success': False, 'message': 'Profissional ou assistente não encontrado'}), 404
+
+        # Criar documento
+        documento = {
+            'profissional_principal_id': prof_principal_id,
+            'profissional_principal_nome': prof_principal.get('nome'),
+            'assistente_id': assistente_id,
+            'assistente_nome': assistente.get('nome'),
+            'percentual_assistente': percentual_assistente,
+            'data_inicio': data.get('data_inicio'),
+            'data_fim': data.get('data_fim'),
+            'observacoes': data.get('observacoes'),
+            'ativa': data.get('ativa', True),
+            'created_at': datetime.now(),
+            'created_by': session.get('usuario', 'Sistema')
+        }
+
+        result = db.multicomissao.insert_one(documento)
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'multicomissao_criada',
+            'usuario': session.get('usuario', 'Sistema'),
+            'descricao': f'Regra de multicomissão criada: {prof_principal.get("nome")} → {assistente.get("nome")}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'regra_id': str(result.inserted_id),
+                'percentual': percentual_assistente
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'regra_id': str(result.inserted_id),
+            'profissional_principal_nome': prof_principal.get('nome'),
+            'assistente_nome': assistente.get('nome'),
+            'percentual_assistente': percentual_assistente,
+            'message': 'Regra criada com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao criar regra de multicomissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/multicomissao/regras/<regra_id>')
+def get_multicomissao_regra(regra_id):
+    """
+    Visualizar regra com cálculos estatísticos
+    Diretriz 12.1: Mostrar valores já pagos
+    """
+    try:
+        db = get_db()
+
+        # Buscar regra
+        regra = db.multicomissao.find_one({'_id': ObjectId(regra_id)})
+        if not regra:
+            return jsonify({'success': False, 'message': 'Regra não encontrada'}), 404
+
+        # Buscar informações dos profissionais
+        prof_principal = db.profissionais.find_one({'_id': ObjectId(regra['profissional_principal_id'])})
+        assistente = db.profissionais.find_one({'_id': ObjectId(regra['assistente_id'])})
+
+        regra['profissional_principal_nome'] = prof_principal.get('nome') if prof_principal else 'N/A'
+        regra['assistente_nome'] = assistente.get('nome') if assistente else 'N/A'
+
+        # CALCULAR ESTATÍSTICAS
+        calculos = calcular_multicomissao(db, regra, prof_principal)
+
+        return jsonify({
+            'success': True,
+            'regra': convert_objectid(regra),
+            'calculos': calculos
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar regra de multicomissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def calcular_multicomissao(db, regra, prof_principal):
+    """
+    Calcular estatísticas de multicomissão
+
+    Lógica:
+    1. Buscar orçamentos aprovados do profissional principal
+    2. Calcular comissão do profissional (X% do valor total)
+    3. Calcular comissão do assistente (Y% da comissão do profissional)
+    """
+    try:
+        # Filtro de data
+        query = {
+            'profissional_id': regra['profissional_principal_id'],
+            'status': 'aprovado'
+        }
+
+        # Se houver período definido
+        if regra.get('data_inicio'):
+            query['data_criacao'] = {'$gte': regra['data_inicio']}
+
+        if regra.get('data_fim'):
+            if 'data_criacao' in query:
+                query['data_criacao']['$lte'] = regra['data_fim']
+            else:
+                query['data_criacao'] = {'$lte': regra['data_fim']}
+
+        # Buscar orçamentos
+        orcamentos = list(db.orcamentos.find(query))
+
+        total_atendimentos = len(orcamentos)
+        valor_total = sum(orc.get('valor_total', 0) for orc in orcamentos)
+
+        # Percentual de comissão do profissional principal
+        percentual_prof = prof_principal.get('comissao_percentual', 10) if prof_principal else 10
+
+        # Comissão do profissional principal
+        comissao_profissional = (valor_total * percentual_prof) / 100
+
+        # Comissão do assistente = X% da comissão do profissional
+        percentual_assistente = regra.get('percentual_assistente', 0)
+        comissao_assistente = (comissao_profissional * percentual_assistente) / 100
+
+        return {
+            'total_atendimentos': total_atendimentos,
+            'valor_total': valor_total,
+            'percentual_profissional': percentual_prof,
+            'comissao_profissional': comissao_profissional,
+            'percentual_assistente': percentual_assistente,
+            'comissao_assistente': comissao_assistente
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao calcular multicomissão: {e}")
+        return {
+            'total_atendimentos': 0,
+            'valor_total': 0,
+            'comissao_profissional': 0,
+            'comissao_assistente': 0
+        }
+
+
+@bp.route('/api/multicomissao/regras/<regra_id>/toggle', methods=['PUT'])
+def toggle_multicomissao_regra(regra_id):
+    """
+    Ativar/Desativar regra de multicomissão
+    """
+    try:
+        db = get_db()
+        data = request.get_json()
+
+        nova_status = data.get('ativa', True)
+
+        result = db.multicomissao.update_one(
+            {'_id': ObjectId(regra_id)},
+            {'$set': {
+                'ativa': nova_status,
+                'updated_at': datetime.now(),
+                'updated_by': session.get('usuario', 'Sistema')
+            }}
+        )
+
+        if result.matched_count == 0:
+            return jsonify({'success': False, 'message': 'Regra não encontrada'}), 404
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'multicomissao_toggle',
+            'usuario': session.get('usuario', 'Sistema'),
+            'descricao': f'Regra de multicomissão {"ativada" if nova_status else "desativada"}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'regra_id': regra_id,
+                'nova_status': nova_status
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'message': f'Regra {"ativada" if nova_status else "desativada"} com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao toggle regra de multicomissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/multicomissao/regras/<regra_id>', methods=['DELETE'])
+def deletar_multicomissao_regra(regra_id):
+    """
+    Deletar regra de multicomissão
+    """
+    try:
+        db = get_db()
+
+        # Buscar regra para auditoria
+        regra = db.multicomissao.find_one({'_id': ObjectId(regra_id)})
+        if not regra:
+            return jsonify({'success': False, 'message': 'Regra não encontrada'}), 404
+
+        # Deletar
+        result = db.multicomissao.delete_one({'_id': ObjectId(regra_id)})
+
+        if result.deleted_count == 0:
+            return jsonify({'success': False, 'message': 'Regra não encontrada'}), 404
+
+        # Auditoria
+        db.auditoria.insert_one({
+            'tipo': 'multicomissao_deletada',
+            'usuario': session.get('usuario', 'Sistema'),
+            'descricao': f'Regra de multicomissão deletada: {regra.get("profissional_principal_nome")} → {regra.get("assistente_nome")}',
+            'data_hora': datetime.now(),
+            'detalhes': {
+                'regra_id': regra_id
+            }
+        })
+
+        return jsonify({
+            'success': True,
+            'message': 'Regra deletada com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao deletar regra de multicomissão: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 logger.info("✅ Rotas de melhorias carregadas com sucesso")
 logger.info("✅ Sistema de Fila Inteligente carregado (Diretrizes 10.1 e 10.2)")
 logger.info("✅ Sistema de Anamnese/Prontuário carregado (Diretrizes 11.1, 11.3, 11.4)")
+logger.info("✅ Sistema de Multicomissão carregado (Diretriz 12.1)")
