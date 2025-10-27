@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v3.7 - Sistema Completo">
+    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v4.0 - Sistema Completo">
     <meta name="author" content="Juan Marco (@juanmarco1999)">
-    <title>BIOMA Uberaba v3.7 - Sistema Profissional</title>
+    <title>BIOMA Uberaba v4.0 - Sistema Profissional</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- BIOMA v3.7 - Melhorias e Correções -->
+    <!-- BIOMA v4.0 - Melhorias e Correções -->
     <link rel="stylesheet" href="/static/css/correcoes-v37.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -240,7 +240,7 @@
             <img id="authLogoCustom" alt="Logo personalizado" style="display:none;max-height:120px;margin:0 auto 20px;">
             <div class="logo-icon">🌳</div>
             <h2>BIOMA</h2>
-            <p>Uberaba - v3.7</p>
+            <p>Uberaba - v4.0</p>
         </div>
         <ul class="nav nav-pills nav-fill mb-4">
             <li class="nav-item"><button class="nav-link active" id="loginTab" onclick="switchTab('login')"><i class="bi bi-box-arrow-in-right"></i> Login</button></li>
@@ -270,7 +270,7 @@
 
 <div id="app">
     <nav class="sidebar">
-        <div class="sidebar-logo"><h1>BIOMA</h1><p>Uberaba v3.7</p></div>
+        <div class="sidebar-logo"><h1>BIOMA</h1><p>Uberaba v4.0</p></div>
         <ul class="sidebar-menu">
             <li><a href="javascript:void(0)" onclick="goTo('dashboard'); return false;" class="active" id="menu-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             <li><a href="javascript:void(0)" onclick="goTo('orcamento'); return false;" id="menu-orcamento"><i class="bi bi-file-earmark-plus"></i> Novo Orçamento</a></li>
@@ -2008,13 +2008,13 @@
     <div class="page-header">
         <h1><i class="bi bi-box-seam"></i> Gestão de Estoque</h1>
         <div class="estoque-actions">
-            <button class="btn btn-success" onclick="novaEntradaEstoque()">
+            <button class="btn btn-success" onclick="abrirEntradaEstoque()">
                 <i class="bi bi-box-arrow-in-down"></i> Nova Entrada
             </button>
-            <button class="btn btn-danger" onclick="novaSaidaEstoque()">
+            <button class="btn btn-danger" onclick="abrirSaidaEstoque()">
                 <i class="bi bi-box-arrow-up"></i> Nova Saída
             </button>
-            <button class="btn btn-primary" onclick="atualizarEstoque()">
+            <button class="btn btn-primary" onclick="loadEstoque()">
                 <i class="bi bi-arrow-repeat"></i> Atualizar
             </button>
         </div>
@@ -2407,7 +2407,7 @@
             <div class="row g-4">
                 <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-database"></i> MongoDB</div><div class="card-body text-center"><div id="mongoStatus" class="badge warning">Verificando...</div><p class="mt-3" id="mongoMessage">...</p></div></div></div>
                 <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-envelope"></i> MailerSend</div><div class="card-body text-center"><div id="emailStatus" class="badge warning">Verificando...</div><p class="mt-3" id="emailMessage">...</p></div></div></div>
-                <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-info-circle"></i> Versão</div><div class="card-body text-center"><h3>v3.7</h3><p>BIOMA Uberaba</p></div></div></div>
+                <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-info-circle"></i> Versão</div><div class="card-body text-center"><h3>v4.0</h3><p>BIOMA Uberaba</p></div></div></div>
             </div>
         </div>
 
@@ -2537,7 +2537,7 @@
             <div class="card mt-4"><div class="card-header"><i class="bi bi-image"></i> Personalização Visual</div><div class="card-body"><div class="row g-4"><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoPrincipalPreview"><span class="text-muted">Logo do sistema</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('principal')"><i class="bi bi-upload"></i> Enviar logo principal</button><button class="btn btn-sm btn-link text-danger mt-2" type="button" onclick="removerLogo('principal')">Remover</button></div></div><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoLoginPreview"><span class="text-muted">Logo da tela de login</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('login')"><i class="bi bi-upload"></i> Enviar logo de login</button><button class="btn btn-sm btn-link text-danger mt-2" type="button" onclick="removerLogo('login')">Remover</button></div></div></div></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-sliders"></i> Configurações Operacionais</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Abertura</label><input type="time" id="cfgHorarioAbertura" value="08:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Fechamento</label><input type="time" id="cfgHorarioFechamento" value="19:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Duração Padrão (min)</label><input type="number" id="cfgDuracaoPadrao" value="60" class="form-control"></div></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Cashback Padrão (%)</label><input type="number" id="cfgCashbackPadrao" value="5" min="0" max="100" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Comissão Padrão (%)</label><input type="number" id="cfgComissaoPadrao" value="10" min="0" max="100" class="form-control"></div></div><button class="btn btn-success" onclick="salvarConfigOp()"><i class="bi bi-check-circle"></i> Salvar Configurações Operacionais</button></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-envelope"></i> Configurações de E-mail</div><div class="card-body"><p class="text-muted mb-3">Configure as credenciais SMTP para envio de e-mails automáticos (orçamentos, notificações, etc.)</p><div class="alert alert-info"><i class="bi bi-info-circle"></i> <strong>Importante:</strong> As configurações de SMTP devem ser definidas no arquivo <code>.env</code> do servidor:<br><code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, <code>EMAIL_USER</code>, <code>EMAIL_PASSWORD</code>, <code>EMAIL_FROM</code></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Testar Configuração de E-mail</label><div class="input-group"><input type="email" id="emailTesteDestino" placeholder="Digite um e-mail para teste" class="form-control"><button class="btn btn-primary" onclick="testarEmailConfig()"><i class="bi bi-send"></i> Enviar E-mail de Teste</button></div><small class="text-muted">Um e-mail de teste será enviado para verificar se as configurações estão corretas.</small></div></div></div>
-            <div class="card mt-4"><div class="card-header"><i class="bi bi-shield-check"></i> Licença e Desenvolvedor</div><div class="card-body"><table style="width:100%"><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Plano Contratado:</td><td style="padding:15px"><span class="badge success">PROFISSIONAL PREMIUM</span></td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Franquia:</td><td style="padding:15px">BIOMA Uberaba - Oficial</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Desenvolvedor:</td><td style="padding:15px">@juanmarco1999 (Juan Marco Bernardos Souza e Silva)</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Email Suporte:</td><td style="padding:15px">180147064@aluno.unb.br</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Versão:</td><td style="padding:15px">v3.7 (Build 2025.10.05)</td></tr><tr><td style="padding:15px;font-weight:700">Última Atualização:</td><td style="padding:15px">05 de Outubro de 2025 às 22:34 UTC</td></tr></table></div></div>
+            <div class="card mt-4"><div class="card-header"><i class="bi bi-shield-check"></i> Licença e Desenvolvedor</div><div class="card-body"><table style="width:100%"><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Plano Contratado:</td><td style="padding:15px"><span class="badge success">PROFISSIONAL PREMIUM</span></td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Franquia:</td><td style="padding:15px">BIOMA Uberaba - Oficial</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Desenvolvedor:</td><td style="padding:15px">@juanmarco1999 (Juan Marco Bernardos Souza e Silva)</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Email Suporte:</td><td style="padding:15px">180147064@aluno.unb.br</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Versão:</td><td style="padding:15px">v4.0 (Build 2025.10.05)</td></tr><tr><td style="padding:15px;font-weight:700">Última Atualização:</td><td style="padding:15px">05 de Outubro de 2025 às 22:34 UTC</td></tr></table></div></div>
         </div>
 
     </div>
@@ -2611,7 +2611,7 @@ function switchSubTab(section, subtab) {
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-    console.log('%c🌳 BIOMA v3.7 DEFINITIVO','background:#7C3AED;color:#fff;font-size:24px;padding:15px;border-radius:8px;font-weight:900');
+    console.log('%c🌳 BIOMA v4.0 DEFINITIVO','background:#7C3AED;color:#fff;font-size:24px;padding:15px;border-radius:8px;font-weight:900');
     console.log('%c✅ Sistema 100% Completo Carregado','color:#10B981;font-size:16px;font-weight:700');
     checkAuth();
 });
@@ -4970,7 +4970,7 @@ async function cancelarAgendamento(id){
         confirmButtonText: 'Sim, cancelar',
         cancelButtonText: 'Não'
     });
-    
+
     if(result.isConfirmed){
         try{
             await fetch(`/api/agendamentos/${id}`,{method:'DELETE',credentials:'include'});
@@ -4979,6 +4979,76 @@ async function cancelarAgendamento(id){
         }catch(e){
             Swal.fire('Erro','Não foi possível cancelar o agendamento','error');
         }
+    }
+}
+
+async function visualizarAgendamento(id){
+    try{
+        const res = await fetch(`/api/agendamentos/${id}`, {credentials:'include'});
+        const data = await res.json();
+
+        if(data.success && data.agendamento){
+            const ag = data.agendamento;
+            const dataHora = new Date(ag.data_hora).toLocaleString('pt-BR');
+
+            Swal.fire({
+                title: '<strong>📅 Detalhes do Agendamento</strong>',
+                html: `
+                    <div style="text-align: left; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #7C3AED, #EC4899); color: #fff; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                            <h3 style="margin: 0;">👤 ${ag.cliente_nome || 'Não informado'}</h3>
+                            <p style="margin: 10px 0 0; opacity: 0.9;">📞 ${ag.cliente_telefone || 'Não informado'}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #7C3AED;">✂️ Serviço:</strong>
+                            <p style="margin: 5px 0 0;">${ag.servico || 'Não especificado'}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #7C3AED;">👨‍⚕️ Profissional:</strong>
+                            <p style="margin: 5px 0 0;">${ag.profissional || 'Não atribuído'}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <strong style="color: #7C3AED;">🗓️ Data e Hora:</strong>
+                            <p style="margin: 5px 0 0;">${dataHora}</p>
+                        </div>
+
+                        ${ag.observacoes ? `
+                            <div style="margin-bottom: 15px;">
+                                <strong style="color: #7C3AED;">📝 Observações:</strong>
+                                <p style="margin: 5px 0 0; background: #F3F4F6; padding: 10px; border-radius: 8px;">${ag.observacoes}</p>
+                            </div>
+                        ` : ''}
+
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #E5E7EB;">
+                            <p style="font-size: 0.85rem; color: #6B7280; margin: 0;">
+                                <strong>Status:</strong> <span class="badge ${ag.status === 'confirmado' ? 'success' : 'warning'}">${ag.status || 'Pendente'}</span>
+                            </p>
+                            <p style="font-size: 0.85rem; color: #6B7280; margin: 10px 0 0;">
+                                Criado em: ${new Date(ag.created_at || ag.data_hora).toLocaleString('pt-BR')}
+                            </p>
+                        </div>
+                    </div>
+                `,
+                width: '600px',
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#7C3AED',
+                showCancelButton: true,
+                cancelButtonText: '<i class="bi bi-trash"></i> Cancelar Agendamento',
+                cancelButtonColor: '#EF4444'
+            }).then((result) => {
+                if (result.dismiss === Swal.DismissReason.cancel) {
+                    cancelarAgendamento(id);
+                }
+            });
+        } else {
+            Swal.fire('Erro', 'Agendamento não encontrado', 'error');
+        }
+    }catch(e){
+        console.error('Erro ao visualizar agendamento:', e);
+        Swal.fire('Erro', 'Não foi possível carregar os detalhes do agendamento', 'error');
     }
 }
 
@@ -6410,7 +6480,7 @@ function salvarConfigOp(){
     Swal.fire({icon:'info',title:'Configurações operacionais',text:'Valores registrados localmente. Ajuste manualmente horários e comissões conforme necessidade.'});
 }
 
-console.log('%c✅ BIOMA v3.7 COMPLETO - 100% FUNCIONAL','color:#10B981;font-size:18px;font-weight:900');
+console.log('%c✅ BIOMA v4.0 COMPLETO - 100% FUNCIONAL','color:#10B981;font-size:18px;font-weight:900');
 console.log('%c🔥 Todas as funções implementadas sem erros','color:#7C3AED;font-size:14px;font-weight:700');
 console.log('%c📅 2025-10-05 22:38 UTC | Dev: @juanmarco1999','color:#6B7280;font-size:12px');
 
@@ -6432,7 +6502,7 @@ document.addEventListener('click',function(e){
 
 <!-- BIOMA ENHANCEMENTS APPENDED -->
 <script>
-/* === BIOMA v3.7 – Enhancements (não altera a estrutura, só adiciona funcionalidades) ===
+/* === BIOMA v4.0 – Enhancements (não altera a estrutura, só adiciona funcionalidades) ===
    Este bloco conecta o frontend base ao backend (appchatgpt.py):
    - Login/Cadastro/Logout
    - Tema, System Health
@@ -7720,7 +7790,7 @@ async function carregarOrcamentosAprovados() {
                     <td>${nome}</td>
                     <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
-                    <td>${orc.pagamento || 'N/A'}</td>
+                    <td>${(typeof orc.pagamento === 'object' ? orc.pagamento.tipo : orc.pagamento) || orc.forma_pagamento || 'N/A'}</td>
                     <td>
                         <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orc._id}')">
                             <i class="bi bi-eye"></i>
@@ -8885,7 +8955,7 @@ window.carregarDadosSecao = function(section) {
 };
 </script>
 
-<!-- BIOMA v3.7 - Melhorias e Correções JavaScript -->
+<!-- BIOMA v4.0 - Melhorias e Correções JavaScript -->
 <script src="/static/js/melhorias-v37.js"></script>
 
 </body>

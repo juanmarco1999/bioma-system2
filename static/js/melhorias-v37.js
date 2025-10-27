@@ -1,9 +1,9 @@
 /**
- * BIOMA v3.7 - Melhorias e Correções
+ * BIOMA v4.0 - Melhorias e Correções
  * Sistema de Auto-Atualização + Correções Críticas
  */
 
-console.log('🚀 BIOMA v3.7 - Melhorias carregadas');
+console.log('🚀 BIOMA v4.0 - Melhorias carregadas');
 
 // ============================================================================
 // SISTEMA DE AUTO-ATUALIZAÇÃO GLOBAL
@@ -5527,7 +5527,7 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
         try {
             const registration = await navigator.serviceWorker.register('/static/sw.js', {
-                scope: '/'
+                scope: '/static/'
             });
 
             console.log('✅ Service Worker registrado:', registration.scope);
@@ -5829,4 +5829,4 @@ console.log('✅ Detalhamento em Consultar melhorado (2.2)');
 console.log('✅ Gráficos da aba Resumo melhorados (4.1)');
 console.log('✅ PDF com Assinaturas implementado (3.2)');
 console.log('✅ Sistema Offline com Service Worker carregado (17.1)');
-console.log('✅ Melhorias v3.7 carregadas com sucesso!');
+console.log('✅ Melhorias v4.0 carregadas com sucesso!');

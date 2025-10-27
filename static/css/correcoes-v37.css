@@ -1423,17 +1423,18 @@ button[onclick*="buscarProntuariosCliente"]:hover::before {
 
 /* Logo na sidebar - renderização aprimorada */
 .sidebar-logo {
-    padding: 35px 20px;
+    padding: 15px 10px;
     text-align: center;
     background: linear-gradient(135deg,
         #7C3AED 0%,
         #8B5CF6 50%,
         #A78BFA 100%
     );
-    border-bottom: 6px solid;
+    border-bottom: 3px solid;
     border-image: linear-gradient(90deg, #F59E0B, #EC4899, #7C3AED) 1;
     position: relative;
     overflow: hidden;
+    min-height: auto;
 }
 
 /* Efeito de brilho sutil no fundo */
@@ -1465,7 +1466,7 @@ button[onclick*="buscarProntuariosCliente"]:hover::before {
 
 /* Imagem do logo customizada */
 #sidebarLogoImage {
-    max-height: 70px !important;
+    max-height: 50px !important;
     max-width: 90% !important;
     height: auto;
     width: auto;
@@ -1477,7 +1478,7 @@ button[onclick*="buscarProntuariosCliente"]:hover::before {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     background: transparent !important;
 }
 
@@ -1640,10 +1641,10 @@ button[onclick*="buscarProntuariosCliente"]:hover::before {
 
 /* Texto do título BIOMA na sidebar */
 .sidebar-logo h1 {
-    font-size: 2.8rem;
+    font-size: 2rem;
     font-weight: 900;
-    letter-spacing: 6px;
-    margin: 8px 0 0 0;
+    letter-spacing: 4px;
+    margin: 5px 0 0 0;
     text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
                  0 2px 4px rgba(0, 0, 0, 0.2);
     color: #FFFFFF;
@@ -1665,10 +1666,10 @@ button[onclick*="buscarProntuariosCliente"]:hover::before {
 
 /* Subtítulo na sidebar */
 .sidebar-logo p {
-    font-size: 1rem;
+    font-size: 0.85rem;
     opacity: 0.95;
-    margin: 12px 0 0 0;
-    letter-spacing: 3px;
+    margin: 5px 0 0 0;
+    letter-spacing: 2px;
     color: rgba(255, 255, 255, 0.95);
     font-weight: 600;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
