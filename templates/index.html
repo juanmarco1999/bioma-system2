@@ -14,60 +14,94 @@
     })();
     </script>
 
-    <!-- FORCE LIGHT MODE - INLINE CSS TO OVERRIDE CACHE -->
-    <style>
-    /* Override EVERYTHING with !important to bypass cache */
-    html, html[data-theme="dark"], html[data-theme="light"], body {
+    <!-- ULTRA FORCE LIGHT MODE - NUCLEAR OVERRIDE ALL CACHE AND CSS -->
+    <style id="force-light-mode-nuclear">
+    /* NUCLEAR OVERRIDE - DESTROY ALL DARK MODE WITH MAXIMUM PRIORITY */
+    * {
         --bg-main: #F9FAFB !important;
         --bg-card: #FFFFFF !important;
         --bg-sidebar: #1F2937 !important;
         --text-primary: #1F2937 !important;
         --text-secondary: #6B7280 !important;
+        --text-muted: #9CA3AF !important;
         --border-color: #E5E7EB !important;
-        color-scheme: light !important;
+        --primary: #7C3AED !important;
+        --primary-dark: #6D28D9 !important;
+        --secondary: #EC4899 !important;
+        --success: #10B981 !important;
+        --danger: #EF4444 !important;
+        --warning: #F59E0B !important;
+        --info: #3B82F6 !important;
+    }
+
+    html, html[data-theme], html[data-theme="dark"], html[data-theme="light"],
+    body, body[data-theme], body[data-theme="dark"], body[data-theme="light"] {
+        color-scheme: light only !important;
         background: #F9FAFB !important;
+        background-color: #F9FAFB !important;
         color: #1F2937 !important;
     }
 
-    /* Force auth screen to always be in gradient light mode */
-    .auth-screen {
+    /* AUTH SCREEN - ULTRA FORCE GRADIENT */
+    #authScreen, .auth-screen, div.auth-screen, body .auth-screen,
+    html .auth-screen, #authScreen.auth-screen {
         background: linear-gradient(135deg,#667eea 0%,#764ba2 100%) !important;
+        background-image: linear-gradient(135deg,#667eea 0%,#764ba2 100%) !important;
+        background-color: #667eea !important;
         color: #1F2937 !important;
     }
 
-    .auth-box {
+    /* AUTH BOX - ULTRA FORCE WHITE */
+    .auth-box, div.auth-box, #authScreen .auth-box {
         background: rgba(255,255,255,0.98) !important;
+        background-color: rgba(255,255,255,0.98) !important;
+        backdrop-filter: blur(10px) !important;
         color: #1F2937 !important;
     }
 
-    .auth-logo h2 {
+    /* ALL TEXT - FORCE DARK COLOR */
+    .auth-logo h2, .auth-logo p, .login-label, label,
+    .auth-box *, .auth-screen *, #authScreen * {
         color: #1F2937 !important;
     }
 
-    .auth-logo p {
-        color: #6B7280 !important;
-    }
-
-    .form-control, .form-select {
-        background: white !important;
+    /* FORM INPUTS - ULTRA WHITE */
+    input, input.form-control, .form-control, .form-select,
+    textarea, select, #loginUsername, #loginPassword {
+        background: #FFFFFF !important;
+        background-color: #FFFFFF !important;
         color: #1F2937 !important;
         border: 2px solid #E5E7EB !important;
     }
 
-    .nav-pills .nav-link {
+    input::placeholder {
+        color: #9CA3AF !important;
+    }
+
+    /* NAVIGATION TABS */
+    .nav-pills .nav-link, .nav-link, button.nav-link {
         color: #6B7280 !important;
+        background: transparent !important;
     }
 
-    .nav-pills .nav-link.active {
+    .nav-pills .nav-link.active, .nav-link.active, button.nav-link.active {
         background: linear-gradient(135deg,#7C3AED,#6D28D9) !important;
-        color: white !important;
+        color: #FFFFFF !important;
     }
 
-    /* Never allow dark mode variables */
-    html[data-theme="dark"] {
+    /* INFO BOX */
+    .alert-info, .info-box {
+        background: linear-gradient(135deg,#E0E7FF,#DBEAFE) !important;
+        color: #1E40AF !important;
+    }
+
+    /* DESTROY DARK MODE ROOT VARIABLES */
+    :root, :root[data-theme="dark"],
+    html:root, html:root[data-theme="dark"] {
         --bg-main: #F9FAFB !important;
         --bg-card: #FFFFFF !important;
         --text-primary: #1F2937 !important;
+        --text-secondary: #6B7280 !important;
     }
     </style>
 
@@ -7024,57 +7058,74 @@ async function loadRelatorios(){
 }
 
 async function exportarRelatorio(){
-    Swal.fire({
-        title: 'Exportando Relatório...',
-        html: '<div class="spinner"></div><p style="margin-top: 20px;">Gerando arquivo Excel...</p>',
-        allowOutsideClick: false,
-        showConfirmButton: false
-    });
-    
     try{
+        // Usar toast em vez de modal pesado
+        toast('Preparando relatório Excel...', 'info');
+
         const response = await fetch('/api/relatorios/completo', {
             method: 'GET',
             credentials: 'include'
         });
-        
+
         if(!response.ok){
             throw new Error('Erro ao gerar relatório');
         }
-        
-        // Obter o blob do arquivo
-        const blob = await response.blob();
-        
-        // Criar URL temporária para download
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        
+
+        // A API retorna JSON, não um arquivo Excel
+        // Vamos usar SheetJS para gerar o Excel no frontend
+        const data = await response.json();
+
+        // Criar workbook
+        const wb = XLSX.utils.book_new();
+
+        // Criar planilha com dados gerais
+        const wsData = [
+            ['RELATÓRIO BIOMA - RESUMO GERAL'],
+            [],
+            ['Estatísticas Gerais'],
+            ['Total Clientes', data.estatisticas?.total_clientes || 0],
+            ['Total Produtos', data.estatisticas?.total_produtos || 0],
+            ['Total Serviços', data.estatisticas?.total_servicos || 0],
+            ['Total Profissionais', data.estatisticas?.total_profissionais || 0],
+            [],
+            ['Faturamento'],
+            ['Faturamento Total', `R$ ${(data.faturamento?.total || 0).toFixed(2)}`],
+            ['Faturamento Serviços', `R$ ${(data.faturamento?.servicos || 0).toFixed(2)}`],
+            ['Faturamento Produtos', `R$ ${(data.faturamento?.produtos || 0).toFixed(2)}`],
+            ['Ticket Médio', `R$ ${(data.vendas?.ticket_medio || 0).toFixed(2)}`],
+            ['Taxa de Conversão', `${(data.vendas?.taxa_conversao || 0).toFixed(2)}%`]
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, 'Resumo');
+
+        // Adicionar planilha de top clientes se houver
+        if(data.top_clientes && data.top_clientes.length > 0){
+            const clientesData = [
+                ['Top Clientes'],
+                ['Nome', 'Total Gasto', 'Total Compras'],
+                ...data.top_clientes.map(c => [
+                    c.cliente_nome || 'N/A',
+                    `R$ ${(c.total_gasto || 0).toFixed(2)}`,
+                    c.total_compras || 0
+                ])
+            ];
+            const wsClientes = XLSX.utils.aoa_to_sheet(clientesData);
+            XLSX.utils.book_append_sheet(wb, wsClientes, 'Top Clientes');
+        }
+
         // Nome do arquivo com data atual
         const dataAtual = new Date().toISOString().split('T')[0];
-        a.download = `relatorio_bioma_${dataAtual}.xlsx`;
-        
-        document.body.appendChild(a);
-        a.click();
-        
-        // Limpar
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
-        Swal.fire({
-            icon: 'success',
-            title: '✅ Relatório Exportado!',
-            text: 'O arquivo foi baixado com sucesso',
-            timer: 2000
-        });
-        
+        const fileName = `relatorio_bioma_${dataAtual}.xlsx`;
+
+        // Gerar arquivo Excel e baixar
+        XLSX.writeFile(wb, fileName);
+
+        toast('✅ Relatório exportado com sucesso!', 'success');
+
     }catch(e){
         console.error('❌ Erro ao exportar relatório:', e);
-        Swal.fire({
-            icon: 'error',
-            title: 'Erro na Exportação',
-            text: 'Não foi possível gerar o relatório. Tente novamente.'
-        });
+        toast('Erro ao exportar relatório', 'error');
     }
 }
 

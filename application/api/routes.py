@@ -1491,11 +1491,12 @@ def gerar_pdf_orcamento_singular(id):
         story.append(HRFlowable(doc_width - 4*cm, color=HexColor('#E5E7EB'), thickness=1))
         story.append(Spacer(1, 1*cm))
 
+        # Fix: Garantir que nenhum valor seja None
         contratante_details = f"""
-            <b>Nome:</b> {orcamento.get('cliente_nome', 'N/A')}<br/>
-            <b>CPF:</b> {orcamento.get('cliente_cpf', 'N/A')}<br/>
-            <b>Telefone:</b> {orcamento.get('cliente_telefone', 'N/A')}<br/>
-            <b>E-mail:</b> {orcamento.get('cliente_email', 'N/A')}
+            <b>Nome:</b> {orcamento.get('cliente_nome') or 'N/A'}<br/>
+            <b>CPF:</b> {orcamento.get('cliente_cpf') or 'N/A'}<br/>
+            <b>Telefone:</b> {orcamento.get('cliente_telefone') or 'N/A'}<br/>
+            <b>E-mail:</b> {orcamento.get('cliente_email') or 'N/A'}
         """
         contratada_details = f"""
             <b>Razão Social:</b> BIOMA UBERABA<br/>
@@ -1588,7 +1589,9 @@ def gerar_pdf_orcamento_singular(id):
         story.append(Paragraph("ASSINATURAS", styles['MainTitle']))
         story.append(Spacer(1, 4*cm))
 
-        assinatura_contratante = Paragraph("________________________________________<br/><b>CONTRATANTE</b><br/>" + orcamento.get('cliente_nome', 'N/A'), styles['Signature'])
+        # Fix: Garantir que cliente_nome nunca seja None
+        cliente_nome = orcamento.get('cliente_nome') or 'N/A'
+        assinatura_contratante = Paragraph(f"________________________________________<br/><b>CONTRATANTE</b><br/>{cliente_nome}", styles['Signature'])
         assinatura_contratada = Paragraph("________________________________________<br/><b>CONTRATADA</b><br/>BIOMA UBERABA", styles['Signature'])
         
         assinaturas_table = Table([[assinatura_contratante, assinatura_contratada]], colWidths=['*', '*'])
@@ -1605,7 +1608,9 @@ def gerar_pdf_orcamento_singular(id):
         doc.build(story, onFirstPage=on_each_page, onLaterPages=on_each_page)
         
         buffer.seek(0)
-        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=f'contrato_bioma_{orcamento.get("numero")}.pdf')
+        # Fix: Garantir que numero nunca seja None no nome do arquivo
+        numero_orcamento = orcamento.get("numero") or str(orcamento.get('_id', 'sem_numero'))[-6:]
+        return send_file(buffer, mimetype='application/pdf', as_attachment=True, download_name=f'contrato_bioma_{numero_orcamento}.pdf')
         
     except Exception as e:
         logger.error(f"❌ PDF error: {e}")
