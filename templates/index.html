@@ -4113,32 +4113,77 @@ function showSubTab(section, tab) {
 
 // ========== FUNÇÃO: CARREGAR HISTÓRICO DE COMISSÕES ==========
 async function carregarHistoricoComissoes() {
+    console.log('💰 Carregando histórico de comissões...');
+
     try {
         const res = await fetch('/api/financeiro/comissoes', {credentials: 'include'});
         const data = await res.json();
 
-        const tbody = document.getElementById('profissionais-comissoes');
-        if (!tbody) {
-            console.warn('⚠️ Elemento profissionais-comissoes não encontrado');
+        // Suportar ambas as seções: Profissionais e Financeiro
+        const tbodyProfissionais = document.getElementById('profissionais-comissoes');
+        const tbodyFinanceiro = document.getElementById('comissoesPagarTableBody');
+
+        if (!tbodyProfissionais && !tbodyFinanceiro) {
+            console.warn('⚠️ Nenhum elemento tbody de comissões encontrado');
             return;
         }
 
         if (data.success && data.comissoes && data.comissoes.length > 0) {
-            const html = data.comissoes.map(c => `
-                <tr>
-                    <td><strong>${new Date(c.data).toLocaleDateString('pt-BR')}</strong></td>
-                    <td>${c.profissional_nome || 'N/A'}</td>
-                    <td>${c.servico_nome || 'N/A'}</td>
-                    <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
-                    <td><span class="badge ${c.status === 'Pago' ? 'success' : 'warning'}">${c.status || 'Pendente'}</span></td>
-                </tr>
-            `).join('');
-            tbody.innerHTML = html;
+            // HTML para tabela de Profissionais (5 colunas)
+            if (tbodyProfissionais) {
+                const htmlProfissionais = data.comissoes.map(c => `
+                    <tr>
+                        <td><strong>${c.data ? new Date(c.data).toLocaleDateString('pt-BR') : 'N/A'}</strong></td>
+                        <td>${c.profissional_nome || 'N/A'}</td>
+                        <td>${c.servico_nome || 'N/A'}</td>
+                        <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
+                        <td><span class="badge ${c.status === 'Pago' ? 'success' : 'warning'}">${c.status || 'Pendente'}</span></td>
+                    </tr>
+                `).join('');
+                tbodyProfissionais.innerHTML = htmlProfissionais;
+            }
+
+            // HTML para tabela de Financeiro (6 colunas - inclui Orçamento e Ações)
+            if (tbodyFinanceiro) {
+                const htmlFinanceiro = data.comissoes.map(c => `
+                    <tr>
+                        <td>${c.profissional_nome || 'N/A'}</td>
+                        <td>#${c.orcamento_numero || c.orcamento_id || 'N/A'}</td>
+                        <td><strong>${c.data ? new Date(c.data).toLocaleDateString('pt-BR') : 'N/A'}</strong></td>
+                        <td><strong style="color: var(--warning);">R$ ${(c.valor || 0).toFixed(2)}</strong></td>
+                        <td><span class="badge ${c.status === 'Pago' ? 'success' : 'warning'}">${c.status || 'Pendente'}</span></td>
+                        <td>
+                            <button class="btn btn-sm ${c.status === 'Pago' ? 'btn-outline' : 'btn-success'}"
+                                    onclick="marcarComissaoPaga('${c._id}')"
+                                    ${c.status === 'Pago' ? 'disabled' : ''}>
+                                <i class="bi bi-check-circle"></i> ${c.status === 'Pago' ? 'Pago' : 'Pagar'}
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                tbodyFinanceiro.innerHTML = htmlFinanceiro;
+            }
+
+            console.log(`✅ ${data.comissoes.length} comissões carregadas`);
         } else {
-            tbody.innerHTML = '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhuma comissão registrada</td></tr>';
+            if (tbodyProfissionais) {
+                tbodyProfissionais.innerHTML = '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhuma comissão registrada</td></tr>';
+            }
+            if (tbodyFinanceiro) {
+                tbodyFinanceiro.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma comissão a pagar</td></tr>';
+            }
         }
     } catch (e) {
         console.error('❌ Erro ao carregar comissões:', e);
+        const tbodyProfissionais = document.getElementById('profissionais-comissoes');
+        const tbodyFinanceiro = document.getElementById('comissoesPagarTableBody');
+
+        if (tbodyProfissionais) {
+            tbodyProfissionais.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar comissões</td></tr>';
+        }
+        if (tbodyFinanceiro) {
+            tbodyFinanceiro.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar comissões</td></tr>';
+        }
     }
 }
 
@@ -9640,8 +9685,8 @@ async function carregarFaturamentoMensal() {
     const labels = Object.keys(faturamentoPorMes);
     const valores = Object.values(faturamentoPorMes);
 
-    // Criar gráfico
-    const ctx = document.getElementById('chartFaturamento');
+    // Criar gráfico (suporta ambos IDs: Relatórios e Financeiro)
+    const ctx = document.getElementById('graficoFaturamentoMensal') || document.getElementById('chartFaturamento');
     if (ctx && window.Chart) {
       if (window.chartFaturamentoInstance) {
         window.chartFaturamentoInstance.destroy();
@@ -11715,54 +11760,160 @@ async function toggleStatusServico(id, statusAtual) {
 // ========== SISTEMA DE SUB-TABS - ESTOQUE ====================
 async function carregarEstoqueVisaoGeral() {
     const FUNC_KEY = 'estoqueVisaoGeral';
-    const tbody = document.getElementById('estoqueProdutosBody');
-    if (!tbody) return;
     if (window.loadingStates?.[FUNC_KEY]) return;
-    
+
     try {
         if (!window.loadingStates) window.loadingStates = {};
         window.loadingStates[FUNC_KEY] = true;
-        
-        const res = await fetch('/api/estoque/visao-geral', {credentials: 'include'});
-        if (!res.ok) throw new Error('Erro ao carregar estoque');
-        
-        const data = await res.json();
-        
-        // Atualizar estatísticas
-        document.getElementById('totalProdutosEstoque').textContent = data.total_produtos || 0;
-        document.getElementById('valorTotalEstoque').textContent = `R$ ${parseFloat(data.valor_total || 0).toFixed(2)}`;
-        // document.getElementById('alertasEstoque').textContent = data.alertas || 0;
-        document.getElementById('movimentacoesEstoque').textContent = data.movimentacoes_mes || 0;
-        
-        // Renderizar tabela
-        const produtos = data.produtos || [];
-        if (!produtos || produtos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum produto em estoque</td></tr>';
-            return;
+
+        console.log('📦 Carregando visão geral do estoque...');
+
+        // Buscar produtos para estatísticas
+        const prodRes = await fetch('/api/produtos', {credentials: 'include'});
+        const prodData = await prodRes.json();
+
+        // Buscar movimentações do mês
+        const hoje = new Date();
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const movRes = await fetch(`/api/estoque/movimentacoes?data_inicio=${inicioMes.toISOString()}&per_page=10000`, {credentials: 'include'});
+        const movData = await movRes.json();
+
+        if (prodData.success && prodData.produtos) {
+            const produtos = prodData.produtos;
+
+            // Atualizar cards de estatísticas
+            document.getElementById('totalProdutosEstoque').textContent = produtos.length;
+
+            // Valor total em estoque
+            const valorTotal = produtos.reduce((sum, p) => {
+                return sum + ((p.preco || 0) * (p.quantidade || p.estoque || 0));
+            }, 0);
+            document.getElementById('valorTotalEstoque').textContent = `R$ ${valorTotal.toFixed(2)}`;
+
+            // Produtos abaixo do mínimo
+            const abaixoMinimo = produtos.filter(p => {
+                const estoque = p.quantidade || p.estoque || 0;
+                const minimo = p.estoque_minimo || 0;
+                return estoque < minimo && minimo > 0;
+            }).length;
+            document.getElementById('itensAbaixoMinimo').textContent = abaixoMinimo;
         }
-        
-        tbody.innerHTML = produtos.map(p => {
-            const statusClass = p.estoque_atual <= p.estoque_minimo ? 'danger' : p.estoque_atual < (p.estoque_minimo * 1.5) ? 'warning' : 'success';
-            const statusText = p.estoque_atual <= p.estoque_minimo ? 'Crítico' : p.estoque_atual < (p.estoque_minimo * 1.5) ? 'Baixo' : 'Normal';
-            const valorTotal = p.estoque_atual * (p.preco || 0);
-            
-            return `
-                <tr>
-                    <td>${p.nome}</td>
-                    <td>${p.marca || 'N/A'}</td>
-                    <td>${p.estoque_atual || 0}</td>
-                    <td>${p.estoque_minimo || 0}</td>
-                    <td>R$ ${parseFloat(p.preco || 0).toFixed(2)}</td>
-                    <td>R$ ${valorTotal.toFixed(2)}</td>
-                    <td><span class="badge ${statusClass}">${statusText}</span></td>
-                </tr>
-            `;
-        }).join('');
-        
+
+        // Movimentações do mês
+        if (movData.success && movData.movimentacoes) {
+            document.getElementById('movimentacoesEstoque').textContent = movData.movimentacoes.length;
+
+            // Criar gráfico de Resumo de Movimentações
+            const entradas = movData.movimentacoes.filter(m => m.tipo === 'entrada').length;
+            const saidas = movData.movimentacoes.filter(m => m.tipo === 'saida' || m.tipo === 'saída').length;
+
+            const ctxMovimentacoes = document.getElementById('chartEstoqueVisaoGeral');
+            if (ctxMovimentacoes && window.Chart) {
+                if (window.chartEstoqueVisaoGeralInstance) {
+                    window.chartEstoqueVisaoGeralInstance.destroy();
+                }
+
+                window.chartEstoqueVisaoGeralInstance = new Chart(ctxMovimentacoes, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Entradas', 'Saídas'],
+                        datasets: [{
+                            label: 'Movimentações',
+                            data: [entradas, saidas],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(239, 68, 68, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(239, 68, 68, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Criar gráfico de Distribuição (Produtos por Status)
+        if (prodData.success && prodData.produtos) {
+            const produtos = prodData.produtos;
+            const disponiveis = produtos.filter(p => {
+                const estoque = p.quantidade || p.estoque || 0;
+                const minimo = p.estoque_minimo || 0;
+                return estoque >= (minimo * 1.5);
+            }).length;
+
+            const baixo = produtos.filter(p => {
+                const estoque = p.quantidade || p.estoque || 0;
+                const minimo = p.estoque_minimo || 0;
+                return estoque >= minimo && estoque < (minimo * 1.5) && minimo > 0;
+            }).length;
+
+            const critico = produtos.filter(p => {
+                const estoque = p.quantidade || p.estoque || 0;
+                const minimo = p.estoque_minimo || 0;
+                return estoque < minimo && minimo > 0;
+            }).length;
+
+            const ctxDistribuicao = document.getElementById('chartDistribuicaoEstoque');
+            if (ctxDistribuicao && window.Chart) {
+                if (window.chartDistribuicaoEstoqueInstance) {
+                    window.chartDistribuicaoEstoqueInstance.destroy();
+                }
+
+                window.chartDistribuicaoEstoqueInstance = new Chart(ctxDistribuicao, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Disponível', 'Estoque Baixo', 'Crítico'],
+                        datasets: [{
+                            data: [disponiveis, baixo, critico],
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(245, 158, 11, 0.7)',
+                                'rgba(239, 68, 68, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(239, 68, 68, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        console.log('✅ Visão geral do estoque carregada');
+
     } catch (error) {
-        console.error('❌ Erro:', error);
-        Swal.fire('Erro', 'Falha ao carregar visão geral do estoque', 'error');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar estoque</td></tr>';
+        console.error('❌ Erro ao carregar visão geral do estoque:', error);
+        toast('❌ Erro ao carregar visão geral do estoque', 'error');
     } finally {
         if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
