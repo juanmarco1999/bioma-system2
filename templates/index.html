@@ -8759,6 +8759,92 @@ async function salvarConfig(){
     }
 }
 
+// Função para testar configuração de e-mail
+async function testarEmailConfig() {
+    const emailDestino = document.getElementById('emailTesteDestino')?.value?.trim();
+
+    if (!emailDestino) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'E-mail Necessário',
+            text: 'Por favor, digite um endereço de e-mail para enviar o teste.'
+        });
+        return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailDestino)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'E-mail Inválido',
+            text: 'Por favor, digite um endereço de e-mail válido.'
+        });
+        return;
+    }
+
+    try {
+        // Mostrar loading
+        Swal.fire({
+            title: 'Enviando E-mail de Teste...',
+            html: 'Por favor, aguarde enquanto o e-mail é enviado.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const response = await fetch('/api/email/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email: emailDestino })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'E-mail Enviado com Sucesso!',
+                html: `
+                    <p>✅ O e-mail de teste foi enviado para:</p>
+                    <p><strong>${emailDestino}</strong></p>
+                    <p class="text-muted">Verifique a caixa de entrada (e spam) do destinatário.</p>
+                `,
+                confirmButtonText: 'OK'
+            });
+
+            // Limpar campo
+            document.getElementById('emailTesteDestino').value = '';
+
+        } else {
+            throw new Error(data.message || 'Erro ao enviar e-mail de teste');
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao testar e-mail:', error);
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao Enviar E-mail',
+            html: `
+                <p>${error.message || 'Não foi possível enviar o e-mail de teste.'}</p>
+                <hr>
+                <p class="text-muted"><strong>Possíveis causas:</strong></p>
+                <ul style="text-align: left; font-size: 0.9rem;">
+                    <li>Configurações SMTP incorretas no arquivo .env</li>
+                    <li>Credenciais de e-mail inválidas</li>
+                    <li>Servidor SMTP bloqueando conexão</li>
+                    <li>Porta SMTP incorreta ou bloqueada por firewall</li>
+                </ul>
+                <p class="text-muted">Verifique o console do servidor para mais detalhes.</p>
+            `,
+            confirmButtonText: 'Entendi'
+        });
+    }
+}
+
 function salvarConfigOp(){
     Swal.fire({icon:'success',title:'✅ Configurações operacionais salvas',timer:2000});
 }
