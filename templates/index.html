@@ -400,6 +400,48 @@
             }
         }
 
+        /* ========== TELA DE LOGIN: SEMPRE LIGHT MODE ========== */
+        /* A tela de autenticação NUNCA deve ser afetada por dark mode */
+        #authScreen,
+        #authScreen *,
+        .auth-screen,
+        .auth-screen *,
+        .auth-box,
+        .auth-box * {
+            /* Forçar tema light na tela de login */
+            color: #1F2937 !important;
+        }
+
+        .auth-screen {
+            /* Garantir que o fundo do gradiente sempre apareça */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+
+        .auth-box {
+            /* Box de login sempre claro */
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: #1F2937 !important;
+        }
+
+        .auth-logo h2 {
+            color: #1F2937 !important;
+        }
+
+        .auth-logo p {
+            color: #6B7280 !important;
+        }
+
+        .form-control,
+        .form-select {
+            background: white !important;
+            color: #1F2937 !important;
+            border-color: #E5E7EB !important;
+        }
+
+        .nav-pills .nav-link {
+            color: #6B7280 !important;
+        }
+
         /* ========== LOGIN MODERNIZADO COM DARK MODE (PARTE 5.1) ========== */
 
         /* Labels com cor dinâmica */
@@ -3087,32 +3129,19 @@ async function checkAutoLogin(){
                 const username = data.username;
                 const password = atob(data.password);
 
+                console.log('📡 Enviando requisição de login...');
                 const response = await API.post('/api/login', { username, password });
+                console.log('📥 Resposta recebida:', response.success ? 'SUCCESS' : 'FAILED');
 
                 if(response.success){
                     // Salvar sessão
                     sessionStorage.setItem('bioma_user', JSON.stringify(response.user));
+                    console.log('💾 Sessão salva no sessionStorage');
 
-                    // Mostrar modal de sucesso simplificado
-                    Swal.fire({
-                        icon: 'success',
-                        title: '<strong style="color: #10B981;">Login Automático</strong>',
-                        html: `
-                            <div style="text-align: center; padding: 15px;">
-                                <p style="margin: 0; color: #065F46; font-weight: 600;">
-                                    Bem-vindo de volta, ${response.user.name || response.user.username}!
-                                </p>
-                            </div>
-                        `,
-                        showConfirmButton: false,
-                        timer: 1500,
-                        timerProgressBar: true,
-                        allowOutsideClick: false,
-                        didClose: () => {
-                            // Iniciar app APÓS modal fechar completamente
-                            initApp(response.user);
-                        }
-                    });
+                    // AUTO-LOGIN SILENCIOSO: Iniciar app diretamente sem modal
+                    console.log('🎯 Iniciando app diretamente (sem modal)...');
+                    await initApp(response.user);
+                    console.log('✅ App inicializado com sucesso!');
                 } else {
                     // Falha no auto-login: limpar dados salvos
                     console.warn('⚠️ Auto-login falhou:', response.message);
