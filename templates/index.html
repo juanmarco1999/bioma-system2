@@ -17,6 +17,8 @@
     <link rel="stylesheet" href="/static/css/correcoes-v37.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SheetJS para exportação Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
 :root[data-theme="light"]{--primary:#7C3AED;--primary-dark:#6D28D9;--secondary:#EC4899;--accent:#F59E0B;--success:#10B981;--danger:#EF4444;--warning:#F59E0B;--info:#3B82F6;--bg-main:#F9FAFB;--bg-card:#FFFFFF;--bg-sidebar:#1F2937;--bg-sidebar-hover:#374151;--text-primary:#1F2937;--text-secondary:#6B7280;--text-muted:#9CA3AF;--border-color:#E5E7EB;--shadow:0 4px 20px rgba(0,0,0,0.08);--shadow-hover:0 8px 30px rgba(124,58,237,0.15);}:root[data-theme="dark"]{--primary:#8B5CF6;--primary-dark:#7C3AED;--secondary:#F472B6;--accent:#FBBF24;--success:#34D399;--danger:#F87171;--warning:#FBBF24;--info:#60A5FA;--bg-main:#0F172A;--bg-card:#1E293B;--bg-sidebar:#0F172A;--bg-sidebar-hover:#1E293B;--text-primary:#F1F5F9;--text-secondary:#CBD5E1;--text-muted:#94A3B8;--border-color:#334155;--shadow:0 4px 20px rgba(0,0,0,0.4);--shadow-hover:0 8px 30px rgba(139,92,246,0.3)}*{margin:0;padding:0;box-sizing:border-box;transition:background-color .3s ease,color .3s ease,border-color .3s ease}body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-main);color:var(--text-primary);overflow-x:hidden;line-height:1.6}.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;animation:gradientAnimation 15s ease infinite;background-size:400% 400%}@keyframes gradientAnimation{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.auth-box{background:rgba(255,255,255,0.98);backdrop-filter:blur(10px);border-radius:30px;padding:50px;max-width:500px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,0.4);animation:slideUp 0.6s cubic-bezier(0.68,-0.55,0.265,1.55)}@keyframes slideUp{from{opacity:0;transform:translateY(50px) scale(0.9)}to{opacity:1;transform:translateY(0) scale(1)}}.auth-logo{text-align:center;margin-bottom:40px}.auth-logo .logo-icon{font-size:5rem;background:linear-gradient(135deg,#7C3AED,#EC4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:pulse 2s ease-in-out infinite;filter:drop-shadow(0 5px 15px rgba(124,58,237,0.3))}@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}.auth-logo h2{font-weight:900;font-size:2.8rem;color:#1F2937;margin-top:20px;letter-spacing:2px}.auth-logo p{color:#6B7280;font-size:1.1rem;margin-top:10px;font-weight:500}.nav-pills .nav-link{border-radius:15px;font-weight:700;padding:12px 25px;transition:all .3s;color:#6B7280;border:none;background:transparent;cursor:pointer}.nav-pills .nav-link.active{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:white;box-shadow:0 5px 20px rgba(124,58,237,0.4);transform:translateY(-2px)}.form-control,.form-select{border-radius:12px;border:2px solid #E5E7EB;padding:12px 18px;font-size:1rem;transition:all .3s;background:white;color:#1F2937}.form-control:focus,.form-select:focus{border-color:#7C3AED;box-shadow:0 0 0 5px rgba(124,58,237,0.1);outline:none;background:white}.alert{border-radius:15px;border:none;padding:15px 20px}.alert-info{background:linear-gradient(135deg,#E0E7FF,#DBEAFE);color:#1E40AF;border-left:5px solid #3B82F6}.alert-success{background:linear-gradient(135deg,#D1FAE5,#A7F3D0);color:#065F46;border-left:5px solid #10B981}.btn{border-radius:12px;padding:12px 30px;font-weight:700;border:none;cursor:pointer;transition:all .3s ease;display:inline-flex;align-items:center;gap:10px;font-size:1rem;text-transform:uppercase;letter-spacing:0.5px}.btn i{font-size:1.2rem}.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 5px 20px rgba(124,58,237,0.3)}.btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(124,58,237,0.5);color:#fff}.btn-success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.btn-success:hover{transform:translateY(-3px);color:#fff}.btn-danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.btn-outline{background:transparent;color:var(--primary);border:3px solid var(--primary)}.btn-outline:hover{background:var(--primary);color:#fff}.btn-secondary{background:#6B7280;color:#fff}.btn-sm{padding:8px 16px;font-size:0.85rem}.w-100{width:100%}.mt-3{margin-top:1rem}.mb-3{margin-bottom:1rem}#app{display:none}.sidebar{width:280px;background:var(--bg-sidebar);color:#fff;position:fixed;height:100vh;overflow-y:auto;z-index:1000;box-shadow:4px 0 25px rgba(0,0,0,0.2)}.sidebar::-webkit-scrollbar{width:8px}.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,0.05)}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:4px}.sidebar-logo{padding:30px 20px;text-align:center;background:linear-gradient(135deg,var(--primary),var(--secondary));border-bottom:5px solid var(--accent)}.sidebar-logo h1{font-size:2.5rem;font-weight:900;letter-spacing:5px;margin:0;text-shadow:2px 2px 8px rgba(0,0,0,0.3)}.sidebar-logo p{font-size:1rem;opacity:0.95;margin:10px 0 0 0;letter-spacing:2px}.sidebar-menu{list-style:none;padding:20px 0}.sidebar-menu li a{display:flex;align-items:center;gap:12px;padding:14px 20px;color:rgba(255,255,255,0.85);text-decoration:none;transition:all .3s;border-left:5px solid transparent;font-weight:500;font-size:0.95rem}.sidebar-menu li a i{font-size:1.3rem;width:25px}.sidebar-menu li a:hover{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--accent);padding-left:28px}.sidebar-menu li a.active{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--primary);font-weight:700}.theme-toggle{padding:15px 20px;border-top:1px solid rgba(255,255,255,0.1)}.theme-toggle button{width:100%;padding:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);border-radius:12px;color:#fff;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px}.main-content{margin-left:280px;padding:30px 40px 100px;min-height:100vh;overflow-y:auto;overflow-x:hidden}.main-content::-webkit-scrollbar{width:10px}.main-content::-webkit-scrollbar-track{background:var(--bg-main)}.main-content::-webkit-scrollbar-thumb{background:var(--primary);border-radius:5px}.content-section{display:none}.content-section.active{display:block;animation:fadeIn 0.4s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.page-header{margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}.page-header h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:0;display:flex;align-items:center;gap:15px}.stat-card{background:var(--bg-card);border-radius:20px;padding:30px;box-shadow:var(--shadow);transition:all .3s;text-align:center;position:relative;overflow:hidden;border:2px solid var(--border-color)}.stat-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:6px;background:linear-gradient(90deg,var(--primary),var(--secondary))}.stat-card:hover{transform:translateY(-10px);box-shadow:var(--shadow-hover);border-color:var(--primary)}.stat-card .icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 10px 25px rgba(124,58,237,0.3)}.stat-card h3{font-size:3rem;font-weight:900;margin:15px 0 10px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}.stat-card p{color:var(--text-secondary);font-size:1rem;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:1px}.card{background:var(--bg-card);border-radius:20px;box-shadow:var(--shadow);margin-bottom:30px;overflow:visible;transition:all .3s;border:2px solid var(--border-color)}.card-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px 30px;font-weight:800;font-size:1.2rem;display:flex;align-items:center;gap:12px}.card-body{padding:30px}table{width:100%;border-collapse:collapse;font-size:0.95rem}table thead th{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:16px 14px;text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;font-size:0.85rem}table tbody tr{border-bottom:2px solid var(--border-color);transition:all .2s}table tbody tr:hover{background:var(--bg-main);transform:scale(1.01)}table tbody td{padding:16px 14px;vertical-align:middle;color:var(--text-primary)}.badge{padding:8px 16px;border-radius:20px;font-weight:800;font-size:0.8rem;display:inline-block;text-transform:uppercase;letter-spacing:0.5px}.badge.success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.badge.warning{background:linear-gradient(135deg,var(--warning),#F59E0B);color:#000}.badge.danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.spinner{border:4px solid var(--border-color);border-top:4px solid var(--primary);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.text-center{text-align:center}.text-muted{color:var(--text-secondary)}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.autocomplete-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:2px solid var(--primary);border-radius:14px;margin-top:5px;max-height:350px;overflow-y:auto;z-index:9999;box-shadow:0 10px 40px rgba(124,58,237,0.3);display:none}.autocomplete-results::-webkit-scrollbar{width:8px}.autocomplete-results::-webkit-scrollbar-track{background:var(--bg-main);border-radius:10px}.autocomplete-results::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px}.autocomplete-item{padding:14px 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s ease;word-wrap:break-word;white-space:normal}.autocomplete-item:hover{background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));transform:translateX(5px);border-left:4px solid var(--primary)}.autocomplete-item:last-child{border-bottom:none}.autocomplete-item strong{color:var(--primary);font-size:1.05rem;display:block;margin-bottom:5px}.autocomplete-item small{color:var(--text-secondary);font-size:0.9rem;display:block}.row{display:flex;flex-wrap:wrap;margin:0 -15px}.row.g-4>*{padding:0 15px;margin-bottom:25px}[class^="col-"]{padding:0 15px}.col-12{width:100%}@media (min-width:768px){.col-md-6{width:50%}.col-md-4{width:33.333%}.col-md-3{width:25%}.col-md-2{width:16.666%}}@media (min-width:992px){.col-lg-3{width:25%}.col-lg-4{width:33.333%}.col-lg-6{width:50%}}
             .global-search-container{margin-bottom:24px;background:var(--bg-card);border-radius:18px;padding:20px;box-shadow:var(--shadow);position:relative}
@@ -7027,6 +7029,396 @@ function formatarTamanhoArquivo(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
+
+// ========== BIBLIOTECA DE EXPORTAÇÃO ==========
+
+/**
+ * Biblioteca unificada para exportação de dados
+ * Suporta: Excel (XLSX), CSV, PDF
+ */
+const ExportLibrary = {
+    /**
+     * Exportar dados para CSV
+     * @param {Array} data - Array de objetos com os dados
+     * @param {Array} columns - Array de objetos {key: 'campo', label: 'Label'}
+     * @param {String} filename - Nome do arquivo
+     */
+    toCSV: function(data, columns, filename) {
+        if (!data || data.length === 0) {
+            Swal.fire('Atenção', 'Nenhum dado disponível para exportar', 'warning');
+            return;
+        }
+
+        // BOM UTF-8 para Excel reconhecer acentos
+        let csv = '\uFEFF';
+
+        // Cabeçalhos
+        csv += columns.map(col => col.label).join(';') + '\n';
+
+        // Dados
+        data.forEach(row => {
+            const line = columns.map(col => {
+                let value = row[col.key] ?? '';
+
+                // Tratar tipos especiais
+                if (typeof value === 'object' && value !== null) {
+                    value = JSON.stringify(value);
+                }
+
+                // Escapar ponto e vírgula
+                value = String(value).replace(/;/g, ',');
+
+                return value;
+            }).join(';');
+
+            csv += line + '\n';
+        });
+
+        // Download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'CSV Exportado!',
+            text: `${data.length} registros exportados com sucesso`,
+            timer: 2000,
+            showConfirmButton: false
+        });
+    },
+
+    /**
+     * Exportar dados para Excel usando biblioteca SheetJS
+     * @param {Array} data - Array de objetos com os dados
+     * @param {Array} columns - Array de objetos {key: 'campo', label: 'Label'}
+     * @param {String} filename - Nome do arquivo
+     * @param {String} sheetName - Nome da planilha
+     */
+    toExcel: async function(data, columns, filename, sheetName = 'Dados') {
+        if (!data || data.length === 0) {
+            Swal.fire('Atenção', 'Nenhum dado disponível para exportar', 'warning');
+            return;
+        }
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Gerando Excel...',
+            html: '<div class="spinner"></div><p style="margin-top:20px;">Preparando arquivo...</p>',
+            allowOutsideClick: false,
+            showConfirmButton: false
+        });
+
+        try {
+            // Preparar dados no formato de tabela
+            const tableData = [];
+
+            // Cabeçalhos
+            tableData.push(columns.map(col => col.label));
+
+            // Dados
+            data.forEach(row => {
+                const rowData = columns.map(col => {
+                    let value = row[col.key] ?? '';
+
+                    // Formatar datas
+                    if (col.type === 'date' && value) {
+                        value = new Date(value).toLocaleDateString('pt-BR');
+                    }
+                    // Formatar moeda
+                    else if (col.type === 'currency' && value) {
+                        value = 'R$ ' + Number(value).toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                    }
+                    // Formatar boolean
+                    else if (col.type === 'boolean') {
+                        value = value ? 'Sim' : 'Não';
+                    }
+
+                    return value;
+                });
+                tableData.push(rowData);
+            });
+
+            // Criar workbook com SheetJS (biblioteca já carregada globalmente)
+            if (typeof XLSX === 'undefined') {
+                throw new Error('Biblioteca XLSX não carregada');
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(tableData);
+
+            // Estilizar cabeçalho (largura das colunas)
+            const wscols = columns.map(col => ({ wch: col.width || 15 }));
+            ws['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+            // Gerar arquivo
+            XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Excel Gerado!',
+                text: `${data.length} registros exportados com sucesso`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            console.error('Erro ao gerar Excel:', error);
+            Swal.fire('Erro', 'Não foi possível gerar o arquivo Excel', 'error');
+        }
+    },
+
+    /**
+     * Exportar tabela HTML existente para CSV
+     * @param {String} tableId - ID da tabela HTML
+     * @param {String} filename - Nome do arquivo
+     */
+    tableToCSV: function(tableId, filename) {
+        const table = document.getElementById(tableId);
+        if (!table) {
+            Swal.fire('Erro', 'Tabela não encontrada', 'error');
+            return;
+        }
+
+        const rows = table.querySelectorAll('tr');
+        if (rows.length <= 1) {
+            Swal.fire('Atenção', 'Nenhum dado na tabela para exportar', 'warning');
+            return;
+        }
+
+        let csv = '\uFEFF'; // BOM UTF-8
+
+        rows.forEach((row, index) => {
+            const cells = row.querySelectorAll(index === 0 ? 'th' : 'td');
+            const line = Array.from(cells).map(cell => {
+                return cell.textContent.trim().replace(/;/g, ',');
+            }).join(';');
+            csv += line + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'CSV Exportado!',
+            text: 'Tabela exportada com sucesso',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    }
+};
+
+// ========== FIM BIBLIOTECA DE EXPORTAÇÃO ==========
+
+// ========== FUNÇÕES DE EXPORTAÇÃO ESPECÍFICAS ==========
+
+/**
+ * Exportar Orçamentos para Excel
+ */
+async function exportarOrcamentosExcel() {
+    try {
+        const res = await fetch('/api/orcamentos', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.orcamentos || data.orcamentos.length === 0) {
+            Swal.fire('Atenção', 'Nenhum orçamento disponível para exportar', 'info');
+            return;
+        }
+
+        const columns = [
+            { key: 'numero', label: 'Número', width: 10 },
+            { key: 'cliente_nome', label: 'Cliente', width: 25 },
+            { key: 'created_at', label: 'Data', type: 'date', width: 12 },
+            { key: 'profissional_nome', label: 'Profissional', width: 25 },
+            { key: 'total_servicos', label: 'Total Serviços', type: 'currency', width: 15 },
+            { key: 'total_produtos', label: 'Total Produtos', type: 'currency', width: 15 },
+            { key: 'desconto', label: 'Desconto', type: 'currency', width: 12 },
+            { key: 'total_final', label: 'Total Final', type: 'currency', width: 15 },
+            { key: 'status', label: 'Status', width: 12 }
+        ];
+
+        await ExportLibrary.toExcel(data.orcamentos, columns, 'orcamentos_bioma', 'Orçamentos');
+    } catch (error) {
+        console.error('Erro ao exportar orçamentos:', error);
+        Swal.fire('Erro', 'Não foi possível exportar os orçamentos', 'error');
+    }
+}
+
+/**
+ * Exportar Orçamentos para CSV
+ */
+async function exportarOrcamentosCSV() {
+    try {
+        const res = await fetch('/api/orcamentos', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.orcamentos || data.orcamentos.length === 0) {
+            Swal.fire('Atenção', 'Nenhum orçamento disponível para exportar', 'info');
+            return;
+        }
+
+        const columns = [
+            { key: 'numero', label: 'Número' },
+            { key: 'cliente_nome', label: 'Cliente' },
+            { key: 'created_at', label: 'Data' },
+            { key: 'profissional_nome', label: 'Profissional' },
+            { key: 'total_final', label: 'Total Final' },
+            { key: 'status', label: 'Status' }
+        ];
+
+        ExportLibrary.toCSV(data.orcamentos, columns, 'orcamentos_bioma');
+    } catch (error) {
+        console.error('Erro ao exportar orçamentos:', error);
+        Swal.fire('Erro', 'Não foi possível exportar os orçamentos', 'error');
+    }
+}
+
+/**
+ * Exportar Serviços para Excel/CSV
+ */
+async function exportarServicos(formato = 'excel') {
+    try {
+        const res = await fetch('/api/servicos', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.servicos || data.servicos.length === 0) {
+            Swal.fire('Atenção', 'Nenhum serviço disponível para exportar', 'info');
+            return;
+        }
+
+        const columns = [
+            { key: 'nome', label: 'Nome do Serviço', width: 30 },
+            { key: 'categoria', label: 'Categoria', width: 15 },
+            { key: 'tamanho', label: 'Tamanho', width: 12 },
+            { key: 'preco', label: 'Preço', type: 'currency', width: 15 },
+            { key: 'duracao', label: 'Duração (min)', width: 12 },
+            { key: 'ativo', label: 'Ativo', type: 'boolean', width: 10 }
+        ];
+
+        if (formato === 'excel') {
+            await ExportLibrary.toExcel(data.servicos, columns, 'servicos_bioma', 'Serviços');
+        } else {
+            ExportLibrary.toCSV(data.servicos, columns, 'servicos_bioma');
+        }
+    } catch (error) {
+        console.error('Erro ao exportar serviços:', error);
+        Swal.fire('Erro', 'Não foi possível exportar os serviços', 'error');
+    }
+}
+
+/**
+ * Exportar Produtos para Excel/CSV
+ */
+async function exportarProdutos(formato = 'excel') {
+    try {
+        const res = await fetch('/api/produtos', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.produtos || data.produtos.length === 0) {
+            Swal.fire('Atenção', 'Nenhum produto disponível para exportar', 'info');
+            return;
+        }
+
+        const columns = [
+            { key: 'nome', label: 'Nome do Produto', width: 30 },
+            { key: 'marca', label: 'Marca', width: 20 },
+            { key: 'preco', label: 'Preço', type: 'currency', width: 15 },
+            { key: 'estoque', label: 'Estoque', width: 10 },
+            { key: 'estoque_minimo', label: 'Estoque Mínimo', width: 15 },
+            { key: 'ativo', label: 'Ativo', type: 'boolean', width: 10 }
+        ];
+
+        if (formato === 'excel') {
+            await ExportLibrary.toExcel(data.produtos, columns, 'produtos_bioma', 'Produtos');
+        } else {
+            ExportLibrary.toCSV(data.produtos, columns, 'produtos_bioma');
+        }
+    } catch (error) {
+        console.error('Erro ao exportar produtos:', error);
+        Swal.fire('Erro', 'Não foi possível exportar os produtos', 'error');
+    }
+}
+
+/**
+ * Exportar Clientes para Excel/CSV
+ */
+async function exportarClientes(formato = 'excel') {
+    try {
+        const res = await fetch('/api/clientes', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.clientes || data.clientes.length === 0) {
+            Swal.fire('Atenção', 'Nenhum cliente disponível para exportar', 'info');
+            return;
+        }
+
+        const columns = [
+            { key: 'nome', label: 'Nome', width: 30 },
+            { key: 'telefone', label: 'Telefone', width: 15 },
+            { key: 'email', label: 'E-mail', width: 30 },
+            { key: 'cpf', label: 'CPF', width: 15 },
+            { key: 'data_nascimento', label: 'Data Nascimento', type: 'date', width: 15 },
+            { key: 'endereco', label: 'Endereço', width: 35 }
+        ];
+
+        if (formato === 'excel') {
+            await ExportLibrary.toExcel(data.clientes, columns, 'clientes_bioma', 'Clientes');
+        } else {
+            ExportLibrary.toCSV(data.clientes, columns, 'clientes_bioma');
+        }
+    } catch (error) {
+        console.error('Erro ao exportar clientes:', error);
+        Swal.fire('Erro', 'Não foi possível exportar os clientes', 'error');
+    }
+}
+
+/**
+ * Exportar Profissionais para Excel/CSV
+ */
+async function exportarProfissionais(formato = 'excel') {
+    try {
+        const res = await fetch('/api/profissionais', { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.profissionais || data.profissionais.length === 0) {
+            Swal.fire('Atenção', 'Nenhum profissional disponível para exportar', 'info');
+            return;
+        }
+
+        const columns = [
+            { key: 'nome', label: 'Nome', width: 30 },
+            { key: 'especialidade', label: 'Especialidade', width: 25 },
+            { key: 'telefone', label: 'Telefone', width: 15 },
+            { key: 'email', label: 'E-mail', width: 30 },
+            { key: 'comissao_padrao', label: 'Comissão Padrão (%)', width: 18 },
+            { key: 'ativo', label: 'Ativo', type: 'boolean', width: 10 }
+        ];
+
+        if (formato === 'excel') {
+            await ExportLibrary.toExcel(data.profissionais, columns, 'profissionais_bioma', 'Profissionais');
+        } else {
+            ExportLibrary.toCSV(data.profissionais, columns, 'profissionais_bioma');
+        }
+    } catch (error) {
+        console.error('Erro ao exportar profissionais:', error);
+        Swal.fire('Erro', 'Não foi possível exportar os profissionais', 'error');
+    }
+}
+
+// ========== FIM FUNÇÕES DE EXPORTAÇÃO ESPECÍFICAS ==========
 
 /**
  * Upload de foto para profissional
