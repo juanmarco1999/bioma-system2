@@ -10484,7 +10484,7 @@ async function carregarProfissionaisFiltro() {
 
 async function carregarComissoesProfissional() {
     const profissionalId = document.getElementById('filtroComissoesProfissional')?.value;
-    
+
     if (!profissionalId) {
         Swal.fire('Atenção', 'Selecione um profissional', 'warning');
         return;
@@ -10499,51 +10499,157 @@ async function carregarComissoesProfissional() {
     if (dataFim) params.append('data_fim', dataFim + 'T23:59:59');
     if (status) params.append('status', status);
 
+    // Mostrar loading na tabela
+    const tbody = document.getElementById('tabelaHistoricoComissoes');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
+    }
+
     try {
         const res = await fetch(`/api/profissionais/${profissionalId}/comissoes?${params}`, {
             credentials: 'include'
         });
 
-        if (!res.ok) throw new Error('Erro ao carregar comissões');
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error('❌ Erro HTTP ao carregar comissões:', res.status, errorText);
+            throw new Error(`Erro ${res.status}: ${errorText || 'Falha ao carregar comissões'}`);
+        }
 
-        const { data } = await res.json();
+        const responseData = await res.json();
+        console.log('📊 Dados recebidos do backend:', responseData);
 
-        document.getElementById('statTotalComissoes').textContent = 
-            `R$ ${data.estatisticas.total_comissoes.toFixed(2).replace('.', ',')}`;
-        document.getElementById('statTotalOrcamentos').textContent = 
-            data.estatisticas.total_orcamentos;
-        document.getElementById('statMediaComissao').textContent = 
-            `R$ ${data.estatisticas.media_comissao.toFixed(2).replace('.', ',')}`;
+        // Verificar estrutura de dados e aplicar fallbacks
+        const data = responseData.data || responseData;
+        const estatisticas = data.estatisticas || {};
+        const historico = data.historico || data.comissoes || [];
 
-        document.getElementById('comissoesEstatisticasCards').style.display = 'block';
-        document.getElementById('comissoesMensagemInicial').style.display = 'none';
+        // Valores com fallback
+        const totalComissoes = estatisticas.total_comissoes ?? 0;
+        const totalOrcamentos = estatisticas.total_orcamentos ?? 0;
+        const mediaComissao = estatisticas.media_comissao ?? 0;
+        const comissoesPorMes = estatisticas.comissoes_por_mes || [];
 
-        renderizarGraficoComissoes(data.estatisticas.comissoes_por_mes);
-        renderizarTabelaHistoricoComissoes(data.historico, data.estatisticas.total_comissoes);
+        // Atualizar estatísticas
+        const statTotalComissoesElem = document.getElementById('statTotalComissoes');
+        const statTotalOrcamentosElem = document.getElementById('statTotalOrcamentos');
+        const statMediaComissaoElem = document.getElementById('statMediaComissao');
+
+        if (statTotalComissoesElem) {
+            statTotalComissoesElem.textContent = `R$ ${totalComissoes.toFixed(2).replace('.', ',')}`;
+        }
+        if (statTotalOrcamentosElem) {
+            statTotalOrcamentosElem.textContent = totalOrcamentos;
+        }
+        if (statMediaComissaoElem) {
+            statMediaComissaoElem.textContent = `R$ ${mediaComissao.toFixed(2).replace('.', ',')}`;
+        }
+
+        // Mostrar/ocultar seções
+        const cardsElem = document.getElementById('comissoesEstatisticasCards');
+        const msgInicialElem = document.getElementById('comissoesMensagemInicial');
+
+        if (cardsElem) cardsElem.style.display = 'block';
+        if (msgInicialElem) msgInicialElem.style.display = 'none';
+
+        // Renderizar gráfico e tabela
+        renderizarGraficoComissoes(comissoesPorMes);
+        renderizarTabelaHistoricoComissoes(historico, totalComissoes);
+
+        console.log('✅ Comissões carregadas com sucesso:', {
+            total_comissoes: totalComissoes,
+            total_orcamentos: totalOrcamentos,
+            historico_length: historico.length
+        });
 
     } catch (error) {
-        console.error('Erro:', error);
-        Swal.fire('Erro', 'Não foi possível carregar as comissões', 'error');
+        console.error('❌ Erro ao carregar comissões:', error);
+
+        // Mostrar mensagem de erro amigável na tabela
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Erro ao carregar comissões</strong><br>
+                        <small>${error.message || 'Verifique sua conexão ou contate o suporte'}</small>
+                    </td>
+                </tr>
+            `;
+        }
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao Carregar Comissões',
+            html: `<p>${error.message || 'Não foi possível carregar as comissões'}</p>
+                   <small class="text-muted">Verifique o console para mais detalhes</small>`,
+            confirmButtonText: 'OK'
+        });
     }
 }
 
 function renderizarGraficoComissoes(comissoesPorMes) {
     const ctx = document.getElementById('graficoComissoesMensal');
-    if (!ctx) return;
-    
+    if (!ctx) {
+        console.warn('⚠️ Canvas graficoComissoesMensal não encontrado');
+        return;
+    }
+
+    // Destruir gráfico anterior se existir
     if (graficoComissoesInstance) {
         graficoComissoesInstance.destroy();
     }
 
-    const meses = Object.keys(comissoesPorMes).sort();
-    const valores = meses.map(mes => comissoesPorMes[mes].valor);
-    const quantidades = meses.map(mes => comissoesPorMes[mes].quantidade);
+    // Validar dados de entrada
+    if (!comissoesPorMes || typeof comissoesPorMes !== 'object' || Object.keys(comissoesPorMes).length === 0) {
+        console.warn('⚠️ Dados de comissões por mês vazios ou inválidos');
+        // Renderizar gráfico vazio com mensagem
+        graficoComissoesInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Sem dados'],
+                datasets: [{
+                    label: 'Valor Total (R$)',
+                    data: [0],
+                    borderColor: 'rgb(124, 58, 237)',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Nenhum dado disponível para o período selecionado'
+                    }
+                }
+            }
+        });
+        return;
+    }
 
-    const labels = meses.map(mes => {
-        const [ano, mesNum] = mes.split('-');
-        const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-        return `${mesesNomes[parseInt(mesNum) - 1]}/${ano}`;
-    });
+    try {
+        const meses = Object.keys(comissoesPorMes).sort();
+        const valores = meses.map(mes => {
+            const dadosMes = comissoesPorMes[mes];
+            return dadosMes?.valor ?? dadosMes?.total ?? 0;
+        });
+        const quantidades = meses.map(mes => {
+            const dadosMes = comissoesPorMes[mes];
+            return dadosMes?.quantidade ?? dadosMes?.count ?? 0;
+        });
+
+        const labels = meses.map(mes => {
+            try {
+                const [ano, mesNum] = mes.split('-');
+                const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                const mesIndex = parseInt(mesNum) - 1;
+                return mesesNomes[mesIndex] ? `${mesesNomes[mesIndex]}/${ano}` : mes;
+            } catch (err) {
+                console.warn('⚠️ Erro ao formatar label do mês:', mes, err);
+                return mes;
+            }
+        });
 
     graficoComissoesInstance = new Chart(ctx, {
         type: 'line',
@@ -10601,46 +10707,109 @@ function renderizarGraficoComissoes(comissoesPorMes) {
             }
         }
     });
+
+    console.log('✅ Gráfico de comissões renderizado com sucesso');
+
+    } catch (error) {
+        console.error('❌ Erro ao renderizar gráfico de comissões:', error);
+        // Renderizar gráfico vazio em caso de erro
+        graficoComissoesInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Erro'],
+                datasets: [{
+                    label: 'Dados não disponíveis',
+                    data: [0],
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Erro ao carregar dados do gráfico',
+                        color: 'rgb(239, 68, 68)'
+                    }
+                }
+            }
+        });
+    }
 }
 
 function renderizarTabelaHistoricoComissoes(historico, totalComissoes) {
     const tbody = document.getElementById('tabelaHistoricoComissoes');
     if (!tbody) return;
-    
+
     if (!historico || historico.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhuma comissão encontrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted"><i class="bi bi-inbox"></i> Nenhuma comissão encontrada para os filtros selecionados</td></tr>';
         const tfoot = document.getElementById('tfootComissoes');
         if (tfoot) tfoot.style.display = 'none';
         return;
     }
 
-    tbody.innerHTML = historico.map(comissao => {
-        const data = new Date(comissao.data_registro).toLocaleDateString('pt-BR');
-        const valorBase = comissao.valor_base.toFixed(2).replace('.', ',');
-        const comissaoValor = comissao.comissao_valor.toFixed(2).replace('.', ',');
-        
-        const badgeStatus = 
-            comissao.status_orcamento === 'Aprovado' ? 'success' :
-            comissao.status_orcamento === 'Pendente' ? 'warning' : 'danger';
+    tbody.innerHTML = historico.map((comissao, index) => {
+        try {
+            // Fallbacks para todos os campos
+            const dataRegistro = comissao.data_registro || comissao.data || comissao.created_at;
+            const data = dataRegistro ? new Date(dataRegistro).toLocaleDateString('pt-BR') : 'Data não disponível';
 
-        const badgeTipo = comissao.tipo === 'profissional' ? 'primary' : 'info';
+            const valorBase = (comissao.valor_base ?? comissao.valorBase ?? 0);
+            const valorBaseFormatado = typeof valorBase === 'number' ? valorBase.toFixed(2).replace('.', ',') : '0,00';
 
-        return `
-            <tr>
-                <td>${data}</td>
-                <td>#${comissao.orcamento_id.slice(-6)}</td>
-                <td><span class="badge ${badgeTipo}">${comissao.tipo}</span></td>
-                <td>R$ ${valorBase}</td>
-                <td>${comissao.comissao_perc}%</td>
-                <td><strong>R$ ${comissaoValor}</strong></td>
-                <td><span class="badge ${badgeStatus}">${comissao.status_orcamento}</span></td>
-            </tr>
-        `;
+            const comissaoValor = (comissao.comissao_valor ?? comissao.comissaoValor ?? comissao.valor ?? 0);
+            const comissaoValorFormatado = typeof comissaoValor === 'number' ? comissaoValor.toFixed(2).replace('.', ',') : '0,00';
+
+            const comissaoPerc = (comissao.comissao_perc ?? comissao.percentual ?? comissao.porcentagem ?? 0);
+            const comissaoPercFormatado = typeof comissaoPerc === 'number' ? comissaoPerc : parseFloat(comissaoPerc) || 0;
+
+            const orcamentoId = comissao.orcamento_id || comissao.orcamentoId || `ORÇ-${index + 1}`;
+            const orcamentoIdDisplay = typeof orcamentoId === 'string' && orcamentoId.length > 6
+                ? orcamentoId.slice(-6)
+                : orcamentoId;
+
+            const statusOrcamento = comissao.status_orcamento || comissao.statusOrcamento || comissao.status || 'Desconhecido';
+            const badgeStatus =
+                statusOrcamento === 'Aprovado' || statusOrcamento === 'aprovado' ? 'success' :
+                statusOrcamento === 'Pendente' || statusOrcamento === 'pendente' ? 'warning' :
+                statusOrcamento === 'Cancelado' || statusOrcamento === 'cancelado' ? 'danger' : 'secondary';
+
+            const tipo = comissao.tipo || comissao.tipo_comissao || 'profissional';
+            const badgeTipo = tipo === 'profissional' ? 'primary' : tipo === 'indicacao' ? 'info' : 'secondary';
+
+            return `
+                <tr>
+                    <td>${data}</td>
+                    <td>#${orcamentoIdDisplay}</td>
+                    <td><span class="badge ${badgeTipo}">${tipo}</span></td>
+                    <td>R$ ${valorBaseFormatado}</td>
+                    <td>${comissaoPercFormatado}%</td>
+                    <td><strong>R$ ${comissaoValorFormatado}</strong></td>
+                    <td><span class="badge ${badgeStatus}">${statusOrcamento}</span></td>
+                </tr>
+            `;
+        } catch (err) {
+            console.error('❌ Erro ao renderizar comissão:', err, comissao);
+            return `
+                <tr>
+                    <td colspan="7" class="text-center text-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Erro ao exibir comissão #${index + 1}
+                    </td>
+                </tr>
+            `;
+        }
     }).join('');
 
+    // Atualizar rodapé com total
     const footerElem = document.getElementById('totalComissoesFooter');
     const tfootElem = document.getElementById('tfootComissoes');
-    if (footerElem) footerElem.textContent = `R$ ${totalComissoes.toFixed(2).replace('.', ',')}`;
+
+    const totalFormatado = typeof totalComissoes === 'number'
+        ? totalComissoes.toFixed(2).replace('.', ',')
+        : '0,00';
+
+    if (footerElem) footerElem.textContent = `R$ ${totalFormatado}`;
     if (tfootElem) tfootElem.style.display = '';
 }
 
