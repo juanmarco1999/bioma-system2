@@ -4650,6 +4650,736 @@ window.buscaRapidaConsultar = function(termo) {
     }, 500);
 };
 
+// ==================== MELHORAR GRÁFICOS DA ABA RESUMO (Diretriz 4.1) ====================
+
+// Instâncias dos gráficos melhorados
+let chartServicosMelhorado = null;
+let chartFaturamentoMelhorado = null;
+let chartConversao = null;
+let chartStatusDistribuicao = null;
+
+/**
+ * Carregar Relatórios com gráficos melhorados
+ */
+window.loadRelatoriosMelhorado = async function() {
+    try {
+        // Buscar dados
+        const response = await fetch('/api/orcamentos', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success || !data.orcamentos) {
+            console.error('Erro ao carregar orçamentos');
+            return;
+        }
+
+        const todosOrcamentos = data.orcamentos || [];
+        const orcamentosAprovados = todosOrcamentos.filter(o => o.status?.toLowerCase() === 'aprovado');
+
+        // Atualizar cards de estatísticas (mantém originais)
+        atualizarCardsRelatorios(todosOrcamentos, orcamentosAprovados);
+
+        // Gerar gráficos melhorados
+        gerarGraficoServicosMelhorado(orcamentosAprovados);
+        gerarGraficoFaturamentoMelhorado(orcamentosAprovados);
+        gerarGraficoConversao(todosOrcamentos);
+        gerarGraficoStatusDistribuicao(todosOrcamentos);
+
+        // Carregar top clientes e produtos (mantém original)
+        await carregarTopClientes();
+        carregarTopProdutos(orcamentosAprovados);
+
+    } catch (error) {
+        console.error('Erro ao carregar relatórios melhorados:', error);
+    }
+};
+
+/**
+ * Atualizar cards de estatísticas
+ */
+function atualizarCardsRelatorios(todos, aprovados) {
+    const faturamentoTotal = aprovados.reduce((acc, o) => acc + (o.total_final || 0), 0);
+    const faturamentoMes = calcularFaturamentoMesAtual(aprovados);
+    const cashbackTotal = aprovados.reduce((acc, o) => acc + (o.cashback_valor || 0), 0);
+    const ticketMedio = aprovados.length > 0 ? faturamentoTotal / aprovados.length : 0;
+
+    // Atualizar elementos (se existirem)
+    const elFatTotal = document.getElementById('relFaturamentoTotal');
+    const elFatMes = document.getElementById('relFaturamentoMes');
+    const elCashback = document.getElementById('relCashbackTotal');
+    const elTicket = document.getElementById('relTicketMedio');
+
+    if (elFatTotal) elFatTotal.textContent = `R$ ${faturamentoTotal.toFixed(0)}`;
+    if (elFatMes) elFatMes.textContent = `R$ ${faturamentoMes.toFixed(0)}`;
+    if (elCashback) elCashback.textContent = `R$ ${cashbackTotal.toFixed(0)}`;
+    if (elTicket) elTicket.textContent = `R$ ${ticketMedio.toFixed(0)}`;
+}
+
+function calcularFaturamentoMesAtual(orcamentos) {
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+
+    return orcamentos
+        .filter(o => {
+            const d = new Date(o.created_at);
+            return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+        })
+        .reduce((acc, o) => acc + (o.total_final || 0), 0);
+}
+
+/**
+ * Gráfico de Serviços Melhorado (Bar Chart com gradientes)
+ */
+function gerarGraficoServicosMelhorado(orcamentos) {
+    const canvas = document.getElementById('chartServicos');
+    if (!canvas) return;
+
+    // Destruir gráfico anterior
+    if (chartServicosMelhorado) {
+        chartServicosMelhorado.destroy();
+    }
+
+    // Calcular top 8 serviços (aumentado de 5)
+    const servicosCount = {};
+    orcamentos.forEach(orc => {
+        (orc.servicos || []).forEach(s => {
+            const nome = s.nome || 'Sem nome';
+            if (!servicosCount[nome]) {
+                servicosCount[nome] = { total: 0, quantidade: 0 };
+            }
+            servicosCount[nome].total += s.total || s.preco || 0;
+            servicosCount[nome].quantidade += s.quantidade || 1;
+        });
+    });
+
+    const topServicos = Object.entries(servicosCount)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 8);
+
+    if (topServicos.length === 0) return;
+
+    // Cores em gradiente
+    const colors = [
+        'rgba(124, 58, 237, 0.8)',   // Roxo
+        'rgba(59, 130, 246, 0.8)',   // Azul
+        'rgba(16, 185, 129, 0.8)',   // Verde
+        'rgba(251, 191, 36, 0.8)',   // Amarelo
+        'rgba(239, 68, 68, 0.8)',    // Vermelho
+        'rgba(236, 72, 153, 0.8)',   // Rosa
+        'rgba(139, 92, 246, 0.8)',   // Roxo claro
+        'rgba(14, 165, 233, 0.8)'    // Azul claro
+    ];
+
+    const borderColors = colors.map(c => c.replace('0.8', '1'));
+
+    chartServicosMelhorado = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: topServicos.map(s => s[0]),
+            datasets: [{
+                label: 'Faturamento (R$)',
+                data: topServicos.map(s => s[1].total),
+                backgroundColor: colors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                borderRadius: 8,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#666',
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    callbacks: {
+                        label: function(context) {
+                            const servico = topServicos[context.dataIndex];
+                            return [
+                                `Faturamento: R$ ${servico[1].total.toFixed(2)}`,
+                                `Quantidade: ${servico[1].quantidade} un.`,
+                                `Média: R$ ${(servico[1].total / servico[1].quantidade).toFixed(2)}`
+                            ];
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Top 8 Serviços Mais Rentáveis',
+                    color: '#333',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        },
+                        color: '#666'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#666',
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+}
+
+/**
+ * Gráfico de Faturamento Mensal Melhorado (Line Chart com gradiente)
+ */
+function gerarGraficoFaturamentoMelhorado(orcamentos) {
+    const canvas = document.getElementById('chartFaturamento');
+    if (!canvas) return;
+
+    // Destruir gráfico anterior
+    if (chartFaturamentoMelhorado) {
+        chartFaturamentoMelhorado.destroy();
+    }
+
+    // Últimos 12 meses (aumentado de 6)
+    const meses = [];
+    const faturamento = [];
+    const quantidades = [];
+
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const mes = d.getMonth();
+        const ano = d.getFullYear();
+
+        meses.push(d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }));
+
+        const orcamentosMes = orcamentos.filter(o => {
+            const od = new Date(o.created_at);
+            return od.getMonth() === mes && od.getFullYear() === ano;
+        });
+
+        faturamento.push(orcamentosMes.reduce((acc, o) => acc + (o.total_final || 0), 0));
+        quantidades.push(orcamentosMes.length);
+    }
+
+    chartFaturamentoMelhorado = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: meses,
+            datasets: [
+                {
+                    label: 'Faturamento (R$)',
+                    data: faturamento,
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Quantidade de Vendas',
+                    data: quantidades,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        color: '#666',
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                if (context.datasetIndex === 0) {
+                                    label += 'R$ ' + context.parsed.y.toFixed(2);
+                                } else {
+                                    label += context.parsed.y + ' vendas';
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Evolução de Faturamento e Vendas (Últimos 12 Meses)',
+                    color: '#333',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        },
+                        color: 'rgba(16, 185, 129, 1)'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + ' un.';
+                        },
+                        color: 'rgba(59, 130, 246, 1)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#666'
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1200,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+}
+
+/**
+ * Gráfico de Conversão (Funil de Vendas)
+ */
+function gerarGraficoConversao(orcamentos) {
+    const canvas = document.getElementById('chartConversao');
+    if (!canvas) {
+        // Criar canvas se não existir
+        criarCanvasConversao();
+        return gerarGraficoConversao(orcamentos);
+    }
+
+    // Destruir gráfico anterior
+    if (chartConversao) {
+        chartConversao.destroy();
+    }
+
+    // Calcular conversão
+    const total = orcamentos.length;
+    const pendentes = orcamentos.filter(o => o.status?.toLowerCase() === 'pendente').length;
+    const aprovados = orcamentos.filter(o => o.status?.toLowerCase() === 'aprovado').length;
+    const cancelados = orcamentos.filter(o => o.status?.toLowerCase() === 'cancelado').length;
+
+    const taxaAprovacao = total > 0 ? (aprovados / total * 100) : 0;
+    const taxaCancelamento = total > 0 ? (cancelados / total * 100) : 0;
+
+    chartConversao = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Aprovados', 'Pendentes', 'Cancelados'],
+            datasets: [{
+                data: [aprovados, pendentes, cancelados],
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.8)',   // Verde
+                    'rgba(251, 191, 36, 0.8)',   // Amarelo
+                    'rgba(239, 68, 68, 0.8)'     // Vermelho
+                ],
+                borderColor: [
+                    'rgba(16, 185, 129, 1)',
+                    'rgba(251, 191, 36, 1)',
+                    'rgba(239, 68, 68, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        color: '#666',
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        },
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            return data.labels.map((label, i) => {
+                                const value = data.datasets[0].data[i];
+                                const percent = total > 0 ? (value / total * 100).toFixed(1) : 0;
+                                return {
+                                    text: `${label}: ${value} (${percent}%)`,
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    hidden: false,
+                                    index: i
+                                };
+                            });
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const percent = total > 0 ? (value / total * 100).toFixed(1) : 0;
+                            return `${context.label}: ${value} (${percent}%)`;
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Taxa de Conversão de Orçamentos',
+                    color: '#333',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000
+            }
+        }
+    });
+}
+
+/**
+ * Gráfico de Distribuição de Status
+ */
+function gerarGraficoStatusDistribuicao(orcamentos) {
+    const canvas = document.getElementById('chartStatusDistribuicao');
+    if (!canvas) {
+        criarCanvasStatus();
+        return gerarGraficoStatusDistribuicao(orcamentos);
+    }
+
+    // Destruir gráfico anterior
+    if (chartStatusDistribuicao) {
+        chartStatusDistribuicao.destroy();
+    }
+
+    // Calcular valores por status
+    const aprovados = orcamentos.filter(o => o.status?.toLowerCase() === 'aprovado');
+    const pendentes = orcamentos.filter(o => o.status?.toLowerCase() === 'pendente');
+    const cancelados = orcamentos.filter(o => o.status?.toLowerCase() === 'cancelado');
+
+    const valorAprovados = aprovados.reduce((acc, o) => acc + (o.total_final || 0), 0);
+    const valorPendentes = pendentes.reduce((acc, o) => acc + (o.total_final || 0), 0);
+    const valorCancelados = cancelados.reduce((acc, o) => acc + (o.total_final || 0), 0);
+
+    chartStatusDistribuicao = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ['Aprovados', 'Pendentes', 'Cancelados'],
+            datasets: [{
+                label: 'Valor Total (R$)',
+                data: [valorAprovados, valorPendentes, valorCancelados],
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(251, 191, 36, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(16, 185, 129, 1)',
+                    'rgba(251, 191, 36, 1)',
+                    'rgba(239, 68, 68, 1)'
+                ],
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',  // Horizontal bars
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const quantidade = context.label === 'Aprovados' ? aprovados.length :
+                                              context.label === 'Pendentes' ? pendentes.length :
+                                              cancelados.length;
+                            return [
+                                `Valor: R$ ${context.parsed.x.toFixed(2)}`,
+                                `Quantidade: ${quantidade}`,
+                                `Média: R$ ${quantidade > 0 ? (context.parsed.x / quantidade).toFixed(2) : 0}`
+                            ];
+                        }
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Valor Total por Status',
+                    color: '#333',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        },
+                        color: '#666'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#666',
+                        font: {
+                            size: 13,
+                            weight: '600'
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+}
+
+/**
+ * Criar canvas para gráfico de conversão (se não existir)
+ */
+function criarCanvasConversao() {
+    const ctxFaturamento = document.getElementById('chartFaturamento');
+    if (!ctxFaturamento || !ctxFaturamento.parentNode) return;
+
+    const container = document.createElement('div');
+    container.className = 'col-md-6 mb-4';
+    container.innerHTML = `
+        <div class="card" style="height: 350px;">
+            <div class="card-body">
+                <canvas id="chartConversao"></canvas>
+            </div>
+        </div>
+    `;
+
+    // Inserir após o gráfico de faturamento
+    const parentRow = ctxFaturamento.closest('.row');
+    if (parentRow) {
+        parentRow.appendChild(container);
+    }
+}
+
+/**
+ * Criar canvas para gráfico de status (se não existir)
+ */
+function criarCanvasStatus() {
+    const ctxServicos = document.getElementById('chartServicos');
+    if (!ctxServicos || !ctxServicos.parentNode) return;
+
+    const container = document.createElement('div');
+    container.className = 'col-md-6 mb-4';
+    container.innerHTML = `
+        <div class="card" style="height: 350px;">
+            <div class="card-body">
+                <canvas id="chartStatusDistribuicao"></canvas>
+            </div>
+        </div>
+    `;
+
+    // Inserir após o gráfico de serviços
+    const parentRow = ctxServicos.closest('.row');
+    if (parentRow) {
+        parentRow.appendChild(container);
+    }
+}
+
+/**
+ * Carregar top clientes
+ */
+async function carregarTopClientes() {
+    try {
+        const response = await fetch('/api/clientes', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.clientes) {
+            const topClientes = data.clientes
+                .sort((a, b) => (b.total_gasto || 0) - (a.total_gasto || 0))
+                .slice(0, 10);
+
+            const tbody = document.getElementById('topClientesBody');
+            if (!tbody) return;
+
+            const html = topClientes.map((c, idx) => {
+                const medalha = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+                return `
+                    <tr>
+                        <td><strong style="font-size:1.3rem;">${medalha} ${idx + 1}º</strong></td>
+                        <td><strong>${c.nome}</strong></td>
+                        <td><strong style="color:#10B981">R$ ${(c.total_gasto || 0).toFixed(2)}</strong></td>
+                        <td>${c.total_visitas || 0}</td>
+                        <td>${c.ultima_visita ? new Date(c.ultima_visita).toLocaleDateString('pt-BR') : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = html || '<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar top clientes:', error);
+    }
+}
+
+/**
+ * Carregar top produtos
+ */
+function carregarTopProdutos(orcamentos) {
+    const produtosCount = {};
+
+    orcamentos.forEach(orc => {
+        (orc.produtos || []).forEach(p => {
+            const nome = p.nome || 'Sem nome';
+            if (!produtosCount[nome]) {
+                produtosCount[nome] = { total: 0, quantidade: 0 };
+            }
+            produtosCount[nome].total += p.total || p.preco || 0;
+            produtosCount[nome].quantidade += p.quantidade || 1;
+        });
+    });
+
+    const topProdutos = Object.entries(produtosCount)
+        .sort((a, b) => b[1].quantidade - a[1].quantidade)
+        .slice(0, 10);
+
+    const tbody = document.getElementById('topProdutosBody');
+    if (!tbody) return;
+
+    if (topProdutos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum</td></tr>';
+        return;
+    }
+
+    const html = topProdutos.map(p => `
+        <tr>
+            <td><strong>${p[0]}</strong></td>
+            <td>${p[1].quantidade}</td>
+            <td><strong>R$ ${p[1].total.toFixed(2)}</strong></td>
+        </tr>
+    `).join('');
+
+    tbody.innerHTML = html;
+}
+
 // Carregar perfil automaticamente ao carregar a página
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', carregarPerfilUsuario);
@@ -4662,4 +5392,5 @@ console.log('✅ Histórico de Atendimentos carregado (12.4)');
 console.log('✅ Sistema de Níveis de Acesso carregado (5.1)');
 console.log('✅ Layout Melhorado do Contrato carregado (1.3)');
 console.log('✅ Detalhamento em Consultar melhorado (2.2)');
+console.log('✅ Gráficos da aba Resumo melhorados (4.1)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
