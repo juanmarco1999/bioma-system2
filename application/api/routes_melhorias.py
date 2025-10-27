@@ -2571,8 +2571,342 @@ Equipe BIOMA"""
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ==================== HISTÓRICO DE ATENDIMENTOS (Diretriz 12.4) ====================
+
+@bp.route('/api/profissionais/<profissional_id>/historico')
+def get_historico_atendimentos(profissional_id):
+    """
+    Histórico completo de atendimentos do profissional com filtros
+    Diretriz 12.4: Histórico de atendimento por profissional
+    """
+    try:
+        db = get_db()
+
+        # Verificar se profissional existe
+        profissional = db.profissionais.find_one({'_id': ObjectId(profissional_id)})
+        if not profissional:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+
+        # Parâmetros de filtro da query string
+        data_inicio = request.args.get('data_inicio')  # YYYY-MM-DD
+        data_fim = request.args.get('data_fim')        # YYYY-MM-DD
+        cliente_id = request.args.get('cliente_id')
+        servico_nome = request.args.get('servico')
+        status = request.args.get('status')  # pendente, em_andamento, concluido, cancelado
+        limite = int(request.args.get('limite', 50))
+        pagina = int(request.args.get('pagina', 1))
+
+        # Construir filtro base
+        filtro = {'profissional_id': profissional_id}
+
+        # Filtro de data
+        if data_inicio or data_fim:
+            filtro['data'] = {}
+            if data_inicio:
+                filtro['data']['$gte'] = data_inicio
+            if data_fim:
+                filtro['data']['$lte'] = data_fim
+
+        # Filtro de cliente
+        if cliente_id:
+            filtro['cliente_id'] = cliente_id
+
+        # Filtro de status
+        if status:
+            filtro['status'] = status
+
+        # Pipeline de agregação para buscar agendamentos com dados relacionados
+        pipeline = [
+            {'$match': filtro},
+            {'$sort': {'data': -1, 'horario': -1}},
+            {'$skip': (pagina - 1) * limite},
+            {'$limit': limite},
+            {
+                '$lookup': {
+                    'from': 'clientes',
+                    'localField': 'cliente_id',
+                    'foreignField': '_id',
+                    'as': 'cliente_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'servicos',
+                    'localField': 'servico_id',
+                    'foreignField': '_id',
+                    'as': 'servico_info'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'orcamentos',
+                    'localField': 'orcamento_id',
+                    'foreignField': '_id',
+                    'as': 'orcamento_info'
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$cliente_info',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$servico_info',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$orcamento_info',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$project': {
+                    '_id': 1,
+                    'data': 1,
+                    'horario': 1,
+                    'status': 1,
+                    'observacoes': 1,
+                    'duracao': 1,
+                    'cliente_nome': '$cliente_info.nome',
+                    'cliente_telefone': '$cliente_info.telefone',
+                    'servico_nome': '$servico_info.nome',
+                    'servico_categoria': '$servico_info.categoria',
+                    'valor_servico': '$servico_info.preco',
+                    'valor_total': '$orcamento_info.valor_total',
+                    'forma_pagamento': '$orcamento_info.forma_pagamento',
+                    'orcamento_status': '$orcamento_info.status'
+                }
+            }
+        ]
+
+        # Executar agregação
+        atendimentos = list(db.agendamentos.aggregate(pipeline))
+
+        # Filtro adicional por serviço (nome parcial)
+        if servico_nome:
+            atendimentos = [
+                a for a in atendimentos
+                if a.get('servico_nome') and servico_nome.lower() in a.get('servico_nome', '').lower()
+            ]
+
+        # Contar total de registros (sem paginação)
+        total_registros = db.agendamentos.count_documents(filtro)
+
+        # Calcular estatísticas do histórico filtrado
+        estatisticas_historico = calcular_estatisticas_historico(atendimentos)
+
+        # Converter ObjectId para string
+        atendimentos_convertidos = []
+        for atend in atendimentos:
+            atend_convertido = convert_objectid(atend)
+            atendimentos_convertidos.append(atend_convertido)
+
+        return jsonify({
+            'success': True,
+            'profissional': {
+                'id': str(profissional['_id']),
+                'nome': profissional.get('nome'),
+                'especialidade': profissional.get('especialidade')
+            },
+            'atendimentos': atendimentos_convertidos,
+            'paginacao': {
+                'pagina_atual': pagina,
+                'limite': limite,
+                'total_registros': total_registros,
+                'total_paginas': (total_registros + limite - 1) // limite
+            },
+            'estatisticas': estatisticas_historico,
+            'filtros_aplicados': {
+                'data_inicio': data_inicio,
+                'data_fim': data_fim,
+                'cliente_id': cliente_id,
+                'servico': servico_nome,
+                'status': status
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar histórico de atendimentos: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def calcular_estatisticas_historico(atendimentos):
+    """
+    Calcular estatísticas do histórico de atendimentos
+    """
+    try:
+        total_atendimentos = len(atendimentos)
+
+        if total_atendimentos == 0:
+            return {
+                'total_atendimentos': 0,
+                'atendimentos_concluidos': 0,
+                'atendimentos_cancelados': 0,
+                'taxa_conclusao': 0,
+                'faturamento_total': 0,
+                'ticket_medio': 0,
+                'servicos_mais_realizados': [],
+                'clientes_atendidos': 0,
+                'duracao_media': 0
+            }
+
+        # Contar por status
+        status_count = {}
+        for atend in atendimentos:
+            status = atend.get('status', 'desconhecido')
+            status_count[status] = status_count.get(status, 0) + 1
+
+        atendimentos_concluidos = status_count.get('concluido', 0)
+        atendimentos_cancelados = status_count.get('cancelado', 0)
+        taxa_conclusao = (atendimentos_concluidos / total_atendimentos * 100) if total_atendimentos > 0 else 0
+
+        # Faturamento total (somente concluídos)
+        faturamento_total = sum(
+            atend.get('valor_total', 0) or atend.get('valor_servico', 0)
+            for atend in atendimentos
+            if atend.get('status') == 'concluido'
+        )
+
+        ticket_medio = faturamento_total / atendimentos_concluidos if atendimentos_concluidos > 0 else 0
+
+        # Serviços mais realizados
+        servicos_count = {}
+        for atend in atendimentos:
+            servico = atend.get('servico_nome')
+            if servico:
+                servicos_count[servico] = servicos_count.get(servico, 0) + 1
+
+        servicos_mais_realizados = sorted(
+            [{'servico': s, 'quantidade': q} for s, q in servicos_count.items()],
+            key=lambda x: x['quantidade'],
+            reverse=True
+        )[:5]
+
+        # Clientes únicos
+        clientes_unicos = set()
+        for atend in atendimentos:
+            cliente = atend.get('cliente_nome')
+            if cliente:
+                clientes_unicos.add(cliente)
+
+        clientes_atendidos = len(clientes_unicos)
+
+        # Duração média (em minutos)
+        duracoes = [atend.get('duracao', 0) for atend in atendimentos if atend.get('duracao')]
+        duracao_media = sum(duracoes) / len(duracoes) if duracoes else 60  # Default 60min
+
+        return {
+            'total_atendimentos': total_atendimentos,
+            'atendimentos_concluidos': atendimentos_concluidos,
+            'atendimentos_cancelados': atendimentos_cancelados,
+            'taxa_conclusao': round(taxa_conclusao, 1),
+            'faturamento_total': faturamento_total,
+            'ticket_medio': ticket_medio,
+            'servicos_mais_realizados': servicos_mais_realizados,
+            'clientes_atendidos': clientes_atendidos,
+            'duracao_media': int(duracao_media),
+            'distribuicao_status': status_count
+        }
+
+    except Exception as e:
+        logger.error(f"Erro ao calcular estatísticas do histórico: {e}")
+        return {
+            'total_atendimentos': len(atendimentos),
+            'error': str(e)
+        }
+
+
+@bp.route('/api/profissionais/<profissional_id>/timeline')
+def get_timeline_atendimentos(profissional_id):
+    """
+    Timeline visual dos atendimentos (agrupados por mês)
+    Diretriz 12.4: Visualização alternativa do histórico
+    """
+    try:
+        db = get_db()
+
+        # Verificar se profissional existe
+        profissional = db.profissionais.find_one({'_id': ObjectId(profissional_id)})
+        if not profissional:
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+
+        # Buscar atendimentos dos últimos 12 meses
+        hoje = datetime.now()
+        data_limite = hoje - timedelta(days=365)
+
+        pipeline = [
+            {
+                '$match': {
+                    'profissional_id': profissional_id,
+                    'data': {'$gte': data_limite.strftime('%Y-%m-%d')}
+                }
+            },
+            {
+                '$addFields': {
+                    'ano_mes': {'$substr': ['$data', 0, 7]}  # YYYY-MM
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$ano_mes',
+                    'total_atendimentos': {'$sum': 1},
+                    'concluidos': {
+                        '$sum': {'$cond': [{'$eq': ['$status', 'concluido']}, 1, 0]}
+                    },
+                    'cancelados': {
+                        '$sum': {'$cond': [{'$eq': ['$status', 'cancelado']}, 1, 0]}
+                    }
+                }
+            },
+            {'$sort': {'_id': 1}}
+        ]
+
+        timeline_data = list(db.agendamentos.aggregate(pipeline))
+
+        # Formatar timeline
+        timeline_formatada = []
+        for item in timeline_data:
+            ano_mes = item['_id']
+            try:
+                # Converter YYYY-MM para nome do mês
+                ano, mes = ano_mes.split('-')
+                meses_pt = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                           'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                mes_nome = meses_pt[int(mes) - 1]
+                label = f"{mes_nome}/{ano}"
+            except:
+                label = ano_mes
+
+            timeline_formatada.append({
+                'periodo': ano_mes,
+                'label': label,
+                'total_atendimentos': item['total_atendimentos'],
+                'concluidos': item['concluidos'],
+                'cancelados': item['cancelados'],
+                'taxa_conclusao': round((item['concluidos'] / item['total_atendimentos'] * 100), 1) if item['total_atendimentos'] > 0 else 0
+            })
+
+        return jsonify({
+            'success': True,
+            'profissional': {
+                'id': str(profissional['_id']),
+                'nome': profissional.get('nome')
+            },
+            'timeline': timeline_formatada
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar timeline: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 logger.info("✅ Rotas de melhorias carregadas com sucesso")
 logger.info("✅ Sistema de Fila Inteligente carregado (Diretrizes 10.1 e 10.2)")
 logger.info("✅ Sistema de Anamnese/Prontuário carregado (Diretrizes 11.1, 11.3, 11.4)")
 logger.info("✅ Sistema de Multicomissão carregado (Diretriz 12.1)")
 logger.info("✅ Melhorias nos Profissionais carregadas (Diretrizes 12.2 e 12.3)")
+logger.info("✅ Histórico de Atendimentos carregado (Diretriz 12.4)")

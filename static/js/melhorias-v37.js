@@ -2748,5 +2748,458 @@ async function enviarNotificacaoProfissional(profissionalId, nomeProfissional, e
     }
 }
 
+// ==================== HISTÓRICO DE ATENDIMENTOS (Diretriz 12.4) ====================
+
+/**
+ * Visualizar histórico completo de atendimentos do profissional
+ */
+window.visualizarHistoricoProfissional = async function(profissionalId) {
+    try {
+        Swal.fire({
+            title: 'Carregando histórico...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Buscar histórico sem filtros (padrão: últimos 50)
+        const response = await fetch(`/api/profissionais/${profissionalId}/historico?limite=50&pagina=1`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Erro', data.message || 'Não foi possível carregar o histórico', 'error');
+            return;
+        }
+
+        const prof = data.profissional;
+        const atendimentos = data.atendimentos || [];
+        const stats = data.estatisticas || {};
+        const paginacao = data.paginacao || {};
+
+        // Construir tabela de atendimentos
+        let tabelaHtml = '';
+        if (atendimentos.length === 0) {
+            tabelaHtml = '<p class="text-center text-muted">Nenhum atendimento encontrado</p>';
+        } else {
+            tabelaHtml = `
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover table-sm">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Data</th>
+                                <th>Horário</th>
+                                <th>Cliente</th>
+                                <th>Serviço</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            atendimentos.forEach(atend => {
+                const data = atend.data ? formatarData(atend.data) : '-';
+                const horario = atend.horario || '-';
+                const cliente = atend.cliente_nome || 'Não informado';
+                const servico = atend.servico_nome || 'Não informado';
+                const valor = atend.valor_total || atend.valor_servico || 0;
+                const valorFormatado = formatarMoeda(valor);
+                const status = atend.status || 'desconhecido';
+                const badgeStatus = getBadgeClassStatus(status);
+
+                tabelaHtml += `
+                    <tr>
+                        <td>${data}</td>
+                        <td>${horario}</td>
+                        <td>${cliente}</td>
+                        <td>${servico}</td>
+                        <td>${valorFormatado}</td>
+                        <td><span class="badge ${badgeStatus}">${status}</span></td>
+                    </tr>
+                `;
+            });
+
+            tabelaHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Estatísticas do histórico
+        const statsHtml = `
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${stats.total_atendimentos || 0}</h6>
+                            <small>Total</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${stats.atendimentos_concluidos || 0}</h6>
+                            <small>Concluídos</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${stats.atendimentos_cancelados || 0}</h6>
+                            <small>Cancelados</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${stats.taxa_conclusao || 0}%</h6>
+                            <small>Taxa Conclusão</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${formatarMoeda(stats.faturamento_total || 0)}</h6>
+                            <small>Faturamento Total</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${formatarMoeda(stats.ticket_medio || 0)}</h6>
+                            <small>Ticket Médio</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="mb-0">${stats.clientes_atendidos || 0}</h6>
+                            <small>Clientes Únicos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Paginação info
+        const paginacaoHtml = `
+            <p class="text-muted text-center mb-2">
+                Página ${paginacao.pagina_atual || 1} de ${paginacao.total_paginas || 1}
+                (${paginacao.total_registros || 0} registros no total)
+            </p>
+        `;
+
+        Swal.fire({
+            title: `<i class="bi bi-clock-history"></i> Histórico - ${prof.nome}`,
+            html: `
+                <div class="text-start">
+                    ${statsHtml}
+                    ${tabelaHtml}
+                    ${paginacaoHtml}
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                        <button class="btn btn-sm btn-primary" onclick="abrirFiltrosHistorico('${profissionalId}')">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="visualizarTimelineProfissional('${profissionalId}')">
+                            <i class="bi bi-graph-up"></i> Timeline
+                        </button>
+                    </div>
+                </div>
+            `,
+            width: '900px',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar histórico:', error);
+        Swal.fire('Erro', 'Não foi possível carregar o histórico', 'error');
+    }
+};
+
+/**
+ * Abrir modal de filtros para o histórico
+ */
+window.abrirFiltrosHistorico = async function(profissionalId) {
+    const { value: formValues } = await Swal.fire({
+        title: '<strong><i class="bi bi-funnel"></i> Filtrar Histórico</strong>',
+        html: `
+            <div class="text-start">
+                <div class="mb-3">
+                    <label class="form-label">Data Início</label>
+                    <input type="date" id="filtro-data-inicio" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data Fim</label>
+                    <input type="date" id="filtro-data-fim" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select id="filtro-status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="cancelado">Cancelado</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Buscar Serviço</label>
+                    <input type="text" id="filtro-servico" class="form-control" placeholder="Nome do serviço...">
+                </div>
+            </div>
+        `,
+        width: '500px',
+        showCancelButton: true,
+        confirmButtonText: 'Aplicar Filtros',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            return {
+                data_inicio: document.getElementById('filtro-data-inicio').value,
+                data_fim: document.getElementById('filtro-data-fim').value,
+                status: document.getElementById('filtro-status').value,
+                servico: document.getElementById('filtro-servico').value
+            };
+        }
+    });
+
+    if (formValues) {
+        await visualizarHistoricoFiltrado(profissionalId, formValues);
+    }
+};
+
+/**
+ * Visualizar histórico com filtros aplicados
+ */
+async function visualizarHistoricoFiltrado(profissionalId, filtros) {
+    try {
+        Swal.fire({
+            title: 'Aplicando filtros...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // Construir query string
+        const params = new URLSearchParams();
+        params.append('limite', '50');
+        params.append('pagina', '1');
+        if (filtros.data_inicio) params.append('data_inicio', filtros.data_inicio);
+        if (filtros.data_fim) params.append('data_fim', filtros.data_fim);
+        if (filtros.status) params.append('status', filtros.status);
+        if (filtros.servico) params.append('servico', filtros.servico);
+
+        const response = await fetch(`/api/profissionais/${profissionalId}/historico?${params.toString()}`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Erro', data.message || 'Não foi possível aplicar os filtros', 'error');
+            return;
+        }
+
+        const atendimentos = data.atendimentos || [];
+        const stats = data.estatisticas || {};
+
+        // Construir tabela
+        let tabelaHtml = '';
+        if (atendimentos.length === 0) {
+            tabelaHtml = '<p class="text-center text-muted">Nenhum atendimento encontrado com esses filtros</p>';
+        } else {
+            tabelaHtml = `
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-striped table-hover table-sm">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th>Data</th>
+                                <th>Cliente</th>
+                                <th>Serviço</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            atendimentos.forEach(atend => {
+                const data_formatada = atend.data ? formatarData(atend.data) : '-';
+                const cliente = atend.cliente_nome || 'Não informado';
+                const servico = atend.servico_nome || 'Não informado';
+                const valor = formatarMoeda(atend.valor_total || atend.valor_servico || 0);
+                const badgeStatus = getBadgeClassStatus(atend.status || 'desconhecido');
+
+                tabelaHtml += `
+                    <tr>
+                        <td>${data_formatada}</td>
+                        <td>${cliente}</td>
+                        <td>${servico}</td>
+                        <td>${valor}</td>
+                        <td><span class="badge ${badgeStatus}">${atend.status || '-'}</span></td>
+                    </tr>
+                `;
+            });
+
+            tabelaHtml += '</tbody></table></div>';
+        }
+
+        // Mostrar resultados filtrados
+        Swal.fire({
+            title: '<i class="bi bi-funnel-fill"></i> Resultados Filtrados',
+            html: `
+                <div class="text-start">
+                    <div class="alert alert-info mb-3">
+                        <strong>Filtros aplicados:</strong><br>
+                        ${filtros.data_inicio ? `Data Início: ${formatarData(filtros.data_inicio)}<br>` : ''}
+                        ${filtros.data_fim ? `Data Fim: ${formatarData(filtros.data_fim)}<br>` : ''}
+                        ${filtros.status ? `Status: ${filtros.status}<br>` : ''}
+                        ${filtros.servico ? `Serviço: ${filtros.servico}<br>` : ''}
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body p-2 text-center">
+                                    <h6 class="mb-0">${stats.total_atendimentos || 0}</h6>
+                                    <small>Encontrados</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card bg-success text-white">
+                                <div class="card-body p-2 text-center">
+                                    <h6 class="mb-0">${stats.atendimentos_concluidos || 0}</h6>
+                                    <small>Concluídos</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body p-2 text-center">
+                                    <h6 class="mb-0">${formatarMoeda(stats.faturamento_total || 0)}</h6>
+                                    <small>Faturamento</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ${tabelaHtml}
+                </div>
+            `,
+            width: '800px',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error('Erro ao aplicar filtros:', error);
+        Swal.fire('Erro', 'Não foi possível aplicar os filtros', 'error');
+    }
+}
+
+/**
+ * Visualizar timeline mensal de atendimentos
+ */
+window.visualizarTimelineProfissional = async function(profissionalId) {
+    try {
+        Swal.fire({
+            title: 'Carregando timeline...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const response = await fetch(`/api/profissionais/${profissionalId}/timeline`, {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            Swal.fire('Erro', data.message || 'Não foi possível carregar a timeline', 'error');
+            return;
+        }
+
+        const prof = data.profissional;
+        const timeline = data.timeline || [];
+
+        if (timeline.length === 0) {
+            Swal.fire('Info', 'Nenhum dado de timeline disponível', 'info');
+            return;
+        }
+
+        // Construir gráfico de barras simples com HTML/CSS
+        let timelineHtml = '<div style="max-height: 400px; overflow-y: auto;">';
+
+        timeline.forEach(item => {
+            const percentual = item.total_atendimentos > 0 ? (item.concluidos / item.total_atendimentos * 100) : 0;
+            const barWidth = Math.min(percentual, 100);
+
+            timelineHtml += `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong>${item.label}</strong>
+                        <span class="badge bg-primary">${item.total_atendimentos} atendimentos</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar"
+                             style="width: ${barWidth}%"
+                             aria-valuenow="${percentual}" aria-valuemin="0" aria-valuemax="100">
+                            ${item.concluidos} concluídos (${item.taxa_conclusao}%)
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        Cancelados: ${item.cancelados}
+                    </div>
+                </div>
+            `;
+        });
+
+        timelineHtml += '</div>';
+
+        Swal.fire({
+            title: `<i class="bi bi-graph-up"></i> Timeline - ${prof.nome}`,
+            html: `
+                <div class="text-start">
+                    <p class="text-muted mb-3">Últimos 12 meses de atividade</p>
+                    ${timelineHtml}
+                </div>
+            `,
+            width: '700px',
+            showCloseButton: true,
+            showConfirmButton: false
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar timeline:', error);
+        Swal.fire('Erro', 'Não foi possível carregar a timeline', 'error');
+    }
+};
+
+/**
+ * Helper: Badge de status para atendimentos
+ */
+function getBadgeClassStatus(status) {
+    const badges = {
+        'pendente': 'bg-warning',
+        'confirmado': 'bg-info',
+        'em_andamento': 'bg-primary',
+        'concluido': 'bg-success',
+        'cancelado': 'bg-danger',
+        'desconhecido': 'bg-secondary'
+    };
+    return badges[status] || 'bg-secondary';
+}
+
 console.log('✅ Melhorias nos Profissionais carregadas (12.2, 12.3)');
+console.log('✅ Histórico de Atendimentos carregado (12.4)');
 console.log('✅ Melhorias v3.7 carregadas com sucesso!');
