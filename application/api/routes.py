@@ -2492,7 +2492,23 @@ def listar_movimentacoes():
                             .sort('data', DESCENDING)
                             .skip(skip)
                             .limit(per_page))
-        
+
+        # Enriquecer com nomes dos produtos
+        for mov in movimentacoes:
+            produto_id = mov.get('produto_id')
+            if produto_id:
+                try:
+                    produto = db.produtos.find_one({'_id': ObjectId(produto_id) if isinstance(produto_id, str) else produto_id})
+                    if produto:
+                        mov['produto_nome'] = produto.get('nome', '[Produto sem nome]')
+                    else:
+                        mov['produto_nome'] = f'[Produto removido: {produto_id}]'
+                except Exception as e:
+                    logger.warning(f"Erro ao buscar produto {produto_id}: {e}")
+                    mov['produto_nome'] = f'[Erro: {produto_id}]'
+            else:
+                mov['produto_nome'] = '[Sem produto]'
+
         return jsonify({
             'success': True,
             'movimentacoes': convert_objectid(movimentacoes),
