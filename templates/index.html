@@ -209,25 +209,48 @@
             .sidebar{width:100%;height:auto;position:relative}
         }
 
-        /* ========== LOGO PERSONALIZADO: Ajustar tamanho do logo na sidebar ========== */
+        /* ========== LOGO PERSONALIZADO: DINÂMICO E SEM FUNDO ========== */
         .sidebar-logo {
-            min-height: 400px !important;
-            max-height: 400px !important;
-            padding: 15px 8px !important;
+            padding: 15px 10px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
-            background-size: cover !important;
-            background-position: center !important;
+            background: linear-gradient(135deg,var(--primary),var(--secondary)) !important;
+            border-bottom: 5px solid var(--accent) !important;
+            min-height: auto !important;
+            max-height: none !important;
+            overflow: hidden !important;
+            transition: all 0.3s ease !important;
         }
 
         #sidebarLogoImage {
             width: 100% !important;
             height: auto !important;
-            max-height: 360px !important;
+            max-height: 100px !important;
             object-fit: contain !important;
             object-position: center !important;
+            display: block !important;
+            margin: 0 auto 8px auto !important;
+            background: transparent !important;
+            filter: brightness(1.1) contrast(1.1) !important;
+        }
+
+        /* Quando há logo personalizado, esconder texto */
+        .sidebar-logo.has-custom-logo h1,
+        .sidebar-logo.has-custom-logo p {
+            display: none !important;
+        }
+
+        /* Quando NÃO há logo, mostrar texto normal */
+        .sidebar-logo h1 {
+            font-size: 2rem !important;
+            margin: 0 !important;
+        }
+
+        .sidebar-logo p {
+            font-size: 0.85rem !important;
+            margin: 5px 0 0 0 !important;
         }
 
 </style>
@@ -2883,6 +2906,7 @@ function goTo(section){
         else if(section==='agendamentos')loadAgendamentos();
         else if(section==='auditoria')loadAuditoria();
         else if(section==='clube')loadClube();
+        else if(section==='comissoes')loadComissoes();
     }catch(e){
         console.error('❌ Erro navegação:',e);
     } finally {
@@ -3652,6 +3676,7 @@ function atualizarPreviewLogo(tipo, url){
 function aplicarLogosNaInterface(){
     const sidebarLogo = document.querySelector('.sidebar-logo');
     if(!sidebarLogo){
+        console.warn('⚠️ .sidebar-logo não encontrado');
         return;
     }
     let img = document.getElementById('sidebarLogoImage');
@@ -3659,26 +3684,36 @@ function aplicarLogosNaInterface(){
     const p = sidebarLogo.querySelector('p');
 
     if(logosPersonalizados.principal){
+        console.log('🖼️ Aplicando logo personalizado:', logosPersonalizados.principal);
+
         if(!img){
             img = document.createElement('img');
             img.id = 'sidebarLogoImage';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.maxHeight = '240px';
-            img.style.objectFit = 'contain';
-            img.style.margin = '0';
-            img.style.padding = '0';
+            img.alt = 'Logo Personalizado';
             sidebarLogo.prepend(img);
         }
+
         img.src = logosPersonalizados.principal;
-        // ESCONDER texto quando há logo personalizado
-        if(h1) h1.style.display = 'none';
-        if(p) p.style.display = 'none';
+
+        // Adicionar classe para esconder texto via CSS
+        sidebarLogo.classList.add('has-custom-logo');
+
+        // Log de sucesso
+        img.onload = () => {
+            console.log('✅ Logo carregado com sucesso!');
+        };
+
+        img.onerror = () => {
+            console.error('❌ Erro ao carregar logo');
+            sidebarLogo.classList.remove('has-custom-logo');
+        };
     }else{
+        console.log('📝 Usando texto padrão (sem logo personalizado)');
+
         if(img) img.remove();
-        // MOSTRAR texto quando NÃO há logo personalizado
-        if(h1) h1.style.display = 'block';
-        if(p) p.style.display = 'block';
+
+        // Remover classe para mostrar texto
+        sidebarLogo.classList.remove('has-custom-logo');
     }
     let authImg = document.getElementById('authLogoCustom');
     if(!authImg){
@@ -4746,6 +4781,82 @@ async function loadContratos(){
     }catch(e){
         console.error('❌ Erro ao carregar contratos:',e);
         Swal.fire('Erro','Não foi possível carregar os contratos','error');
+    } finally {
+        setTimeout(() => setLoading(key, false), 1000);
+    }
+}
+
+async function loadComissoes(){
+    const key = 'loadComissoes';
+    if (isLoading(key)) {
+        console.warn(`⚠️ Já carregando: ${key}`);
+        return;
+    }
+    setLoading(key, true);
+
+    console.log('💰 Carregando regras de comissões...');
+
+    try{
+        const res = await fetch('/api/comissoes', {credentials: 'include'});
+        const data = await res.json();
+        const tbody = document.getElementById('comissoesBody');
+
+        if(!tbody){
+            console.error('❌ #comissoesBody não encontrado');
+            return;
+        }
+
+        if(data.success && data.comissoes && data.comissoes.length > 0){
+            const html = data.comissoes.map(c => `
+                <tr>
+                    <td><strong>${c.profissional_nome || 'N/A'}</strong></td>
+                    <td><span class="badge ${c.tipo === 'fixo' ? 'success' : 'warning'}">${c.tipo || 'N/A'}</span></td>
+                    <td>${c.servico_nome || c.produto_nome || 'Geral'}</td>
+                    <td><strong style="color: var(--primary);">${c.comissao_valor ? 'R$ ' + c.comissao_valor.toFixed(2) : c.comissao_percent + '%'}</strong></td>
+                    <td>${c.meta ? 'R$ ' + c.meta.toFixed(2) : '-'}</td>
+                    <td><span class="badge ${c.ativo ? 'success' : 'danger'}">${c.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editarComissao('${c._id}')" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="excluirComissao('${c._id}')" title="Excluir">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            tbody.innerHTML = html;
+            console.log(`✅ ${data.comissoes.length} regras de comissão carregadas`);
+        }else{
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center" style="padding: 40px; color: var(--text-muted);">
+                        <i class="bi bi-cash-stack" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p style="margin-top: 15px; font-weight: 600;">Nenhuma regra de comissão cadastrada</p>
+                        <button class="btn btn-primary" onclick="showModalComissao()" style="margin-top: 10px;">
+                            <i class="bi bi-plus-circle"></i> Criar Primeira Regra
+                        </button>
+                    </td>
+                </tr>
+            `;
+            console.log('ℹ️ Nenhuma comissão cadastrada');
+        }
+    }catch(e){
+        console.error('❌ Erro ao carregar comissões:', e);
+        const tbody = document.getElementById('comissoesBody');
+        if(tbody){
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center" style="padding: 40px; color: var(--danger);">
+                        <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                        <p style="margin-top: 10px;">Erro ao carregar regras de comissão</p>
+                        <button class="btn btn-sm btn-primary" onclick="loadComissoes()" style="margin-top: 10px;">
+                            <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
     } finally {
         setTimeout(() => setLoading(key, false), 1000);
     }
@@ -7158,6 +7269,9 @@ async function initApp(user=null){
     console.error('Erro ao carregar tema:', e);
   }
   
+  // CARREGAR LOGO IMEDIATAMENTE (antes de tudo)
+  await loadConfiguracoes(true); // force=true para garantir carregamento
+
   // Executar loads de forma não-bloqueante para evitar travamento
   // Cada função tem seu próprio safeCall internamente
   Promise.allSettled([
