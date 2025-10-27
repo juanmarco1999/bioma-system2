@@ -4497,10 +4497,7 @@ async function carregarHistoricoComissoes() {
     console.log('💰 Carregando histórico de comissões...');
 
     try {
-        const res = await fetch('/api/financeiro/comissoes', {credentials: 'include'});
-        const data = await res.json();
-
-        // Suportar ambas as seções: Profissionais e Financeiro
+        // Verificar se elementos existem
         const tbodyProfissionais = document.getElementById('profissionais-comissoes');
         const tbodyFinanceiro = document.getElementById('comissoesPagarTableBody');
 
@@ -4509,49 +4506,101 @@ async function carregarHistoricoComissoes() {
             return;
         }
 
+        // Mostrar loading spinner nos elementos ativos
+        if (tbodyFinanceiro && tbodyFinanceiro.offsetParent !== null) {
+            tbodyFinanceiro.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
+        }
+
+        const res = await fetch('/api/financeiro/comissoes', {credentials: 'include'});
+
+        if (!res.ok) {
+            console.error(`❌ Erro HTTP ao buscar comissões: ${res.status}`);
+            throw new Error(`Erro ${res.status}: Falha ao carregar comissões`);
+        }
+
+        const data = await res.json();
+        console.log('📦 Dados de comissões recebidos:', { success: data.success, total: data.comissoes?.length });
+
         if (data.success && data.comissoes && data.comissoes.length > 0) {
             // HTML para tabela de Profissionais (5 colunas)
             if (tbodyProfissionais) {
-                const htmlProfissionais = data.comissoes.map(c => `
-                    <tr>
-                        <td><strong>${c.data ? new Date(c.data).toLocaleDateString('pt-BR') : 'N/A'}</strong></td>
-                        <td>${c.profissional_nome || 'N/A'}</td>
-                        <td>${c.servico_nome || 'N/A'}</td>
-                        <td><strong>R$ ${(c.valor || 0).toFixed(2)}</strong></td>
-                        <td><span class="badge ${c.status === 'Pago' ? 'success' : 'warning'}">${c.status || 'Pendente'}</span></td>
-                    </tr>
-                `).join('');
-                tbodyProfissionais.innerHTML = htmlProfissionais;
+                const htmlProfissionais = data.comissoes.map(c => {
+                    try {
+                        const data = c.data || c.data_registro || c.created_at;
+                        const dataFormatada = data ? new Date(data).toLocaleDateString('pt-BR') : 'Data não disponível';
+                        const valor = parseFloat(c.valor || c.comissao_valor || c.valor_comissao || 0);
+                        const status = c.status || c.status_pagamento || 'Pendente';
+
+                        return `
+                            <tr>
+                                <td><strong>${dataFormatada}</strong></td>
+                                <td>${c.profissional_nome || c.profissional || 'Profissional não identificado'}</td>
+                                <td>${c.servico_nome || c.servico || 'N/A'}</td>
+                                <td><strong>R$ ${valor.toFixed(2).replace('.', ',')}</strong></td>
+                                <td><span class="badge ${status === 'Pago' || status === 'pago' ? 'success' : 'warning'}">${status}</span></td>
+                            </tr>
+                        `;
+                    } catch (err) {
+                        console.error('⚠️ Erro ao renderizar comissão:', c, err);
+                        return '';
+                    }
+                }).filter(html => html !== '').join('');
+
+                tbodyProfissionais.innerHTML = htmlProfissionais || '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Erro ao processar comissões</td></tr>';
             }
 
             // HTML para tabela de Financeiro (6 colunas - inclui Orçamento e Ações)
             if (tbodyFinanceiro) {
-                const htmlFinanceiro = data.comissoes.map(c => `
-                    <tr>
-                        <td>${c.profissional_nome || 'N/A'}</td>
-                        <td>#${c.orcamento_numero || c.orcamento_id || 'N/A'}</td>
-                        <td><strong>${c.data ? new Date(c.data).toLocaleDateString('pt-BR') : 'N/A'}</strong></td>
-                        <td><strong style="color: var(--warning);">R$ ${(c.valor || 0).toFixed(2)}</strong></td>
-                        <td><span class="badge ${c.status === 'Pago' ? 'success' : 'warning'}">${c.status || 'Pendente'}</span></td>
-                        <td>
-                            <button class="btn btn-sm ${c.status === 'Pago' ? 'btn-outline' : 'btn-success'}"
-                                    onclick="marcarComissaoPaga('${c._id}')"
-                                    ${c.status === 'Pago' ? 'disabled' : ''}>
-                                <i class="bi bi-check-circle"></i> ${c.status === 'Pago' ? 'Pago' : 'Pagar'}
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-                tbodyFinanceiro.innerHTML = htmlFinanceiro;
+                const htmlFinanceiro = data.comissoes.map(c => {
+                    try {
+                        const data = c.data || c.data_registro || c.created_at;
+                        const dataFormatada = data ? new Date(data).toLocaleDateString('pt-BR') : 'Data não disponível';
+                        const valor = parseFloat(c.valor || c.comissao_valor || c.valor_comissao || 0);
+                        const status = c.status || c.status_pagamento || 'Pendente';
+                        const comissaoId = c._id || c.id || '';
+                        const orcamentoNumero = c.orcamento_numero || c.orcamento_id || 'N/A';
+                        const orcamentoDisplay = typeof orcamentoNumero === 'string' && orcamentoNumero.length > 6
+                            ? orcamentoNumero.slice(-6)
+                            : orcamentoNumero;
+
+                        const isPago = status === 'Pago' || status === 'pago';
+
+                        return `
+                            <tr>
+                                <td>${c.profissional_nome || c.profissional || 'Profissional não identificado'}</td>
+                                <td>#${orcamentoDisplay}</td>
+                                <td><strong>${dataFormatada}</strong></td>
+                                <td><strong style="color: var(--warning);">R$ ${valor.toFixed(2).replace('.', ',')}</strong></td>
+                                <td><span class="badge ${isPago ? 'success' : 'warning'}">${status}</span></td>
+                                <td>
+                                    <button class="btn btn-sm ${isPago ? 'btn-outline-secondary' : 'btn-success'}"
+                                            onclick="marcarComissaoPaga('${comissaoId}')"
+                                            ${isPago ? 'disabled' : ''}
+                                            title="${isPago ? 'Comissão já paga' : 'Marcar como paga'}">
+                                        <i class="bi ${isPago ? 'bi-check-circle-fill' : 'bi-check-circle'}"></i> ${isPago ? 'Pago' : 'Pagar'}
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    } catch (err) {
+                        console.error('⚠️ Erro ao renderizar comissão para financeiro:', c, err);
+                        return '';
+                    }
+                }).filter(html => html !== '').join('');
+
+                tbodyFinanceiro.innerHTML = htmlFinanceiro || '<tr><td colspan="6" class="text-center text-warning">Erro ao processar comissões</td></tr>';
             }
 
-            console.log(`✅ ${data.comissoes.length} comissões carregadas`);
+            console.log(`✅ ${data.comissoes.length} comissões carregadas e renderizadas`);
         } else {
+            // Sem dados - exibir mensagem amigável
+            console.warn('⚠️ Nenhuma comissão disponível');
+
             if (tbodyProfissionais) {
-                tbodyProfissionais.innerHTML = '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhuma comissão registrada</td></tr>';
+                tbodyProfissionais.innerHTML = '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted"><i class="bi bi-inbox"></i> Nenhuma comissão registrada</td></tr>';
             }
             if (tbodyFinanceiro) {
-                tbodyFinanceiro.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma comissão a pagar</td></tr>';
+                tbodyFinanceiro.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><i class="bi bi-inbox"></i> Nenhuma comissão a pagar no momento</td></tr>';
             }
         }
     } catch (e) {
@@ -4560,11 +4609,85 @@ async function carregarHistoricoComissoes() {
         const tbodyFinanceiro = document.getElementById('comissoesPagarTableBody');
 
         if (tbodyProfissionais) {
-            tbodyProfissionais.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar comissões</td></tr>';
+            tbodyProfissionais.innerHTML = '<tr><td colspan="5" class="text-center text-danger"><i class="bi bi-exclamation-triangle"></i> Erro ao carregar comissões</td></tr>';
         }
         if (tbodyFinanceiro) {
-            tbodyFinanceiro.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar comissões</td></tr>';
+            tbodyFinanceiro.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Erro ao carregar comissões</strong><br>
+                        <small>${e.message || 'Verifique sua conexão'}</small>
+                    </td>
+                </tr>
+            `;
         }
+    }
+}
+
+// ========== FUNÇÃO: MARCAR COMISSÃO COMO PAGA ==========
+async function marcarComissaoPaga(comissaoId) {
+    if (!comissaoId) {
+        console.error('❌ ID de comissão inválido');
+        Swal.fire('Erro', 'ID de comissão inválido', 'error');
+        return;
+    }
+
+    try {
+        const result = await Swal.fire({
+            title: 'Confirmar Pagamento',
+            text: 'Deseja marcar esta comissão como paga?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="bi bi-check-circle"></i> Sim, Pagar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: 'var(--success)',
+            cancelButtonColor: 'var(--danger)'
+        });
+
+        if (!result.isConfirmed) return;
+
+        console.log(`💰 Marcando comissão ${comissaoId} como paga...`);
+
+        const res = await fetch(`/api/financeiro/comissoes/${comissaoId}/pagar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ status: 'Pago', data_pagamento: new Date().toISOString() })
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`❌ Erro HTTP ao marcar comissão: ${res.status}`, errorText);
+            throw new Error(`Erro ${res.status}: ${errorText || 'Falha ao marcar comissão como paga'}`);
+        }
+
+        const data = await res.json();
+
+        if (data.success) {
+            console.log('✅ Comissão marcada como paga');
+            await Swal.fire({
+                icon: 'success',
+                title: 'Comissão Paga!',
+                text: 'A comissão foi marcada como paga com sucesso',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // Recarregar lista de comissões
+            await carregarHistoricoComissoes();
+        } else {
+            throw new Error(data.message || 'Falha ao marcar comissão');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao marcar comissão como paga:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro ao Pagar Comissão',
+            html: `<p>${error.message || 'Não foi possível marcar a comissão como paga'}</p>
+                   <small class="text-muted">Verifique o console para mais detalhes</small>`,
+            confirmButtonText: 'OK'
+        });
     }
 }
 
