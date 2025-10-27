@@ -5908,6 +5908,73 @@ def financeiro_dashboard():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@bp.route('/api/financeiro/resumo', methods=['GET'])
+@login_required
+def financeiro_resumo():
+    db = get_db()
+    """Resumo financeiro simplificado para exibição rápida"""
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database not available'}), 500
+
+    try:
+        # Obter mês atual
+        hoje = datetime.now()
+        inicio_mes = datetime(hoje.year, hoje.month, 1)
+
+        # Receitas do mês (orçamentos aprovados)
+        orcamentos_aprovados = list(db.orcamentos.find({
+            'status': 'Aprovado',
+            'created_at': {'$gte': inicio_mes}
+        }))
+        receita_mes = sum(o.get('total_final', 0) for o in orcamentos_aprovados)
+
+        # Despesas do mês
+        despesas = list(db.despesas.find({
+            'data': {'$gte': inicio_mes}
+        }))
+        despesas_mes = sum(d.get('valor', 0) for d in despesas)
+
+        # Comissões do mês
+        comissoes_mes = sum(o.get('total_comissoes', 0) for o in orcamentos_aprovados)
+
+        # Lucro do mês
+        lucro_mes = receita_mes - comissoes_mes - despesas_mes
+
+        # Totais gerais (todos os tempos)
+        todos_orcamentos = list(db.orcamentos.find({'status': 'Aprovado'}))
+        receita_total = sum(o.get('total_final', 0) for o in todos_orcamentos)
+
+        todas_despesas = list(db.despesas.find())
+        despesas_total = sum(d.get('valor', 0) for d in todas_despesas)
+
+        comissoes_total = sum(o.get('total_comissoes', 0) for o in todos_orcamentos)
+        lucro_total = receita_total - comissoes_total - despesas_total
+
+        return jsonify({
+            'success': True,
+            'resumo': {
+                'mes_atual': {
+                    'receita': round(receita_mes, 2),
+                    'despesas': round(despesas_mes, 2),
+                    'comissoes': round(comissoes_mes, 2),
+                    'lucro': round(lucro_mes, 2),
+                    'quantidade_orcamentos': len(orcamentos_aprovados)
+                },
+                'total_geral': {
+                    'receita': round(receita_total, 2),
+                    'despesas': round(despesas_total, 2),
+                    'comissoes': round(comissoes_total, 2),
+                    'lucro': round(lucro_total, 2),
+                    'quantidade_orcamentos': len(todos_orcamentos)
+                }
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao carregar resumo financeiro: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @bp.route('/api/financeiro/despesas', methods=['GET', 'POST'])
 @login_required
 def financeiro_despesas():

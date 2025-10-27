@@ -527,11 +527,6 @@
         .btn {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .btn:hover {
-            animation: bounceIn 0.6s;
-        }
-
         /* Animação de entrada suave para cards */
         .stat-card, .card {
             animation: fadeInUp 0.5s ease-out;
@@ -723,30 +718,32 @@
             animation: successGlow 1.5s ease-in-out 2;
         }
 
-        /* Floating animation para ícones */
-        @keyframes float {
+        /* Brilho pulsante para ícones (fixos, sem movimento vertical) */
+        @keyframes iconGlow {
             0%, 100% {
-                transform: translateY(0px);
+                box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+                filter: brightness(1);
             }
             50% {
-                transform: translateY(-10px);
+                box-shadow: 0 10px 40px rgba(124, 58, 237, 0.6), 0 0 20px rgba(236, 72, 153, 0.4);
+                filter: brightness(1.2);
             }
         }
 
         .stat-card .icon {
-            animation: float 3s ease-in-out infinite;
+            animation: iconGlow 2s ease-in-out infinite;
         }
 
         .stat-card:nth-child(2) .icon {
-            animation-delay: 0.5s;
+            animation-delay: 0.3s;
         }
 
         .stat-card:nth-child(3) .icon {
-            animation-delay: 1s;
+            animation-delay: 0.6s;
         }
 
         .stat-card:nth-child(4) .icon {
-            animation-delay: 1.5s;
+            animation-delay: 0.9s;
         }
 
         /* Ripple effect para cards ao clicar */
@@ -2881,16 +2878,14 @@ window.addEventListener('load', function() {
                             <thead>
                                 <tr>
                                     <th>Profissional</th>
-                                    <th>Tipo</th>
-                                    <th>Serviço/Produto</th>
-                                    <th>Comissão</th>
-                                    <th>Meta</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
+                                    <th>Cliente</th>
+                                    <th>Orçamento</th>
+                                    <th>Valor Comissão</th>
+                                    <th>Data</th>
                                 </tr>
                             </thead>
                             <tbody id="comissoesBody">
-                                <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                                <tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -6333,7 +6328,7 @@ async function loadComissoes(){
     }
     setLoading(key, true);
 
-    console.log('💰 Carregando regras de comissões...');
+    console.log('💰 Carregando histórico de comissões...');
 
     try{
         const res = await fetch('/api/comissoes', {credentials: 'include'});
@@ -6342,43 +6337,34 @@ async function loadComissoes(){
 
         if(!tbody){
             console.error('❌ #comissoesBody não encontrado');
+            setLoading(key, false);
             return;
         }
 
+        // A API retorna histórico de comissões, não regras
         if(data.success && data.comissoes && data.comissoes.length > 0){
             const html = data.comissoes.map(c => `
                 <tr>
-                    <td><strong>${c.profissional_nome || 'N/A'}</strong></td>
-                    <td><span class="badge ${c.tipo === 'fixo' ? 'success' : 'warning'}">${c.tipo || 'N/A'}</span></td>
-                    <td>${c.servico_nome || c.produto_nome || 'Geral'}</td>
-                    <td><strong style="color: var(--primary);">${c.comissao_valor ? 'R$ ' + c.comissao_valor.toFixed(2) : c.comissao_percent + '%'}</strong></td>
-                    <td>${c.meta ? 'R$ ' + c.meta.toFixed(2) : '-'}</td>
-                    <td><span class="badge ${c.ativo ? 'success' : 'danger'}">${c.ativo ? 'ATIVO' : 'INATIVO'}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" onclick="editarComissao('${c._id}')" title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="excluirComissao('${c._id}')" title="Excluir">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
+                    <td><strong>${c.profissional_nome}</strong></td>
+                    <td>${c.cliente_nome}</td>
+                    <td>#${c.orcamento_numero}</td>
+                    <td><strong style="color: var(--success);">R$ ${c.comissao_valor.toFixed(2)}</strong></td>
+                    <td>${new Date(c.data_registro).toLocaleDateString('pt-BR')}</td>
                 </tr>
             `).join('');
             tbody.innerHTML = html;
-            console.log(`✅ ${data.comissoes.length} regras de comissão carregadas`);
+            console.log(`✅ ${data.comissoes.length} comissões carregadas`);
         }else{
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="text-center" style="padding: 40px; color: var(--text-muted);">
-                        <i class="bi bi-cash-stack" style="font-size: 3rem; opacity: 0.3;"></i>
-                        <p style="margin-top: 15px; font-weight: 600;">Nenhuma regra de comissão cadastrada</p>
-                        <button class="btn btn-primary" onclick="showModalComissao()" style="margin-top: 10px;">
-                            <i class="bi bi-plus-circle"></i> Criar Primeira Regra
-                        </button>
+                        <i class="bi bi-info-circle" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <p style="margin-top: 15px; font-weight: 600; font-size: 1.1rem;">Nenhuma comissão registrada ainda</p>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">As comissões aparecerão aqui quando orçamentos forem aprovados</p>
                     </td>
                 </tr>
             `;
-            console.log('ℹ️ Nenhuma comissão cadastrada');
+            console.log('ℹ️ Nenhuma comissão no histórico');
         }
     }catch(e){
         console.error('❌ Erro ao carregar comissões:', e);
@@ -6388,16 +6374,17 @@ async function loadComissoes(){
                 <tr>
                     <td colspan="7" class="text-center" style="padding: 40px; color: var(--danger);">
                         <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
-                        <p style="margin-top: 10px;">Erro ao carregar regras de comissão</p>
-                        <button class="btn btn-sm btn-primary" onclick="loadComissoes()" style="margin-top: 10px;">
+                        <p style="margin-top: 10px;">Erro ao carregar comissões</p>
+                        <button class="btn btn-sm btn-outline" onclick="loadComissoes()" style="margin-top: 10px;">
                             <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
                         </button>
                     </td>
                 </tr>
             `;
         }
+        setLoading(key, false);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 500);
     }
 }
 
@@ -9202,10 +9189,11 @@ async function carregarDadosFinanceiro() {
     // Carrega comissões
     carregarHistoricoComissoes();
 
-    Swal.fire('Sucesso', 'Dados financeiros atualizados!', 'success');
+    // Toast não bloqueante
+    toast('✅ Dados financeiros atualizados', 'success');
   } catch (error) {
     console.error('Erro ao carregar dados financeiros:', error);
-    Swal.fire('Erro', 'Erro ao atualizar dados financeiros', 'error');
+    toast('❌ Erro ao atualizar dados financeiros', 'error');
   }
 }
 
