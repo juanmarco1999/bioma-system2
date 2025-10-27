@@ -396,6 +396,134 @@
             }
         }
 
+        /* ========== LOGIN MODERNIZADO COM DARK MODE (PARTE 5.1) ========== */
+
+        /* Labels com cor dinâmica */
+        .login-label {
+            font-weight: 700;
+            color: var(--text-primary) !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Ícones animados */
+        .animated-icon {
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        /* Caixa "Lembrar por 7 dias" adaptável */
+        .remember-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(236, 72, 153, 0.1));
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+        }
+
+        .remember-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .remember-label {
+            cursor: pointer;
+            margin: 0;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Caixa de informação adaptável */
+        .info-box {
+            border-left: 5px solid var(--info) !important;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(96, 165, 250, 0.1)) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .info-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary) !important;
+        }
+
+        .info-content {
+            margin-top: 10px;
+            padding-left: 28px;
+        }
+
+        .info-item {
+            margin-bottom: 5px;
+            color: var(--text-primary) !important;
+        }
+
+        .info-code {
+            background: rgba(124, 58, 237, 0.15) !important;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: var(--primary) !important;
+        }
+
+        /* Botão de login moderno */
+        .login-btn {
+            padding: 15px !important;
+            font-size: 1.1rem !important;
+            font-weight: 800 !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-content, .btn-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* Spinner moderno */
+        .modern-spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: modernSpin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes modernSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Dark mode para auth screen */
+        @media (prefers-color-scheme: dark) {
+            .auth-box {
+                background: rgba(30, 41, 59, 0.98) !important;
+            }
+
+            .auth-logo h2 {
+                color: var(--text-primary) !important;
+            }
+
+            .auth-logo p {
+                color: var(--text-secondary) !important;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -413,39 +541,45 @@
             <li class="nav-item"><button class="nav-link" id="registerTab" onclick="switchTab('register')"><i class="bi bi-person-plus"></i> Cadastro</button></li>
         </ul>
         <div id="loginForm">
-            <form onsubmit="return handleLogin(event)">
+            <form onsubmit="return handleLogin(event)" id="formLogin">
                 <div class="mb-3">
-                    <label style="font-weight: 700; color: #1F2937; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                        <i class="bi bi-person-circle"></i> Usuário ou E-mail
+                    <label class="login-label">
+                        <i class="bi bi-person-circle animated-icon"></i> Usuário ou E-mail
                     </label>
                     <input type="text" class="form-control" id="loginUsername" required autocomplete="username" placeholder="Digite seu usuário ou e-mail">
                 </div>
                 <div class="mb-3">
-                    <label style="font-weight: 700; color: #1F2937; display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                        <i class="bi bi-shield-lock"></i> Senha
+                    <label class="login-label">
+                        <i class="bi bi-shield-lock animated-icon"></i> Senha
                     </label>
                     <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password" placeholder="Digite sua senha">
                 </div>
 
                 <!-- Checkbox Lembrar por 7 dias -->
-                <div class="mb-3" style="display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #F3E8FF, #FCE7F3); padding: 15px; border-radius: 12px; border: 2px solid #E9D5FF;">
-                    <input type="checkbox" id="rememberMe" style="width: 20px; height: 20px; cursor: pointer; accent-color: #7C3AED;">
-                    <label for="rememberMe" style="cursor: pointer; margin: 0; font-weight: 600; color: #6B21A8; display: flex; align-items: center; gap: 8px;">
+                <div class="mb-3 remember-box">
+                    <input type="checkbox" id="rememberMe" class="remember-checkbox">
+                    <label for="rememberMe" class="remember-label">
                         <i class="bi bi-clock-history"></i> Lembrar-se de mim por 7 dias
                     </label>
                 </div>
 
-                <div class="alert alert-info" style="border-left: 5px solid #3B82F6; background: linear-gradient(135deg, #DBEAFE, #E0E7FF);">
-                    <strong style="display: flex; align-items: center; gap: 8px;">
+                <div class="alert alert-info info-box">
+                    <strong class="info-title">
                         <i class="bi bi-info-circle"></i> Acesso Padrão:
                     </strong>
-                    <div style="margin-top: 10px; padding-left: 28px;">
-                        <div style="margin-bottom: 5px;"><strong>Usuário:</strong> <code style="background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 6px; font-weight: 700;">admin</code></div>
-                        <div><strong>Senha:</strong> <code style="background: rgba(255,255,255,0.8); padding: 4px 10px; border-radius: 6px; font-weight: 700;">admin123</code></div>
+                    <div class="info-content">
+                        <div class="info-item"><strong>Usuário:</strong> <code class="info-code">admin</code></div>
+                        <div class="info-item"><strong>Senha:</strong> <code class="info-code">admin123</code></div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" style="padding: 15px; font-size: 1.1rem; font-weight: 800;">
-                    <i class="bi bi-box-arrow-in-right"></i> ENTRAR NO SISTEMA
+                <button type="submit" class="btn btn-primary w-100 login-btn" id="btnLogin">
+                    <span class="btn-content">
+                        <i class="bi bi-box-arrow-in-right"></i> ENTRAR NO SISTEMA
+                    </span>
+                    <span class="btn-loading" style="display: none;">
+                        <span class="modern-spinner"></span>
+                        AUTENTICANDO...
+                    </span>
                 </button>
             </form>
         </div>
@@ -6918,16 +7052,14 @@ async function handleLogin(e){
         const password = $('#loginPassword').value;
         const rememberMe = $('#rememberMe')?.checked || false;
 
-        // Loading indicator
-        Swal.fire({
-            title: 'Autenticando...',
-            html: '<div class="spinner" style="margin: 20px auto;"></div>',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
+        // Mostrar spinner moderno no botão
+        const btnLogin = document.getElementById('btnLogin');
+        const btnContent = btnLogin.querySelector('.btn-content');
+        const btnLoading = btnLogin.querySelector('.btn-loading');
+
+        btnLogin.disabled = true;
+        btnContent.style.display = 'none';
+        btnLoading.style.display = 'flex';
 
         const data = {username, password};
         const r = await API.post('/api/login', data);
@@ -7005,6 +7137,11 @@ async function handleLogin(e){
                 confirmButtonText: 'Tentar Novamente',
                 confirmButtonColor: '#7C3AED'
             });
+
+            // Reset botão em caso de erro
+            btnLogin.disabled = false;
+            btnContent.style.display = 'flex';
+            btnLoading.style.display = 'none';
         }
     }catch(err){
         console.error('Login error:', err);
@@ -7026,6 +7163,16 @@ async function handleLogin(e){
             confirmButtonText: 'OK',
             confirmButtonColor: '#7C3AED'
         });
+
+        // Reset botão em caso de exceção
+        const btnLogin = document.getElementById('btnLogin');
+        if(btnLogin){
+            btnLogin.disabled = false;
+            const btnContent = btnLogin.querySelector('.btn-content');
+            const btnLoading = btnLogin.querySelector('.btn-loading');
+            if(btnContent) btnContent.style.display = 'flex';
+            if(btnLoading) btnLoading.style.display = 'none';
+        }
     }
 
     return false;
