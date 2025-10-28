@@ -5493,12 +5493,6 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
     <div class="page-header">
         <h1><i class="bi bi-box-seam"></i> Gestão de Estoque</h1>
         <div class="estoque-actions">
-            <button class="btn btn-success" onclick="abrirEntradaEstoque()">
-                <i class="bi bi-box-arrow-in-down"></i> Nova Entrada
-            </button>
-            <button class="btn btn-danger" onclick="abrirSaidaEstoque()">
-                <i class="bi bi-box-arrow-up"></i> Nova Saída
-            </button>
             <button class="btn btn-primary" onclick="loadEstoque()">
                 <i class="bi bi-arrow-repeat"></i> Atualizar
             </button>
@@ -5507,6 +5501,12 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
 
     <!-- Sub-tabs para Estoque -->
     <div class="sub-tabs">
+        <button class="sub-tab-btn sub-tab-green-animated" onclick="switchSubTab('estoque', 'nova-entrada')">
+            <i class="bi bi-box-arrow-in-down-fill"></i> Nova Entrada
+        </button>
+        <button class="sub-tab-btn sub-tab-red-animated" onclick="switchSubTab('estoque', 'nova-saida')">
+            <i class="bi bi-box-arrow-up-fill"></i> Nova Saída
+        </button>
         <button class="sub-tab-btn active" onclick="switchSubTab('estoque', 'visaogeral')">
             <i class="bi bi-grid"></i> Visão Geral
         </button>
@@ -5519,6 +5519,144 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
         <button class="sub-tab-btn" onclick="switchSubTab('estoque', 'relatorios')">
             <i class="bi bi-file-earmark-text"></i> Relatórios
         </button>
+    </div>
+
+    <!-- Sub-tab: Nova Entrada -->
+    <div id="estoque-subtab-nova-entrada" class="sub-tab-content">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #10B981, #059669);">
+                <i class="bi bi-box-arrow-in-down-fill"></i> Registrar Nova Entrada de Estoque
+            </div>
+            <div class="card-body">
+                <form id="formNovaEntrada">
+                    <div class="row g-3">
+                        <!-- Produto -->
+                        <div class="col-md-8">
+                            <label class="form-label"><i class="bi bi-box-seam"></i> Produto *</label>
+                            <select id="novaEntradaProduto" class="form-select" required>
+                                <option value="">Selecione o produto...</option>
+                            </select>
+                        </div>
+
+                        <!-- Quantidade -->
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="bi bi-plus-circle"></i> Quantidade *</label>
+                            <input type="number" id="novaEntradaQuantidade" class="form-control" placeholder="0" min="1" required>
+                        </div>
+
+                        <!-- Fornecedor -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-truck"></i> Fornecedor</label>
+                            <input type="text" id="novaEntradaFornecedor" class="form-control" placeholder="Nome do fornecedor">
+                        </div>
+
+                        <!-- Valor Unitário -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-currency-dollar"></i> Valor Unitário (R$)</label>
+                            <input type="number" id="novaEntradaValorUnitario" class="form-control" placeholder="0.00" step="0.01" min="0">
+                        </div>
+
+                        <!-- Data -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-calendar"></i> Data da Entrada *</label>
+                            <input type="date" id="novaEntradaData" class="form-control" required>
+                        </div>
+
+                        <!-- Nota Fiscal -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-file-text"></i> Nota Fiscal</label>
+                            <input type="text" id="novaEntradaNF" class="form-control" placeholder="Número da NF">
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="col-12">
+                            <label class="form-label"><i class="bi bi-chat-left-text"></i> Observações</label>
+                            <textarea id="novaEntradaObs" class="form-control" rows="3" placeholder="Informações adicionais sobre esta entrada..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaEntrada()">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="salvarNovaEntrada()">
+                            <i class="bi bi-check-circle"></i> Registrar Entrada
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub-tab: Nova Saída -->
+    <div id="estoque-subtab-nova-saida" class="sub-tab-content">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #EF4444, #DC2626);">
+                <i class="bi bi-box-arrow-up-fill"></i> Registrar Nova Saída de Estoque
+            </div>
+            <div class="card-body">
+                <form id="formNovaSaida">
+                    <div class="row g-3">
+                        <!-- Produto -->
+                        <div class="col-md-8">
+                            <label class="form-label"><i class="bi bi-box-seam"></i> Produto *</label>
+                            <select id="novaSaidaProduto" class="form-select" required>
+                                <option value="">Selecione o produto...</option>
+                            </select>
+                        </div>
+
+                        <!-- Quantidade -->
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="bi bi-dash-circle"></i> Quantidade *</label>
+                            <input type="number" id="novaSaidaQuantidade" class="form-control" placeholder="0" min="1" required>
+                        </div>
+
+                        <!-- Motivo -->
+                        <div class="col-md-12">
+                            <label class="form-label"><i class="bi bi-info-circle"></i> Motivo da Saída *</label>
+                            <select id="novaSaidaMotivo" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                <option value="Venda">Venda</option>
+                                <option value="Uso Interno">Uso Interno</option>
+                                <option value="Perda">Perda/Avaria</option>
+                                <option value="Devolução">Devolução</option>
+                                <option value="Doação">Doação</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+
+                        <!-- Data -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-calendar"></i> Data da Saída *</label>
+                            <input type="date" id="novaSaidaData" class="form-control" required>
+                        </div>
+
+                        <!-- Responsável -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-person"></i> Responsável</label>
+                            <input type="text" id="novaSaidaResponsavel" class="form-control" placeholder="Nome do responsável">
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="col-12">
+                            <label class="form-label"><i class="bi bi-chat-left-text"></i> Observações</label>
+                            <textarea id="novaSaidaObs" class="form-control" rows="3" placeholder="Informações adicionais sobre esta saída..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaSaida()">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="salvarNovaSaida()">
+                            <i class="bi bi-check-circle"></i> Registrar Saída
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Sub-tab: Visão Geral -->
