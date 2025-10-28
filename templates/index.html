@@ -571,8 +571,33 @@
         }
 
         /* Animação de entrada para modais SweetAlert */
+        /* ========== SWAL2 CORREÇÕES CRÍTICAS ========== */
+        /* Garantir que botões e modais sejam SEMPRE clicáveis */
         .swal2-popup {
             animation: swal2FadeInDown 0.3s ease-out !important;
+            pointer-events: auto !important;
+            z-index: 9999 !important;
+        }
+
+        .swal2-container {
+            pointer-events: auto !important;
+            z-index: 9998 !important;
+        }
+
+        /* Garantir que TODOS os botões do SweetAlert sejam clicáveis */
+        .swal2-confirm,
+        .swal2-cancel,
+        .swal2-deny,
+        .swal2-close,
+        .swal2-actions button {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            z-index: 10000 !important;
+        }
+
+        /* Garantir que backdrop permita cliques */
+        .swal2-backdrop-show {
+            pointer-events: auto !important;
         }
 
         @keyframes swal2FadeInDown {
@@ -4421,14 +4446,33 @@ function switchTab(tab){
 // Remoção feita para evitar duplicação e vazamento de mensagens SweetAlert
 
 function applyTheme(theme){
-    document.documentElement.setAttribute('data-theme',theme);
-    currentTheme=theme;
-    if(theme==='dark'){
-        document.getElementById('themeIcon').className='bi bi-sun-fill';
-        document.getElementById('themeText').textContent='Modo Claro';
-    }else{
-        document.getElementById('themeIcon').className='bi bi-moon-stars-fill';
-        document.getElementById('themeText').textContent='Modo Escuro';
+    // CRÍTICO: NUNCA aplicar dark mode se estiver na tela de login
+    const authScreen = document.getElementById('authScreen');
+    const isAuthVisible = authScreen && authScreen.style.display !== 'none';
+
+    // Forçar light mode na tela de login
+    if (isAuthVisible) {
+        console.log('🔒 Tela de login detectada - forçando light mode');
+        document.documentElement.setAttribute('data-theme', 'light');
+        return; // Não continuar
+    }
+
+    // Aplicar tema normalmente apenas dentro do app
+    document.documentElement.setAttribute('data-theme', theme);
+    currentTheme = theme;
+
+    // Atualizar ícone do botão de tema (só existe dentro do app)
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+
+    if (themeIcon && themeText) {
+        if (theme === 'dark') {
+            themeIcon.className = 'bi bi-sun-fill';
+            themeText.textContent = 'Modo Claro';
+        } else {
+            themeIcon.className = 'bi bi-moon-stars-fill';
+            themeText.textContent = 'Modo Escuro';
+        }
     }
 }
 
