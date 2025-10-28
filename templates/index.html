@@ -738,7 +738,29 @@
         /* Loading States */
         .loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(5px)}
         .loading-content{background:var(--bg-card);padding:40px;border-radius:20px;text-align:center;box-shadow:0 15px 50px rgba(0,0,0,0.5)}
-        .loading-spinner-large{border:6px solid var(--border-color);border-top:6px solid var(--primary);border-radius:50%;width:60px;height:60px;animation:spin 1s linear infinite;margin:0 auto 20px}
+        .loading-spinner-large{
+            width:60px;
+            height:60px;
+            margin:0 auto 20px;
+            border-radius:50%;
+            background:linear-gradient(135deg,var(--primary),var(--secondary));
+            animation:brightPulse 1.5s ease-in-out infinite;
+            box-shadow:0 0 30px var(--primary);
+            position:relative;
+        }
+        .loading-spinner-large::before{
+            content:'';
+            position:absolute;
+            top:-6px;
+            left:-6px;
+            right:-6px;
+            bottom:-6px;
+            border-radius:50%;
+            background:linear-gradient(135deg,var(--primary),var(--secondary),var(--accent));
+            z-index:-1;
+            animation:glowPulse 1.5s ease-in-out infinite;
+            opacity:0.6;
+        }
 
         /* ========== CORREÇÃO OVERFLOW/SCROLL ========== */
         .content-section{padding:20px}
@@ -15066,147 +15088,22 @@ async function initApp(user=null){
     loadSystem()
   ]).then(() => {
     console.log('✅ Carregamento inicial completo');
-    console.log('🔄 Sistema de auto-atualização iniciará em segundos...');
+    console.log('💡 Use os botões de refresh para atualizar dados manualmente');
   });
 
-  // ========== SISTEMA DE AUTO-REFRESH MELHORADO (DUPLO) ==========
+  // ========== AUTO-REFRESH DE UI COMPLETAMENTE REMOVIDO ==========
+  //
+  // ⚠️ IMPORTANTE: Auto-refresh automático de UI foi REMOVIDO para não interferir com modais
+  //
+  // Os dados são atualizados via:
+  // 1. SSE (Server-Sent Events) para notificações em tempo real
+  // 2. Botões de refresh manual em cada seção
+  // 3. Recarregamento após operações CRUD (criar/editar/deletar)
+  //
 
-  // AUTO-REFRESH RÁPIDO (15s) - Para seções críticas: Dashboard, Financeiro, Estoque, Orçamentos
-  let autoRefreshRapidoCounter = 0;
-
-  setInterval(() => {
-    // 🛡️ PROTEÇÃO: Não atualizar se houver modal aberto
-    if (Swal.isVisible()) {
-      console.log('⏸️ Auto-refresh pausado - modal aberto');
-      return;
-    }
-
-    autoRefreshRapidoCounter++;
-    console.log(`⚡ Auto-refresh RÁPIDO #${autoRefreshRapidoCounter} iniciando...`);
-
-    let updated = false;
-
-    // 1. Atualizar DASHBOARD se estiver visível
-    const isDashboardVisible = document.getElementById('section-dashboard')?.classList.contains('active');
-    if (isDashboardVisible) {
-      console.log('  📊 [RÁPIDO] Atualizando dashboard...');
-      loadDashboard();
-      updated = true;
-    }
-
-    // 2. Atualizar FINANCEIRO se estiver visível
-    const isFinanceiroVisible = document.getElementById('section-financeiro')?.classList.contains('active');
-    if (isFinanceiroVisible) {
-      console.log('  💵 [RÁPIDO] Atualizando financeiro...');
-      atualizarResumoFinanceiro();
-      updated = true;
-    }
-
-    // 3. Atualizar ESTOQUE se estiver visível
-    const isEstoqueVisible = document.getElementById('section-estoque')?.classList.contains('active');
-    if (isEstoqueVisible) {
-      console.log('  📦 [RÁPIDO] Atualizando estoque...');
-      loadEstoque();
-      updated = true;
-    }
-
-    // 4. Atualizar ORÇAMENTOS se estiver visível
-    const isOrcamentosVisible = document.getElementById('section-orcamento')?.classList.contains('active');
-    if (isOrcamentosVisible) {
-      console.log('  💰 [RÁPIDO] Atualizando orçamentos...');
-      // Recarregar a sub-tab ativa
-      const activeSubTab = document.querySelector('#section-orcamento .sub-tab-content.active')?.id;
-      if (activeSubTab) {
-        const subTabName = activeSubTab.replace('orcamento-subtab-', '');
-        showSubTab('orcamento', subTabName);
-      }
-      updated = true;
-    }
-
-    if (updated) {
-      console.log(`✅ Auto-refresh RÁPIDO #${autoRefreshRapidoCounter} concluído!`);
-    }
-  }, 15000); // 15 segundos - refresh rápido
-
-  // AUTO-REFRESH NORMAL (60s) - Para outras seções
-  let autoRefreshCounter = 0;
-
-  setInterval(() => {
-    // 🛡️ PROTEÇÃO: Não atualizar se houver modal aberto
-    if (Swal.isVisible()) {
-      console.log('⏸️ Auto-refresh pausado - modal aberto');
-      return;
-    }
-
-    autoRefreshCounter++;
-    console.log(`🔄 Auto-refresh GERAL #${autoRefreshCounter} iniciando...`);
-
-    let updated = false;
-
-    // 1. Atualizar CLIENTES se estiver visível
-    const isClientesVisible = document.getElementById('section-clientes')?.classList.contains('active');
-    if (isClientesVisible) {
-      console.log('  👥 Atualizando clientes...');
-      loadClientes();
-      updated = true;
-    }
-
-    // 2. Atualizar PROFISSIONAIS se estiver visível
-    const isProfissionaisVisible = document.getElementById('section-profissionais')?.classList.contains('active');
-    if (isProfissionaisVisible) {
-      console.log('  👨‍⚕️ Atualizando profissionais...');
-      loadProfissionaisLista();
-      updated = true;
-    }
-
-    // 3. Atualizar SERVIÇOS se estiver visível
-    const isServicosVisible = document.getElementById('section-servicos')?.classList.contains('active');
-    if (isServicosVisible) {
-      console.log('  💇 Atualizando serviços...');
-      loadServicosLista();
-      updated = true;
-    }
-
-    // 4. Atualizar PRODUTOS se estiver visível
-    const isProdutosVisible = document.getElementById('section-produtos')?.classList.contains('active');
-    if (isProdutosVisible) {
-      console.log('  📦 Atualizando produtos...');
-      loadProdutosLista();
-      updated = true;
-    }
-
-    // 5. Atualizar CONTRATOS se estiver visível
-    const isContratosVisible = document.getElementById('section-contratos')?.classList.contains('active');
-    if (isContratosVisible) {
-      console.log('  📄 Atualizando contratos...');
-      loadContratos();
-      updated = true;
-    }
-
-    // 6. Atualizar STATUS DO SISTEMA se estiver visível
-    const isSistemaVisible = document.getElementById('section-sistema')?.classList.contains('active');
-    if (isSistemaVisible) {
-      console.log('  ⚙️ Atualizando status do sistema...');
-      verificarStatus();
-      updated = true;
-    }
-
-    // 7. Atualizar FILA se estiver visível
-    const isFilaVisible = document.getElementById('section-fila')?.classList.contains('active');
-    if (isFilaVisible) {
-      console.log('  📋 Atualizando fila...');
-      loadFila();
-      updated = true;
-    }
-
-    if (updated) {
-      console.log(`✅ Auto-refresh GERAL #${autoRefreshCounter} concluído!`);
-    }
-  }, 60000); // 60 segundos - refresh geral
-
-  console.log('✅ Sistema de auto-refresh DUPLO inicializado:');
-  console.log('  ⚡ 15s: Dashboard, Financeiro, Estoque, Orçamentos');
-  console.log('  🔄 60s: Clientes, Profissionais, Serviços, Produtos, Contratos, Sistema, Fila');
+  console.log('✅ Sistema de notificações em tempo real ativo (SSE)');
+  console.log('⚠️ Auto-refresh automático de UI foi DESABILITADO');
+  console.log('💡 Use os botões de refresh em cada seção para atualizar manualmente');
 
   // Funções para mostrar/esconder indicador de auto-refresh
   function showAutoRefreshIndicator() {

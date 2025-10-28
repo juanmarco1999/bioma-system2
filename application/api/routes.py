@@ -975,6 +975,7 @@ def profissionais():
             'especialidade': data.get('especialidade', ''),
             'comissao_perc': float(data.get('comissao_perc', 0)),
             'foto_url': data.get('foto_url', ''),
+            'observacoes': data.get('observacoes', ''),
             'assistente_id': assistente_id,
             'assistente_tipo': assistente_tipo if assistente_id else None,
             'comissao_assistente_perc': float(data.get('comissao_assistente_perc', 0)),
