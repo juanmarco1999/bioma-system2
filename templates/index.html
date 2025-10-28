@@ -504,6 +504,181 @@
         .sub-tab-content{display:none;animation:fadeIn 0.4s ease}
         .sub-tab-content.active{display:block}
 
+        /* ========== IMPROVED ACTION BUTTONS (Directive 9) ========== */
+        /* Enhanced button styling for better UX across all tables and forms */
+
+        /* Base action button improvements */
+        table .btn-sm {
+            min-width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+
+        /* Action button hover effects */
+        table .btn-sm:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        table .btn-sm:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+
+        /* Edit/Primary button enhancement */
+        table .btn-sm.btn-primary {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            border-color: #2563EB;
+        }
+
+        table .btn-sm.btn-primary:hover {
+            background: linear-gradient(135deg, #2563EB, #1D4ED8);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Delete/Danger button enhancement */
+        table .btn-sm.btn-danger {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            border-color: #DC2626;
+        }
+
+        table .btn-sm.btn-danger:hover {
+            background: linear-gradient(135deg, #DC2626, #B91C1C);
+            box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+        }
+
+        /* Info/View button enhancement */
+        table .btn-sm.btn-info {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            border-color: #2563EB;
+        }
+
+        table .btn-sm.btn-info:hover {
+            background: linear-gradient(135deg, #2563EB, #1D4ED8);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Success button enhancement */
+        table .btn-sm.btn-success {
+            background: linear-gradient(135deg, #10B981, #059669);
+            border-color: #059669;
+        }
+
+        table .btn-sm.btn-success:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
+        }
+
+        /* Warning button enhancement */
+        table .btn-sm.btn-warning {
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            border-color: #D97706;
+            color: #fff;
+        }
+
+        table .btn-sm.btn-warning:hover {
+            background: linear-gradient(135deg, #D97706, #B45309);
+            box-shadow: 0 8px 25px rgba(217, 119, 6, 0.4);
+            color: #fff;
+        }
+
+        /* Button ripple effect */
+        table .btn-sm::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        table .btn-sm:active::before {
+            width: 120%;
+            height: 120%;
+        }
+
+        /* Button group spacing */
+        table td .btn-sm {
+            margin-right: 6px;
+        }
+
+        table td .btn-sm:last-child {
+            margin-right: 0;
+        }
+
+        /* Icon sizing in action buttons */
+        table .btn-sm i {
+            font-size: 1.1rem;
+        }
+
+        /* Tooltip-like hover labels (optional enhancement) */
+        table .btn-sm[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+            animation: tooltipFade 0.2s ease;
+        }
+
+        table .btn-sm[title]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 2px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        @keyframes tooltipFade {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* Responsive button adjustments */
+        @media (max-width: 768px) {
+            table .btn-sm {
+                min-width: 32px;
+                height: 32px;
+                padding: 6px 10px;
+            }
+
+            table .btn-sm i {
+                font-size: 1rem;
+            }
+        }
+
+        /* ========== END ACTION BUTTONS ========== */
+
         /* ISOLAMENTO DAS SEÇÕES - Otimizado para Performance */
         .content-section:not(.active) {
             display: none !important;
