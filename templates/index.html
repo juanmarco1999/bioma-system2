@@ -4311,12 +4311,14 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                     <button class="btn btn-info btn-sm" onclick="exportarProdutos('csv')" title="Exportar para CSV">
                         <i class="bi bi-file-earmark-text"></i> CSV
                     </button>
-                    <button class="btn btn-primary" onclick="showModalProduto()"><i class="bi bi-plus-circle"></i> Novo</button>
                 </div>
             </div>
 
             <!-- Sub-tabs para Produtos -->
             <div class="sub-tabs">
+                <button class="sub-tab-btn" onclick="switchSubTab('produtos', 'novo')">
+                    <i class="bi bi-plus-circle-fill"></i> Novo Produto
+                </button>
                 <button class="sub-tab-btn active" onclick="switchSubTab('produtos', 'todos')">
                     <i class="bi bi-box-fill"></i> Todos
                 </button>
@@ -4326,6 +4328,93 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                 <button class="sub-tab-btn" onclick="switchSubTab('produtos', 'inativos')">
                     <i class="bi bi-x-circle"></i> Inativos
                 </button>
+            </div>
+
+            <!-- Sub-tab: NOVO PRODUTO - COMPLETO -->
+            <div id="produtos-subtab-novo" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-plus-circle-fill"></i> Cadastrar Novo Produto
+                    </div>
+                    <div class="card-body">
+                        <form id="formNovoProduto">
+                            <div class="row g-3">
+                                <!-- Nome do Produto -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-box-seam"></i> Nome do Produto *</label>
+                                    <input type="text" id="novoProdutoNome" class="form-control" placeholder="Ex: Shampoo Revitalizante" required>
+                                </div>
+
+                                <!-- Marca -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-tag"></i> Marca</label>
+                                    <input type="text" id="novoProdutoMarca" class="form-control" placeholder="Ex: L'Oréal">
+                                </div>
+
+                                <!-- Código de Barras -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-upc-scan"></i> Código de Barras</label>
+                                    <input type="text" id="novoProdutoCodigoBarras" class="form-control" placeholder="Ex: 7891010971328">
+                                </div>
+
+                                <!-- Fornecedor -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-truck"></i> Fornecedor</label>
+                                    <input type="text" id="novoProdutoFornecedor" class="form-control" placeholder="Nome do fornecedor">
+                                </div>
+
+                                <!-- Preço de Custo -->
+                                <div class="col-md-3">
+                                    <label class="form-label"><i class="bi bi-wallet2"></i> Preço de Custo (R$)</label>
+                                    <input type="number" id="novoProdutoPrecoCusto" class="form-control" placeholder="0.00" step="0.01" min="0">
+                                </div>
+
+                                <!-- Preço de Venda -->
+                                <div class="col-md-3">
+                                    <label class="form-label"><i class="bi bi-currency-dollar"></i> Preço de Venda (R$) *</label>
+                                    <input type="number" id="novoProdutoPrecoVenda" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+                                </div>
+
+                                <!-- Estoque Atual -->
+                                <div class="col-md-3">
+                                    <label class="form-label"><i class="bi bi-box"></i> Estoque Atual *</label>
+                                    <input type="number" id="novoProdutoEstoqueAtual" class="form-control" placeholder="0" min="0" required>
+                                </div>
+
+                                <!-- Estoque Mínimo -->
+                                <div class="col-md-3">
+                                    <label class="form-label"><i class="bi bi-exclamation-triangle"></i> Estoque Mínimo</label>
+                                    <input type="number" id="novoProdutoEstoqueMinimo" class="form-control" placeholder="0" min="0" value="0">
+                                </div>
+
+                                <!-- Status -->
+                                <div class="col-md-12">
+                                    <label class="form-label"><i class="bi bi-toggle-on"></i> Status *</label>
+                                    <select id="novoProdutoStatus" class="form-select" required>
+                                        <option value="ativo" selected>Ativo</option>
+                                        <option value="inativo">Inativo</option>
+                                    </select>
+                                </div>
+
+                                <!-- Descrição -->
+                                <div class="col-12">
+                                    <label class="form-label"><i class="bi bi-chat-left-text"></i> Descrição</label>
+                                    <textarea id="novoProdutoDescricao" class="form-control" rows="3" placeholder="Descreva as características do produto..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Botões de Ação -->
+                            <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoProduto()">
+                                    <i class="bi bi-x-circle"></i> Limpar
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="salvarNovoProduto()">
+                                    <i class="bi bi-check-circle"></i> Salvar Produto
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Sub-tab: Todos -->
@@ -8174,6 +8263,118 @@ async function salvarNovoServico() {
             icon: 'error',
             title: 'Erro no servidor',
             text: 'Não foi possível salvar o serviço'
+        });
+    }
+}
+
+// ========== NOVO PRODUTO - FUNÇÕES COMPLETAS ====================
+
+/**
+ * Limpar formulário de novo produto
+ */
+function limparFormularioNovoProduto() {
+    document.getElementById('novoProdutoNome').value = '';
+    document.getElementById('novoProdutoMarca').value = '';
+    document.getElementById('novoProdutoCodigoBarras').value = '';
+    document.getElementById('novoProdutoFornecedor').value = '';
+    document.getElementById('novoProdutoPrecoCusto').value = '';
+    document.getElementById('novoProdutoPrecoVenda').value = '';
+    document.getElementById('novoProdutoEstoqueAtual').value = '';
+    document.getElementById('novoProdutoEstoqueMinimo').value = '0';
+    document.getElementById('novoProdutoStatus').value = 'ativo';
+    document.getElementById('novoProdutoDescricao').value = '';
+    console.log('✅ Formulário de novo produto limpo');
+}
+
+/**
+ * Salvar novo produto
+ */
+async function salvarNovoProduto() {
+    // Validar campos obrigatórios
+    const nome = document.getElementById('novoProdutoNome').value.trim();
+    const precoVenda = document.getElementById('novoProdutoPrecoVenda').value;
+    const estoqueAtual = document.getElementById('novoProdutoEstoqueAtual').value;
+    const status = document.getElementById('novoProdutoStatus').value;
+
+    if (!nome || !precoVenda || estoqueAtual === '') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos obrigatórios',
+            text: 'Preencha Nome, Preço de Venda e Estoque Atual',
+            timer: 3000
+        });
+        return;
+    }
+
+    try {
+        // Criar objeto com dados do produto
+        const produtoData = {
+            nome: nome,
+            marca: document.getElementById('novoProdutoMarca').value.trim(),
+            codigo_barras: document.getElementById('novoProdutoCodigoBarras').value.trim(),
+            fornecedor: document.getElementById('novoProdutoFornecedor').value.trim(),
+            preco_custo: parseFloat(document.getElementById('novoProdutoPrecoCusto').value) || 0,
+            preco_venda: parseFloat(precoVenda),
+            estoque_atual: parseInt(estoqueAtual),
+            estoque_minimo: parseInt(document.getElementById('novoProdutoEstoqueMinimo').value) || 0,
+            descricao: document.getElementById('novoProdutoDescricao').value.trim(),
+            ativo: status === 'ativo'
+        };
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Salvando...',
+            html: 'Cadastrando produto no sistema',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Enviar para API
+        const response = await fetch('/api/produtos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(produtoData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Produto cadastrado!',
+                html: `<strong>${nome}</strong> foi adicionado ao estoque`,
+                timer: 2500,
+                showConfirmButton: false
+            });
+
+            // Limpar formulário
+            limparFormularioNovoProduto();
+
+            // Recarregar lista
+            loadProdutos();
+
+            // Voltar para aba de todos
+            setTimeout(() => {
+                switchSubTab('produtos', 'todos');
+            }, 2500);
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao cadastrar',
+                text: data.message || 'Verifique os dados e tente novamente'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao salvar produto:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro no servidor',
+            text: 'Não foi possível salvar o produto'
         });
     }
 }
