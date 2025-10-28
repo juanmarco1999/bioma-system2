@@ -3361,12 +3361,14 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                     <button class="btn btn-info btn-sm" onclick="exportarClientes('csv')" title="Exportar para CSV">
                         <i class="bi bi-file-earmark-text"></i> CSV
                     </button>
-                    <button class="btn btn-primary" onclick="showModalCliente()"><i class="bi bi-person-plus"></i> Novo</button>
                 </div>
             </div>
 
             <!-- Sub-tabs para Clientes -->
             <div class="sub-tabs">
+                <button class="sub-tab-btn" onclick="showSubTab('clientes', 'novo')">
+                    <i class="bi bi-person-plus-fill"></i> Novo Cliente
+                </button>
                 <button class="sub-tab-btn active" onclick="showSubTab('clientes', 'lista')">
                     <i class="bi bi-people-fill"></i> Lista
                 </button>
@@ -3379,6 +3381,114 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                 <button class="sub-tab-btn" onclick="showSubTab('clientes', 'faturamento')">
                     <i class="bi bi-currency-dollar"></i> Faturamento
                 </button>
+            </div>
+
+            <!-- Sub-tab: NOVO CLIENTE - COMPLETO COM UPLOAD DE FOTOS -->
+            <div id="clientes-novo" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-person-plus-fill"></i> Cadastrar Novo Cliente
+                    </div>
+                    <div class="card-body">
+                        <!-- Upload de Foto -->
+                        <div class="foto-profissional-container">
+                            <img id="previewFotoCliente" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e7ff'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='48' fill='%237c3aed'%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E"
+                                 class="foto-profissional" alt="Foto do cliente"
+                                 style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary); box-shadow: 0 5px 15px rgba(124,58,237,0.3);">
+                            <button type="button" class="foto-upload-btn" onclick="document.getElementById('inputFotoCliente').click()">
+                                <i class="bi bi-camera-fill"></i>
+                            </button>
+                        </div>
+                        <input type="file" id="inputFotoCliente" accept="image/*" style="display: none;" onchange="previewFotoClienteNovo(event)">
+
+                        <!-- Formulário Completo -->
+                        <form id="formNovoCliente" class="mt-4">
+                            <div class="row g-3">
+                                <!-- Nome Completo -->
+                                <div class="col-md-8">
+                                    <label class="form-label"><i class="bi bi-person"></i> Nome Completo *</label>
+                                    <input type="text" id="novoClienteNome" class="form-control" placeholder="Digite o nome completo" required>
+                                </div>
+
+                                <!-- CPF -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-card-text"></i> CPF *</label>
+                                    <input type="text" id="novoClienteCPF" class="form-control" placeholder="000.000.000-00" maxlength="14" required>
+                                </div>
+
+                                <!-- Email -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-envelope"></i> Email</label>
+                                    <input type="email" id="novoClienteEmail" class="form-control" placeholder="exemplo@email.com">
+                                </div>
+
+                                <!-- Telefone -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-phone"></i> Telefone *</label>
+                                    <input type="text" id="novoClienteTelefone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" required>
+                                </div>
+
+                                <!-- Data de Nascimento -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-calendar-event"></i> Data de Nascimento</label>
+                                    <input type="date" id="novoClienteDataNasc" class="form-control">
+                                </div>
+
+                                <!-- CEP -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-mailbox"></i> CEP</label>
+                                    <input type="text" id="novoClienteCEP" class="form-control" placeholder="00000-000" maxlength="9">
+                                </div>
+
+                                <!-- Estado -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-map"></i> Estado</label>
+                                    <input type="text" id="novoClienteEstado" class="form-control" placeholder="Ex: SP" maxlength="2">
+                                </div>
+
+                                <!-- Cidade -->
+                                <div class="col-md-8">
+                                    <label class="form-label"><i class="bi bi-building"></i> Cidade</label>
+                                    <input type="text" id="novoClienteCidade" class="form-control" placeholder="Digite a cidade">
+                                </div>
+
+                                <!-- Bairro -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-signpost"></i> Bairro</label>
+                                    <input type="text" id="novoClienteBairro" class="form-control" placeholder="Digite o bairro">
+                                </div>
+
+                                <!-- Rua -->
+                                <div class="col-md-8">
+                                    <label class="form-label"><i class="bi bi-signpost-2"></i> Rua</label>
+                                    <input type="text" id="novoClienteRua" class="form-control" placeholder="Digite a rua">
+                                </div>
+
+                                <!-- Número -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-hash"></i> Número</label>
+                                    <input type="text" id="novoClienteNumero" class="form-control" placeholder="Nº">
+                                </div>
+
+                                <!-- Observações -->
+                                <div class="col-12">
+                                    <label class="form-label"><i class="bi bi-chat-left-text"></i> Observações</label>
+                                    <textarea id="novoClienteObservacoes" class="form-control" rows="3" placeholder="Informações adicionais sobre o cliente..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Botões de Ação -->
+                            <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoCliente()">
+                                    <i class="bi bi-x-circle"></i> Limpar
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="salvarNovoCliente()">
+                                    <i class="bi bi-check-circle"></i> Salvar Cliente
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Sub-tab: Lista de Clientes -->
@@ -7706,6 +7816,167 @@ async function salvarNovoProfissional() {
             icon: 'error',
             title: 'Erro no servidor',
             text: 'Não foi possível salvar o profissional'
+        });
+    }
+}
+
+// ========== NOVO CLIENTE - FUNÇÕES COMPLETAS ====================
+
+let fotoNovoCliente = null;
+
+/**
+ * Preview da foto do cliente ao selecionar arquivo
+ */
+function previewFotoClienteNovo(event) {
+    const file = event.target.files[0];
+    if (file) {
+        // Validar tamanho (máx 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Arquivo muito grande',
+                text: 'A foto deve ter no máximo 5MB',
+                timer: 3000
+            });
+            return;
+        }
+
+        // Validar tipo
+        if (!file.type.startsWith('image/')) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Tipo inválido',
+                text: 'Apenas imagens são permitidas',
+                timer: 3000
+            });
+            return;
+        }
+
+        // Criar preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewFotoCliente').src = e.target.result;
+            fotoNovoCliente = file; // Armazenar arquivo
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+/**
+ * Limpar formulário de novo cliente
+ */
+function limparFormularioNovoCliente() {
+    document.getElementById('novoClienteNome').value = '';
+    document.getElementById('novoClienteCPF').value = '';
+    document.getElementById('novoClienteEmail').value = '';
+    document.getElementById('novoClienteTelefone').value = '';
+    document.getElementById('novoClienteDataNasc').value = '';
+    document.getElementById('novoClienteCEP').value = '';
+    document.getElementById('novoClienteEstado').value = '';
+    document.getElementById('novoClienteCidade').value = '';
+    document.getElementById('novoClienteBairro').value = '';
+    document.getElementById('novoClienteRua').value = '';
+    document.getElementById('novoClienteNumero').value = '';
+    document.getElementById('novoClienteObservacoes').value = '';
+    document.getElementById('inputFotoCliente').value = '';
+    document.getElementById('previewFotoCliente').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e0e7ff'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='48' fill='%237c3aed'%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E";
+    fotoNovoCliente = null;
+    console.log('✅ Formulário de novo cliente limpo');
+}
+
+/**
+ * Salvar novo cliente com foto e dados completos
+ */
+async function salvarNovoCliente() {
+    // Validar campos obrigatórios
+    const nome = document.getElementById('novoClienteNome').value.trim();
+    const cpf = document.getElementById('novoClienteCPF').value.trim();
+    const telefone = document.getElementById('novoClienteTelefone').value.trim();
+
+    if (!nome || !cpf || !telefone) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos obrigatórios',
+            text: 'Preencha Nome, CPF e Telefone',
+            timer: 3000
+        });
+        return;
+    }
+
+    try {
+        // Criar FormData para enviar com foto
+        const formData = new FormData();
+        formData.append('nome', nome);
+        formData.append('cpf', cpf);
+        formData.append('email', document.getElementById('novoClienteEmail').value.trim());
+        formData.append('telefone', telefone);
+        formData.append('data_nascimento', document.getElementById('novoClienteDataNasc').value);
+
+        // Endereço completo
+        formData.append('cep', document.getElementById('novoClienteCEP').value.trim());
+        formData.append('estado', document.getElementById('novoClienteEstado').value.trim());
+        formData.append('cidade', document.getElementById('novoClienteCidade').value.trim());
+        formData.append('bairro', document.getElementById('novoClienteBairro').value.trim());
+        formData.append('rua', document.getElementById('novoClienteRua').value.trim());
+        formData.append('numero', document.getElementById('novoClienteNumero').value.trim());
+        formData.append('observacoes', document.getElementById('novoClienteObservacoes').value.trim());
+
+        // Adicionar foto se houver
+        if (fotoNovoCliente) {
+            formData.append('foto', fotoNovoCliente);
+        }
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Salvando...',
+            html: 'Cadastrando cliente no sistema',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Enviar para API
+        const response = await fetch('/api/clientes', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData // Não setar Content-Type - deixar o browser fazer
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Cliente cadastrado!',
+                html: `<strong>${nome}</strong> foi adicionado aos clientes`,
+                timer: 2500,
+                showConfirmButton: false
+            });
+
+            // Limpar formulário
+            limparFormularioNovoCliente();
+
+            // Recarregar lista
+            loadClientes();
+
+            // Voltar para aba de lista
+            setTimeout(() => {
+                showSubTab('clientes', 'lista');
+            }, 2500);
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao cadastrar',
+                text: data.message || 'Verifique os dados e tente novamente'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao salvar cliente:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro no servidor',
+            text: 'Não foi possível salvar o cliente'
         });
     }
 }
