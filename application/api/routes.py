@@ -981,9 +981,11 @@ def profissionais():
             'ativo': True,
             'created_at': datetime.now()
         }
-        db.profissionais.insert_one(profissional_data)
-        logger.info(f"✅ Profissional cadastrado: {profissional_data['nome']}")
-        return jsonify({'success': True, 'message': 'Profissional cadastrado com sucesso'})
+        result = db.profissionais.insert_one(profissional_data)
+        inserted_id = str(result.inserted_id)
+        logger.info(f"✅ Profissional cadastrado: {profissional_data['nome']} (ID: {inserted_id})")
+        clear_cache('profissionais_list')
+        return jsonify({'success': True, 'message': 'Profissional cadastrado com sucesso', 'id': inserted_id})
     except Exception as e:
         logger.error(f"Erro ao cadastrar profissional: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -1372,11 +1374,15 @@ def assistentes():
             'cpf': data.get('cpf', ''),
             'email': data.get('email', ''),
             'telefone': data.get('telefone', ''),
+            'comissao_perc': float(data.get('comissao_perc', 0)),
+            'tipo': data.get('tipo', 'assistente'),
             'ativo': True,
             'created_at': datetime.now()
         }
-        db.assistentes.insert_one(assistente_data)
-        return jsonify({'success': True})
+        result = db.assistentes.insert_one(assistente_data)
+        inserted_id = str(result.inserted_id)
+        logger.info(f"✅ Assistente cadastrado: {assistente_data['nome']} (ID: {inserted_id})")
+        return jsonify({'success': True, 'message': 'Assistente cadastrado com sucesso', 'id': inserted_id})
     except:
         return jsonify({'success': False}), 500
 
@@ -6556,7 +6562,14 @@ def listar_produtos():
         # Formatar resposta
         resultado = []
         for p in produtos:
+            # Suportar ambos os campos: 'ativo' (boolean) e 'status' (string)
+            ativo_val = p.get('ativo', None)
+            if ativo_val is None:
+                status_val = p.get('status', 'Ativo')
+                ativo_val = (status_val == 'Ativo' or status_val == 'ativo')
+
             resultado.append({
+                '_id': str(p['_id']),
                 'id': str(p['_id']),
                 'nome': p.get('nome', 'Sem nome'),
                 'marca': p.get('marca', 'Sem marca'),
@@ -6564,6 +6577,7 @@ def listar_produtos():
                 'estoque': int(p.get('estoque', 0)),
                 'estoque_minimo': int(p.get('estoque_minimo', 0)),
                 'status': p.get('status', 'Ativo'),
+                'ativo': ativo_val,
                 'sku': p.get('sku', ''),
                 'categoria': p.get('categoria', 'Geral')
             })
@@ -6700,14 +6714,20 @@ def listar_servicos():
         # Formatar resposta
         resultado = []
         for s in servicos:
+            status_val = s.get('status', 'ativo')
+            # Suportar ambos os campos: 'ativo' (boolean) e 'status' (string)
+            ativo_bool = s.get('ativo', True) if 'ativo' in s else (status_val.lower() == 'ativo')
+
             resultado.append({
+                '_id': str(s['_id']),
                 'id': str(s['_id']),
                 'nome': s.get('nome', 'Sem nome'),
                 'categoria': s.get('categoria', 'Geral'),
                 'tamanho': s.get('tamanho', 'Médio'),
                 'preco': float(s.get('preco', 0)),
                 'duracao': int(s.get('duracao', 60)),
-                'status': s.get('status', 'Ativo')
+                'status': status_val,
+                'ativo': ativo_bool
             })
         
         logger.info(f"✂️ Serviços listados: {len(resultado)} (status: {status or 'todos'})")
