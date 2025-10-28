@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
     <meta charset="UTF-8">
@@ -1659,66 +1659,44 @@
     <span>Atualizando dados...</span>
 </div>
 
-<!-- SAFE SWAL ULTRA-SIMPLIFICADO: Apenas previne empilhamento -->
+<!-- FORÇA BRUTA: Garantir funcionamento total -->
 <script>
-const _OriginalSwal = (typeof Swal !== 'undefined') ? Swal.fire.bind(Swal) : null;
+console.log('🚀 BIOMA v4.0 - Modo Correção Definitiva');
 
-window.SafeSwal = {
-    _isOpen: false,
-    _currentModal: null,
+// ========== CORREÇÃO 1: LIGHT MODE NO LOGIN (FORÇA BRUTA) ==========
+const forceLoginLightMode = () => {
+    const authScreen = document.getElementById('authScreen');
+    const appDiv = document.getElementById('app');
 
-    fire: function(config) {
-        // Fechar modal anterior se houver (previne empilhamento)
-        if (this._isOpen) {
-            try {
-                Swal.close();
-            } catch(e) {
-                console.warn('⚠️ Fechando modal anterior:', e);
-            }
-        }
+    // Se login está visível (display não é none) OU app está escondido
+    const isLoginVisible = (authScreen && authScreen.style.display !== 'none') ||
+                          (appDiv && appDiv.style.display === 'none');
 
-        this._isOpen = true;
-
-        // Normalizar config se for string
-        if (typeof config === 'string') {
-            config = { title: config };
-        }
-
-        // Preservar callbacks originais e adicionar tracking
-        const originalDidClose = config.didClose;
-        const originalWillClose = config.willClose;
-
-        // Criar nova config sem modificar as opções do usuário
-        const trackedConfig = {
-            ...config,
-            willClose: () => {
-                this._isOpen = false;
-                this._currentModal = null;
-                if (originalWillClose) originalWillClose();
-            },
-            didClose: () => {
-                this._isOpen = false;
-                this._currentModal = null;
-                if (originalDidClose) originalDidClose();
-            }
-        };
-
-        // Chamar Swal original
-        const result = _OriginalSwal(trackedConfig);
-        this._currentModal = result;
-
-        return result;
+    if (isLoginVisible) {
+        document.documentElement.setAttribute('data-theme', 'light');
     }
 };
 
-// Sobrescrever Swal.fire com wrapper mínimo
-if (typeof Swal !== 'undefined') {
-    Swal.fire = function(...args) {
-        return window.SafeSwal.fire(...args);
-    };
-}
+// Executar imediatamente
+forceLoginLightMode();
 
-console.log('✅ SafeSwal inicializado (modo simplificado)');
+// Executar a cada 50ms para capturar mudanças rápidas
+const lightModeInterval = setInterval(forceLoginLightMode, 50);
+
+// Parar após 30 segundos (quando app já terá carregado)
+setTimeout(() => clearInterval(lightModeInterval), 30000);
+
+// ========== CORREÇÃO 2: SWAL SEM WRAPPER (USA DIRETAMENTE) ==========
+// Criar alias SafeSwal que aponta DIRETO para Swal (sem interceptação)
+window.SafeSwal = {
+    fire: function(...args) {
+        return Swal.fire(...args);
+    }
+};
+
+console.log('✅ Correções de força bruta ativadas');
+console.log('   → Light mode no login: ATIVO (50ms interval)');
+console.log('   → Swal.fire: DIRETO via alias simples');
 </script>
 
 <div id="authScreen" class="auth-screen">
