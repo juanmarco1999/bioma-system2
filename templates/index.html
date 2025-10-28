@@ -3285,16 +3285,36 @@ if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
 // Alias simples para compatibilidade
 window.SafeSwal = Swal;
 
-// ========== WRAPPER DE MODAIS COMPLETAMENTE REMOVIDO ==========
-//
-// ⚠️ NENHUMA INTERCEPTAÇÃO DE Swal.fire
-// SweetAlert2 funciona 100% NATIVO sem interferência
-//
-// Se houver problemas com timers, ajuste diretamente nos modais individuais
-//
-console.log('%c✅ SweetAlert2 NATIVO - Zero Interferência', 'color: green; font-weight: bold; font-size: 14px;');
-console.log('%c  🔓 Modais funcionam 100% nativamente', 'color: blue;');
-console.log('%c  ⚠️ Se modais fecharem sozinhos, ajuste timer individual', 'color: orange;');
+// ========== WRAPPER MÍNIMO: GARANTIR QUE MODAIS POSSAM FECHAR ==========
+const originalSwalFire = Swal.fire.bind(Swal);
+
+Swal.fire = function(...args) {
+    const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
+
+    // 🔓 GARANTIR que TODO modal tenha PELO MENOS uma forma de fechar
+
+    // Se não tem botão Confirmar E não permite clicar fora E não permite ESC
+    // Então FORÇAR showCloseButton (botão X)
+    const semBotaoOK = config.showConfirmButton === false;
+    const naoPodeClicarFora = config.allowOutsideClick === false;
+    const naoPodeESC = config.allowEscapeKey === false;
+
+    if (semBotaoOK && naoPodeClicarFora && naoPodeESC) {
+        // Modal está TRAVADO! Forçar botão X
+        config.showCloseButton = true;
+        console.warn('⚠️ Modal sem forma de fechar! Botão X forçado.');
+    }
+
+    // Se não tem botão Confirmar, adicionar botão X por segurança
+    if (semBotaoOK && config.showCloseButton === undefined) {
+        config.showCloseButton = true;
+    }
+
+    return originalSwalFire(config);
+};
+
+console.log('%c✅ Sistema Anti-Travamento de Modais Ativo', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  🔓 Todo modal TEM forma de fechar', 'color: blue;');
 </script>
 
 <div id="authScreen" class="auth-screen">
