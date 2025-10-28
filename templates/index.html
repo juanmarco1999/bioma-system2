@@ -3155,23 +3155,44 @@ const activeModals = new Map();
 Swal.fire = function(...args) {
     const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
 
-    // NÃO aplicar timer automático - deixar o usuário controlar quando fechar
-    // Timer removido para evitar fechamento acidental de diálogos importantes
+    // FORÇAR remoção de timers em modais interativos (com input, confirmação, etc)
+    const isInteractiveModal = config.input || config.showCancelButton || config.html;
+    if (isInteractiveModal) {
+        // NUNCA permitir timer em modais interativos
+        delete config.timer;
+        delete config.timerProgressBar;
+    }
 
-    // Garantir que modais NÃO sejam fechados acidentalmente
-    if (config.allowOutsideClick === undefined) {
-        // Desabilitar click fora para evitar fechamento acidental
+    // FORÇAR allowOutsideClick = false para evitar fechamento acidental
+    // Sobrescrever MESMO se estiver definido explicitamente
+    if (!config.showLoading) {
         config.allowOutsideClick = false;
     }
+
+    // Permitir ESC para fechar
     if (config.allowEscapeKey === undefined) {
-        // Permitir ESC para usuários avançados
         config.allowEscapeKey = true;
     }
 
-    const result = originalSwalFire(config);
+    // Desabilitar backdrop clicks
+    config.backdrop = config.backdrop === false ? false : true;
 
-    // Remover timeout de segurança automático - usuário fecha quando quiser
-    // Isso evita que diálogos importantes desapareçam enquanto o usuário está lendo
+    // Adicionar evento para prevenir fechamento ao passar mouse
+    const originalDidOpen = config.didOpen;
+    config.didOpen = function(popup) {
+        // Executar didOpen original se existir
+        if (originalDidOpen) originalDidOpen(popup);
+
+        // Prevenir qualquer comportamento de hover que feche o modal
+        popup.addEventListener('mouseenter', (e) => {
+            e.stopPropagation();
+        });
+        popup.addEventListener('mouseover', (e) => {
+            e.stopPropagation();
+        });
+    };
+
+    const result = originalSwalFire(config);
 
     return result;
 };
@@ -3709,7 +3730,6 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
         <div id="section-contratos" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-file-earmark-check"></i> Contratos Aprovados</h1>
-                <button class="btn btn-success" onclick="loadContratos()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
             </div>
             <div class="card">
                 <div class="card-header"><i class="bi bi-file-check-fill"></i> Orçamentos Aprovados como Contratos</div>
@@ -3739,7 +3759,6 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <div class="page-header">
                 <h1><i class="bi bi-bar-chart-line"></i> Relatórios e Análises</h1>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-outline" onclick="loadRelatorios()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button>
                     <button class="btn btn-success" onclick="exportarRelatorio()"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
                 </div>
             </div>
@@ -3777,11 +3796,8 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <!-- Sub-tab: Mapa de Calor -->
             <div id="relatorios-mapa" class="sub-tab-content">
                 <div class="card mb-4">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span><i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados</span>
-                        <button class="btn btn-sm btn-outline" onclick="carregarMapaCalor()">
-                            <i class="bi bi-arrow-clockwise"></i> Atualizar
-                        </button>
+                    <div class="card-header">
+                        <i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
@@ -6400,7 +6416,7 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
         </div>
 
         <div id="section-sistema" class="content-section">
-            <div class="page-header"><h1><i class="bi bi-activity"></i> Status</h1><button class="btn btn-outline" onclick="verificarStatus()"><i class="bi bi-arrow-clockwise"></i> Atualizar</button></div>
+            <div class="page-header"><h1><i class="bi bi-activity"></i> Status do Sistema</h1></div>
             <div class="row g-4 mb-4">
                 <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-database"></i> MongoDB</div><div class="card-body text-center"><div id="mongoStatus" class="badge warning">Verificando...</div><p class="mt-3" id="mongoMessage">...</p></div></div></div>
                 <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-envelope"></i> MailerSend</div><div class="card-body text-center"><div id="emailStatus" class="badge warning">Verificando...</div><p class="mt-3" id="emailMessage">...</p></div></div></div>
@@ -6733,16 +6749,17 @@ async function checkAutoLogin(){
                 const response = await API.post('/api/login', { username, password });
                 console.log('📥 Resposta recebida:', response.success ? 'SUCCESS' : 'FAILED');
 
-                if(response.success){
+                if(response.success && response.user){
                     // Salvar sessão
                     sessionStorage.setItem('bioma_user', JSON.stringify(response.user));
                     console.log('💾 Sessão salva no sessionStorage');
 
                     // MODAL INFORMATIVO DE AUTO-LOGIN
+                    const userName = response.user.nome || response.user.username || 'Usuário';
                     Swal.fire({
                         icon: 'success',
                         title: '🔐 Login Automático',
-                        html: `<p>Bem-vindo de volta, <strong>${response.user.nome}</strong>!</p><p style="color: #10B981;">Acessando o sistema...</p>`,
+                        html: `<p>Bem-vindo de volta, <strong>${userName}</strong>!</p><p style="color: #10B981;">Acessando o sistema...</p>`,
                         timer: 2000,
                         timerProgressBar: true,
                         showConfirmButton: false,
@@ -8492,46 +8509,129 @@ function verificarRecursosAvancados() {
 // Função para baixar backup do banco de dados local (IndexedDB)
 async function downloadLocalDatabase() {
     try {
-        toast('📦 Preparando backup do banco de dados local...', 'info');
+        toast('📦 Preparando backup COMPLETO do banco de dados local...', 'info');
 
         // Coletar dados do localStorage e sessionStorage
         const backupData = {
             timestamp: new Date().toISOString(),
             version: '4.0',
-            localStorage: {},
-            sessionStorage: {},
             systemInfo: {
                 userAgent: navigator.userAgent,
                 language: navigator.language,
-                online: navigator.onLine
-            }
+                online: navigator.onLine,
+                platform: navigator.platform,
+                screen: {
+                    width: window.screen.width,
+                    height: window.screen.height
+                }
+            },
+            localStorage: {},
+            sessionStorage: {},
+            offlineData: {},
+            cachedData: {}
         };
 
-        // Exportar localStorage
+        // 1. Exportar localStorage
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            backupData.localStorage[key] = localStorage.getItem(key);
+            try {
+                const value = localStorage.getItem(key);
+                backupData.localStorage[key] = value;
+            } catch (e) {
+                backupData.localStorage[key] = '<erro ao ler>';
+            }
         }
 
-        // Exportar sessionStorage
+        // 2. Exportar sessionStorage
         for (let i = 0; i < sessionStorage.length; i++) {
             const key = sessionStorage.key(i);
-            backupData.sessionStorage[key] = sessionStorage.getItem(key);
+            try {
+                const value = sessionStorage.getItem(key);
+                backupData.sessionStorage[key] = value;
+            } catch (e) {
+                backupData.sessionStorage[key] = '<erro ao ler>';
+            }
         }
 
-        // Verificar IndexedDB (se houver dados)
+        // 3. Exportar dados em cache (variáveis globais do sistema)
+        backupData.cachedData = {
+            clientes: typeof clientesCached !== 'undefined' ? clientesCached : [],
+            profissionais: typeof profissionaisDisponiveis !== 'undefined' ? profissionaisDisponiveis : [],
+            servicos: typeof servicosDisponiveis !== 'undefined' ? servicosDisponiveis : [],
+            produtos: typeof produtosDisponiveis !== 'undefined' ? produtosDisponiveis : [],
+            agendamentos: typeof agendamentosCache !== 'undefined' ? agendamentosCache : [],
+            orcamentos: typeof orcamentosCache !== 'undefined' ? orcamentosCache : []
+        };
+
+        // 4. Verificar IndexedDB e exportar TODOS os dados
         if (window.indexedDB) {
             try {
                 const databases = await indexedDB.databases();
                 backupData.indexedDB = {
                     available: true,
-                    databases: databases.map(db => db.name)
+                    databases: [],
+                    data: {}
                 };
+
+                // Para cada database, exportar todos os dados
+                for (const dbInfo of databases) {
+                    backupData.indexedDB.databases.push(dbInfo.name);
+
+                    try {
+                        const db = await new Promise((resolve, reject) => {
+                            const request = indexedDB.open(dbInfo.name);
+                            request.onsuccess = () => resolve(request.result);
+                            request.onerror = () => reject(request.error);
+                        });
+
+                        backupData.indexedDB.data[dbInfo.name] = {
+                            stores: []
+                        };
+
+                        // Listar todas as object stores
+                        const storeNames = Array.from(db.objectStoreNames);
+
+                        for (const storeName of storeNames) {
+                            const transaction = db.transaction(storeName, 'readonly');
+                            const store = transaction.objectStore(storeName);
+
+                            const allData = await new Promise((resolve, reject) => {
+                                const request = store.getAll();
+                                request.onsuccess = () => resolve(request.result);
+                                request.onerror = () => reject(request.error);
+                            });
+
+                            backupData.indexedDB.data[dbInfo.name].stores.push({
+                                name: storeName,
+                                count: allData.length,
+                                data: allData
+                            });
+                        }
+
+                        db.close();
+                    } catch (dbError) {
+                        console.error(`Erro ao exportar database ${dbInfo.name}:`, dbError);
+                        backupData.indexedDB.data[dbInfo.name] = {
+                            error: dbError.message
+                        };
+                    }
+                }
             } catch (e) {
                 backupData.indexedDB = {
                     available: true,
-                    note: 'Dados IndexedDB disponíveis mas não exportados nesta versão'
+                    error: e.message,
+                    note: 'Erro ao acessar IndexedDB'
                 };
+            }
+        }
+
+        // 5. Dados offline pendentes (se houver)
+        const offlineQueue = localStorage.getItem('offline_queue');
+        if (offlineQueue) {
+            try {
+                backupData.offlineData.pendingSync = JSON.parse(offlineQueue);
+            } catch (e) {
+                backupData.offlineData.pendingSync = [];
             }
         }
 
@@ -10369,6 +10469,8 @@ function showModalServico(){
 
 // Função para ativar todos os serviços
 async function ativarTodosServicos() {
+    console.log('🔄 ativarTodosServicos() chamada');
+
     const result = await SafeSwal.fire({
         title: 'Ativar Todos os Serviços?',
         text: 'Esta ação irá ativar todos os serviços cadastrados no sistema.',
@@ -10381,6 +10483,7 @@ async function ativarTodosServicos() {
     });
 
     if (result.isConfirmed) {
+        console.log('✅ Confirmação recebida, enviando requisição...');
         try {
             const res = await fetch('/api/servicos/toggle-todos', {
                 method: 'POST',
@@ -10388,18 +10491,24 @@ async function ativarTodosServicos() {
                 credentials: 'include',
                 body: JSON.stringify({ ativo: true })
             });
+
+            console.log('📡 Resposta recebida:', res.status);
             const data = await res.json();
+            console.log('📦 Dados:', data);
 
             if (data.success) {
-                toast(`✅ ${data.count} serviços ativados com sucesso!`, 'success');
-                loadServicosLista();
+                toast(`✅ ${data.count || 0} serviços ativados com sucesso!`, 'success');
+                await loadServicosLista();
+                console.log('🔄 Lista de serviços recarregada');
             } else {
                 toast(`❌ ${data.message || 'Não foi possível ativar os serviços'}`, 'error');
             }
         } catch (e) {
-            console.error('Erro ao ativar serviços:', e);
+            console.error('❌ Erro ao ativar serviços:', e);
             toast('❌ Falha ao ativar serviços', 'error');
         }
+    } else {
+        console.log('❌ Operação cancelada pelo usuário');
     }
 
     // Limpeza de backdrop residual
@@ -10413,6 +10522,8 @@ async function ativarTodosServicos() {
 
 // Função para desativar todos os serviços
 async function desativarTodosServicos() {
+    console.log('🔄 desativarTodosServicos() chamada');
+
     const result = await SafeSwal.fire({
         title: 'Desativar Todos os Serviços?',
         text: 'Esta ação irá desativar todos os serviços cadastrados no sistema.',
@@ -10425,6 +10536,7 @@ async function desativarTodosServicos() {
     });
 
     if (result.isConfirmed) {
+        console.log('✅ Confirmação recebida, enviando requisição...');
         try {
             const res = await fetch('/api/servicos/toggle-todos', {
                 method: 'POST',
@@ -10432,18 +10544,24 @@ async function desativarTodosServicos() {
                 credentials: 'include',
                 body: JSON.stringify({ ativo: false })
             });
+
+            console.log('📡 Resposta recebida:', res.status);
             const data = await res.json();
+            console.log('📦 Dados:', data);
 
             if (data.success) {
-                toast(`✅ ${data.count} serviços desativados com sucesso!`, 'success');
-                loadServicosLista();
+                toast(`✅ ${data.count || 0} serviços desativados com sucesso!`, 'success');
+                await loadServicosLista();
+                console.log('🔄 Lista de serviços recarregada');
             } else {
                 toast(`❌ ${data.message || 'Não foi possível desativar os serviços'}`, 'error');
             }
         } catch (e) {
-            console.error('Erro ao desativar serviços:', e);
+            console.error('❌ Erro ao desativar serviços:', e);
             toast('❌ Falha ao desativar serviços', 'error');
         }
+    } else {
+        console.log('❌ Operação cancelada pelo usuário');
     }
 
     // Limpeza de backdrop residual
@@ -10558,6 +10676,8 @@ function showModalProduto(){
 
 // Função para ativar todos os produtos
 async function ativarTodosProdutos() {
+    console.log('🔄 ativarTodosProdutos() chamada');
+
     const result = await SafeSwal.fire({
         title: 'Ativar Todos os Produtos?',
         text: 'Esta ação irá ativar todos os produtos cadastrados no sistema.',
@@ -10570,6 +10690,7 @@ async function ativarTodosProdutos() {
     });
 
     if (result.isConfirmed) {
+        console.log('✅ Confirmação recebida, enviando requisição...');
         try {
             const res = await fetch('/api/produtos/toggle-todos', {
                 method: 'POST',
@@ -10577,18 +10698,24 @@ async function ativarTodosProdutos() {
                 credentials: 'include',
                 body: JSON.stringify({ ativo: true })
             });
+
+            console.log('📡 Resposta recebida:', res.status);
             const data = await res.json();
+            console.log('📦 Dados:', data);
 
             if (data.success) {
-                toast(`✅ ${data.count} produtos ativados com sucesso!`, 'success');
-                loadProdutosLista();
+                toast(`✅ ${data.count || 0} produtos ativados com sucesso!`, 'success');
+                await loadProdutosLista();
+                console.log('🔄 Lista de produtos recarregada');
             } else {
                 toast(`❌ ${data.message || 'Não foi possível ativar os produtos'}`, 'error');
             }
         } catch (e) {
-            console.error('Erro ao ativar produtos:', e);
+            console.error('❌ Erro ao ativar produtos:', e);
             toast('❌ Falha ao ativar produtos', 'error');
         }
+    } else {
+        console.log('❌ Operação cancelada pelo usuário');
     }
 
     // Limpeza de backdrop residual
@@ -10602,6 +10729,8 @@ async function ativarTodosProdutos() {
 
 // Função para desativar todos os produtos
 async function desativarTodosProdutos() {
+    console.log('🔄 desativarTodosProdutos() chamada');
+
     const result = await SafeSwal.fire({
         title: 'Desativar Todos os Produtos?',
         text: 'Esta ação irá desativar todos os produtos cadastrados no sistema.',
@@ -10614,6 +10743,7 @@ async function desativarTodosProdutos() {
     });
 
     if (result.isConfirmed) {
+        console.log('✅ Confirmação recebida, enviando requisição...');
         try {
             const res = await fetch('/api/produtos/toggle-todos', {
                 method: 'POST',
@@ -10621,18 +10751,24 @@ async function desativarTodosProdutos() {
                 credentials: 'include',
                 body: JSON.stringify({ ativo: false })
             });
+
+            console.log('📡 Resposta recebida:', res.status);
             const data = await res.json();
+            console.log('📦 Dados:', data);
 
             if (data.success) {
-                toast(`✅ ${data.count} produtos desativados com sucesso!`, 'success');
-                loadProdutosLista();
+                toast(`✅ ${data.count || 0} produtos desativados com sucesso!`, 'success');
+                await loadProdutosLista();
+                console.log('🔄 Lista de produtos recarregada');
             } else {
                 toast(`❌ ${data.message || 'Não foi possível desativar os produtos'}`, 'error');
             }
         } catch (e) {
-            console.error('Erro ao desativar produtos:', e);
+            console.error('❌ Erro ao desativar produtos:', e);
             toast('❌ Falha ao desativar produtos', 'error');
         }
+    } else {
+        console.log('❌ Operação cancelada pelo usuário');
     }
 
     // Limpeza de backdrop residual
@@ -14634,15 +14770,40 @@ async function initApp(user=null){
     console.log('✅ Carregamento inicial completo');
   });
 
-  // AUTO-REFRESH DO DASHBOARD EM TEMPO REAL (a cada 30 segundos)
+  // AUTO-REFRESH DO DASHBOARD E MAPA DE CALOR EM TEMPO REAL (a cada 60 segundos)
   setInterval(() => {
-    // Só atualiza se o dashboard estiver visível
-    const isDashboardVisible = document.getElementById('dashboard')?.style.display !== 'none';
+    console.log('🔄 Iniciando auto-refresh do sistema...');
+
+    // 1. Atualizar dashboard se estiver visível
+    const isDashboardVisible = document.getElementById('section-dashboard')?.classList.contains('active');
     if (isDashboardVisible) {
-      console.log('🔄 Auto-refresh do dashboard...');
+      console.log('  📊 Atualizando dashboard...');
       loadDashboard();
     }
-  }, 30000); // 30 segundos
+
+    // 2. Atualizar mapa de calor se a sub-tab estiver ativa
+    const isMapaCalorVisible = document.getElementById('relatorios-mapa')?.classList.contains('active');
+    if (isMapaCalorVisible) {
+      console.log('  🗺️ Atualizando mapa de calor...');
+      carregarMapaCalor();
+    }
+
+    // 3. Atualizar status do sistema se estiver visível
+    const isSistemaVisible = document.getElementById('section-sistema')?.classList.contains('active');
+    if (isSistemaVisible) {
+      console.log('  ⚙️ Atualizando status do sistema...');
+      verificarStatus();
+    }
+
+    // 4. Atualizar contratos se estiver visível
+    const isContratosVisible = document.getElementById('section-contratos')?.classList.contains('active');
+    if (isContratosVisible) {
+      console.log('  📄 Atualizando contratos...');
+      loadContratos();
+    }
+
+    console.log('✅ Auto-refresh concluído!');
+  }, 60000); // 60 segundos
 
   // Iniciar features que não dependem de dados
   bindAutocompletes();
