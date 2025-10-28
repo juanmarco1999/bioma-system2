@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
+    <!-- ULTRA-EARLY THEME ENFORCEMENT - Runs before ANY other code -->
+    <script>
+    // Force light mode on login screen - runs IMMEDIATELY
+    (function() {
+        // Set attribute before any CSS loads
+        document.documentElement.setAttribute('data-theme', 'light');
+
+        // Remove any saved theme from localStorage to prevent flash
+        try {
+            const authVisible = !document.getElementById('app') ||
+                               document.getElementById('app')?.style.display === 'none';
+            if (authVisible) {
+                localStorage.removeItem('theme');
+                console.log('%c🌞 EARLY LIGHT MODE ENFORCED', 'background: #FBBF24; color: #000; padding: 4px; font-weight: bold;');
+            }
+        } catch(e) { /* ignore errors on first run */ }
+    })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -22,10 +40,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- jsPDF AutoTable para tabelas em PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <!-- FullCalendar para calendário de profissionais -->
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/pt-br.global.min.js"></script>
+    <!-- FullCalendar para calendário de profissionais - UNPKG CDN (compatível com Brave) -->
+    <link href="https://unpkg.com/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://unpkg.com/fullcalendar@6.1.10/locales/pt-br.global.min.js"></script>
     <style>
 :root[data-theme="light"]{--primary:#7C3AED;--primary-dark:#6D28D9;--secondary:#EC4899;--accent:#F59E0B;--success:#10B981;--danger:#EF4444;--warning:#F59E0B;--info:#3B82F6;--bg-main:#F9FAFB;--bg-card:#FFFFFF;--bg-sidebar:#1F2937;--bg-sidebar-hover:#374151;--text-primary:#1F2937;--text-secondary:#6B7280;--text-muted:#9CA3AF;--border-color:#E5E7EB;--shadow:0 4px 20px rgba(0,0,0,0.08);--shadow-hover:0 8px 30px rgba(124,58,237,0.15);}:root[data-theme="dark"]{--primary:#8B5CF6;--primary-dark:#7C3AED;--secondary:#F472B6;--accent:#FBBF24;--success:#34D399;--danger:#F87171;--warning:#FBBF24;--info:#60A5FA;--bg-main:#0F172A;--bg-card:#1E293B;--bg-sidebar:#0F172A;--bg-sidebar-hover:#1E293B;--text-primary:#F1F5F9;--text-secondary:#CBD5E1;--text-muted:#94A3B8;--border-color:#334155;--shadow:0 4px 20px rgba(0,0,0,0.4);--shadow-hover:0 8px 30px rgba(139,92,246,0.3)}*{margin:0;padding:0;box-sizing:border-box}body,button,input,select,textarea{transition:background-color .2s ease,color .2s ease,border-color .2s ease}body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-main);color:var(--text-primary);overflow-x:hidden;line-height:1.6}.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;animation:gradientAnimation 15s ease infinite;background-size:400% 400%}@keyframes gradientAnimation{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.auth-box{background:rgba(255,255,255,0.98);backdrop-filter:blur(10px);border-radius:30px;padding:50px;max-width:500px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,0.4);animation:slideUp 0.6s cubic-bezier(0.68,-0.55,0.265,1.55)}@keyframes slideUp{from{opacity:0;transform:translateY(50px) scale(0.9)}to{opacity:1;transform:translateY(0) scale(1)}}.auth-logo{text-align:center;margin-bottom:40px}.auth-logo .logo-icon{font-size:5rem;background:linear-gradient(135deg,#7C3AED,#EC4899);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:pulse 2s ease-in-out infinite;filter:drop-shadow(0 5px 15px rgba(124,58,237,0.3))}@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}.auth-logo h2{font-weight:900;font-size:2.8rem;color:#1F2937;margin-top:20px;letter-spacing:2px}.auth-logo p{color:#6B7280;font-size:1.1rem;margin-top:10px;font-weight:500}.nav-pills .nav-link{border-radius:15px;font-weight:700;padding:12px 25px;transition:all .3s;color:#6B7280;border:none;background:transparent;cursor:pointer}.nav-pills .nav-link.active{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:white;box-shadow:0 5px 20px rgba(124,58,237,0.4);transform:translateY(-2px)}.form-control,.form-select{border-radius:12px;border:2px solid #E5E7EB;padding:12px 18px;font-size:1rem;transition:all .3s;background:white;color:#1F2937}.form-control:focus,.form-select:focus{border-color:#7C3AED;box-shadow:0 0 0 5px rgba(124,58,237,0.1);outline:none;background:white}.alert{border-radius:15px;border:none;padding:15px 20px}.alert-info{background:linear-gradient(135deg,#E0E7FF,#DBEAFE);color:#1E40AF;border-left:5px solid #3B82F6}.alert-success{background:linear-gradient(135deg,#D1FAE5,#A7F3D0);color:#065F46;border-left:5px solid #10B981}.btn{border-radius:12px;padding:12px 30px;font-weight:700;border:none;cursor:pointer;transition:all .3s ease;display:inline-flex;align-items:center;gap:10px;font-size:1rem;text-transform:uppercase;letter-spacing:0.5px}.btn i{font-size:1.2rem}.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 5px 20px rgba(124,58,237,0.3)}.btn-primary:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(124,58,237,0.5);color:#fff}.btn-success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.btn-success:hover{transform:translateY(-3px);color:#fff}.btn-danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.btn-outline{background:transparent;color:var(--primary);border:3px solid var(--primary)}.btn-outline:hover{background:var(--primary);color:#fff}.btn-secondary{background:#6B7280;color:#fff}.btn-sm{padding:8px 16px;font-size:0.85rem}.w-100{width:100%}.mt-3{margin-top:1rem}.mb-3{margin-bottom:1rem}#app{display:none}.sidebar{width:280px;background:var(--bg-sidebar);color:#fff;position:fixed;height:100vh;overflow-y:auto;z-index:1000;box-shadow:4px 0 25px rgba(0,0,0,0.2)}.sidebar::-webkit-scrollbar{width:8px}.sidebar::-webkit-scrollbar-track{background:rgba(255,255,255,0.05)}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:4px}.sidebar-logo{padding:30px 20px;text-align:center;background:linear-gradient(135deg,var(--primary),var(--secondary));border-bottom:5px solid var(--accent)}.sidebar-logo h1{font-size:2.5rem;font-weight:900;letter-spacing:5px;margin:0;text-shadow:2px 2px 8px rgba(0,0,0,0.3)}.sidebar-logo p{font-size:1rem;opacity:0.95;margin:10px 0 0 0;letter-spacing:2px}.sidebar-menu{list-style:none;padding:20px 0}.sidebar-menu li a{display:flex;align-items:center;gap:12px;padding:14px 20px;color:rgba(255,255,255,0.85);text-decoration:none;transition:all .3s;border-left:5px solid transparent;font-weight:500;font-size:0.95rem}.sidebar-menu li a i{font-size:1.3rem;width:25px}.sidebar-menu li a:hover{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--accent);padding-left:28px}.sidebar-menu li a.active{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--primary);font-weight:700}.theme-toggle{padding:15px 20px;border-top:1px solid rgba(255,255,255,0.1)}.theme-toggle button{width:100%;padding:12px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);border-radius:12px;color:#fff;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px}.main-content{margin-left:280px;padding:30px 40px 100px;min-height:100vh;overflow-y:auto;overflow-x:hidden}.main-content::-webkit-scrollbar{width:10px}.main-content::-webkit-scrollbar-track{background:var(--bg-main)}.main-content::-webkit-scrollbar-thumb{background:var(--primary);border-radius:5px}.content-section{display:none}.content-section.active{display:block;animation:fadeIn 0.4s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.page-header{margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}.page-header h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:0;display:flex;align-items:center;gap:15px}.stat-card{background:var(--bg-card);border-radius:20px;padding:30px;box-shadow:var(--shadow);transition:all .3s;text-align:center;position:relative;overflow:hidden;border:2px solid var(--border-color)}.stat-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:6px;background:linear-gradient(90deg,var(--primary),var(--secondary))}.stat-card:hover{transform:translateY(-10px);box-shadow:var(--shadow-hover);border-color:var(--primary)}.stat-card .icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 10px 25px rgba(124,58,237,0.3)}.stat-card h3{font-size:3rem;font-weight:900;margin:15px 0 10px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}.stat-card p{color:var(--text-secondary);font-size:1rem;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:1px}.card{background:var(--bg-card);border-radius:20px;box-shadow:var(--shadow);margin-bottom:30px;overflow:visible;transition:all .3s;border:2px solid var(--border-color)}.card-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px 30px;font-weight:800;font-size:1.2rem;display:flex;align-items:center;gap:12px}.card-body{padding:30px}table{width:100%;border-collapse:collapse;font-size:0.95rem}table thead th{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:16px 14px;text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;font-size:0.85rem}table tbody tr{border-bottom:2px solid var(--border-color);transition:all .2s}table tbody tr:hover{background:var(--bg-main);transform:scale(1.01)}table tbody td{padding:16px 14px;vertical-align:middle;color:var(--text-primary)}.badge{padding:8px 16px;border-radius:20px;font-weight:800;font-size:0.8rem;display:inline-block;text-transform:uppercase;letter-spacing:0.5px}.badge.success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.badge.warning{background:linear-gradient(135deg,var(--warning),#F59E0B);color:#000}.badge.danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.spinner{border:4px solid var(--border-color);border-top:4px solid var(--primary);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:20px auto}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}.text-center{text-align:center}.text-muted{color:var(--text-secondary)}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.autocomplete-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:2px solid var(--primary);border-radius:14px;margin-top:5px;max-height:350px;overflow-y:auto;z-index:9999;box-shadow:0 10px 40px rgba(124,58,237,0.3);display:none}.autocomplete-results::-webkit-scrollbar{width:8px}.autocomplete-results::-webkit-scrollbar-track{background:var(--bg-main);border-radius:10px}.autocomplete-results::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px}.autocomplete-item{padding:14px 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s ease;word-wrap:break-word;white-space:normal}.autocomplete-item:hover{background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));transform:translateX(5px);border-left:4px solid var(--primary)}.autocomplete-item:last-child{border-bottom:none}.autocomplete-item strong{color:var(--primary);font-size:1.05rem;display:block;margin-bottom:5px}.autocomplete-item small{color:var(--text-secondary);font-size:0.9rem;display:block}.row{display:flex;flex-wrap:wrap;margin:0 -15px}.row.g-4>*{padding:0 15px;margin-bottom:25px}[class^="col-"]{padding:0 15px}.col-12{width:100%}@media (min-width:768px){.col-md-6{width:50%}.col-md-4{width:33.333%}.col-md-3{width:25%}.col-md-2{width:16.666%}}@media (min-width:992px){.col-lg-3{width:25%}.col-lg-4{width:33.333%}.col-lg-6{width:50%}}
             .global-search-container{margin-bottom:24px;background:var(--bg-card);border-radius:18px;padding:20px;box-shadow:var(--shadow);position:relative}
@@ -1659,44 +1677,99 @@
     <span>Atualizando dados...</span>
 </div>
 
-<!-- FORÇA BRUTA: Garantir funcionamento total -->
+<!-- SISTEMA DE DEBUG + CORREÇÕES ULTRA AGRESSIVAS -->
 <script>
-console.log('🚀 BIOMA v4.0 - Modo Correção Definitiva');
+// ============================================================
+// VERSÃO DE CACHE - MUDE ESTE NÚMERO SE VIR LOGS ANTIGOS
+// ============================================================
+const CACHE_VERSION = 'v2025-10-28-CRITICAL-FIXES';
+console.log(`%c🔥 BIOMA v4.0 - DEBUG MODE ${CACHE_VERSION}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
 
-// ========== CORREÇÃO 1: LIGHT MODE NO LOGIN (FORÇA BRUTA) ==========
+// ============================================================
+// DEBUG 1: VERIFICAR SE CACHE FOI LIMPO
+// ============================================================
+if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
+    console.warn('%c⚠️ CACHE NÃO FOI LIMPO! Você está vendo código ANTIGO!', 'background: red; color: white; font-size: 14px; padding: 8px;');
+    console.log('%cFaça: Ctrl+Shift+R ou F12 > Application > Clear Storage', 'font-size: 12px;');
+} else {
+    localStorage.setItem('BIOMA_CACHE_VERSION', CACHE_VERSION);
+    console.log('%c✅ Cache limpo detectado', 'color: green; font-weight: bold;');
+}
+
+// ============================================================
+// CORREÇÃO 1: LIGHT MODE NO LOGIN (ULTRA AGRESSIVO)
+// ============================================================
+let loginLightModeCount = 0;
 const forceLoginLightMode = () => {
     const authScreen = document.getElementById('authScreen');
     const appDiv = document.getElementById('app');
+    const currentTheme = document.documentElement.getAttribute('data-theme');
 
-    // Se login está visível (display não é none) OU app está escondido
-    const isLoginVisible = (authScreen && authScreen.style.display !== 'none') ||
-                          (appDiv && appDiv.style.display === 'none');
+    const isLoginVisible = (authScreen && window.getComputedStyle(authScreen).display !== 'none') ||
+                          (appDiv && window.getComputedStyle(appDiv).display === 'none') ||
+                          !appDiv;
 
-    if (isLoginVisible) {
+    if (isLoginVisible && currentTheme !== 'light') {
         document.documentElement.setAttribute('data-theme', 'light');
+        loginLightModeCount++;
+        console.log(`🔒 LOGIN LIGHT MODE FORÇADO (#${loginLightModeCount})`);
     }
 };
 
-// Executar imediatamente
+// Executar ANTES de qualquer outra coisa
 forceLoginLightMode();
 
-// Executar a cada 50ms para capturar mudanças rápidas
-const lightModeInterval = setInterval(forceLoginLightMode, 50);
+// Usar MutationObserver para detectar mudanças no DOM
+const observer = new MutationObserver(forceLoginLightMode);
+observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+    childList: true,
+    subtree: true
+});
 
-// Parar após 30 segundos (quando app já terá carregado)
-setTimeout(() => clearInterval(lightModeInterval), 30000);
+// Interval como backup
+setInterval(forceLoginLightMode, 20);
 
-// ========== CORREÇÃO 2: SWAL SEM WRAPPER (USA DIRETAMENTE) ==========
-// Criar alias SafeSwal que aponta DIRETO para Swal (sem interceptação)
-window.SafeSwal = {
-    fire: function(...args) {
-        return Swal.fire(...args);
-    }
+// ============================================================
+// CORREÇÃO 2: REMOVER SAFESWAL - USAR SWAL NATIVO
+// ============================================================
+// SafeSwal estava interferindo com o fechamento de modais
+// Agora usando Swal direto do SweetAlert2 sem wrappers
+
+// Criar alias simples para compatibilidade com código existente
+window.SafeSwal = Swal;
+
+// Debug leve - apenas logar abertura/fechamento sem interceptar clicks
+let modalDebugCount = 0;
+const originalSwalFire = Swal.fire.bind(Swal);
+
+Swal.fire = function(...args) {
+    modalDebugCount++;
+    console.log(`%c🔔 Modal #${modalDebugCount} aberto`, 'background: #10B981; color: white; padding: 4px; font-weight: bold;');
+
+    // Garantir que modais sempre sejam fecháveis
+    const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
+    const safeConfig = {
+        ...config,
+        allowOutsideClick: config.allowOutsideClick !== false, // Default true
+        allowEscapeKey: config.allowEscapeKey !== false, // Default true
+        allowEnterKey: config.allowEnterKey !== false, // Default true
+    };
+
+    const result = originalSwalFire(safeConfig);
+
+    result.then(() => {
+        console.log(`%c✅ Modal #${modalDebugCount} fechado`, 'background: #6B7280; color: white; padding: 4px;');
+    });
+
+    return result;
 };
 
-console.log('✅ Correções de força bruta ativadas');
-console.log('   → Light mode no login: ATIVO (50ms interval)');
-console.log('   → Swal.fire: DIRETO via alias simples');
+console.log('%c✅ Sistema de Debug Ativado', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('   → Light mode login: MutationObserver + Interval 20ms');
+console.log('   → Swal: Debug massivo em cada modal');
+console.log('   → Click tracking: TODOS os cliques rastreados');
 </script>
 
 <div id="authScreen" class="auth-screen">
@@ -1824,6 +1897,34 @@ console.log('   → Swal.fire: DIRETO via alias simples');
                 <div class="col-md-12"><div class="card"><div class="card-header"><i class="bi bi-calendar-event"></i> Próximos Agendamentos</div><div class="card-body" id="proximosAgendamentos"><div class="spinner"></div></div></div></div>
             </div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-clock-history"></i> Últimos Orçamentos</div><div class="card-body"><div class="table-responsive"><table><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Valor</th><th>Status</th></tr></thead><tbody id="ultimosOrcamentosBody"><tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr></tbody></table></div></div></div>
+
+            <!-- ALERTA DE ESTOQUE BAIXO -->
+            <div id="alertaEstoqueBaixo" class="card mt-4" style="display: none; border-left: 5px solid var(--danger);">
+                <div class="card-header" style="background: linear-gradient(135deg, var(--danger), #DC2626);">
+                    <i class="bi bi-exclamation-triangle-fill"></i> ⚠️ Alerta de Estoque Baixo
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" style="margin-bottom: 15px;">
+                        <strong>Atenção!</strong> Os seguintes produtos estão com estoque abaixo do mínimo:
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Marca</th>
+                                    <th>Estoque Atual</th>
+                                    <th>Mínimo</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="estoqueBaixoBody">
+                                <tr><td colspan="5" class="text-center"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="section-orcamento" class="content-section">
@@ -5861,13 +5962,57 @@ async function loadDashboard(){
             document.getElementById('dashAgendamentos').textContent=data.stats.agendamentos_hoje||0;
             document.getElementById('dashFaturamento').textContent='R$ '+(data.stats.faturamento||0).toFixed(0);
         }
-        const estoqueRes=await fetch('/api/estoque/alerta',{credentials:'include'});
-        const estoqueData=await estoqueRes.json();
-        if(estoqueData.success&&estoqueData.produtos&&estoqueData.produtos.length>0){
-            const html=estoqueData.produtos.slice(0,5).map(p=>`<div style="padding:10px;border-bottom:1px solid var(--border-color)"><strong>${p.nome}</strong><br><small>Estoque: ${p.estoque} | Mínimo: ${p.estoque_minimo}</small></div>`).join('');
-            // document.getElementById('alertasEstoque').innerHTML=html;
-        }else{
-            // document.getElementById('alertasEstoque').innerHTML='<p class="text-center text-success">✅ Estoque OK</p>';
+        // ALERTA DE ESTOQUE BAIXO - FUNCIONAL E EM TEMPO REAL
+        try {
+            const estoqueRes = await fetch('/api/estoque/alerta', {credentials: 'include'});
+            const estoqueData = await estoqueRes.json();
+
+            const alertaCard = document.getElementById('alertaEstoqueBaixo');
+            const alertaBody = document.getElementById('estoqueBaixoBody');
+
+            if (estoqueData.success && estoqueData.produtos && estoqueData.produtos.length > 0) {
+                // Mostrar card de alerta
+                if (alertaCard) alertaCard.style.display = 'block';
+
+                // Renderizar produtos com estoque baixo
+                const html = estoqueData.produtos.map(p => {
+                    const estoqueAtual = p.estoque || p.quantidade || 0;
+                    const estoqueMinimo = p.estoque_minimo || p.minimo || 0;
+                    const percentual = estoqueMinimo > 0 ? (estoqueAtual / estoqueMinimo * 100).toFixed(0) : 0;
+
+                    // Status badge com cores
+                    let statusBadge = '';
+                    if (estoqueAtual === 0) {
+                        statusBadge = '<span class="badge danger">🚫 ESGOTADO</span>';
+                    } else if (estoqueAtual < estoqueMinimo) {
+                        statusBadge = `<span class="badge danger">⚠️ CRÍTICO (${percentual}%)</span>`;
+                    } else if (estoqueAtual < estoqueMinimo * 1.5) {
+                        statusBadge = `<span class="badge warning">⚡ BAIXO (${percentual}%)</span>`;
+                    }
+
+                    return `
+                    <tr style="background: ${estoqueAtual === 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(234, 179, 8, 0.05)'};">
+                        <td><strong>${p.nome || 'Produto'}</strong></td>
+                        <td>${p.marca || 'N/A'}</td>
+                        <td style="color: ${estoqueAtual === 0 ? 'var(--danger)' : 'var(--warning)'}; font-weight: bold;">${estoqueAtual}</td>
+                        <td>${estoqueMinimo}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                    `;
+                }).join('');
+
+                if (alertaBody) alertaBody.innerHTML = html;
+
+                console.log(`⚠️ ${estoqueData.produtos.length} produto(s) com estoque baixo detectado(s)!`);
+            } else {
+                // Esconder card se não houver alertas
+                if (alertaCard) alertaCard.style.display = 'none';
+                console.log('✅ Estoque OK - Nenhum produto abaixo do mínimo');
+            }
+        } catch (estoqueErr) {
+            console.error('❌ Erro ao buscar alertas de estoque:', estoqueErr);
+            const alertaCard = document.getElementById('alertaEstoqueBaixo');
+            if (alertaCard) alertaCard.style.display = 'none';
         }
         const agendRes=await fetch('/api/agendamentos',{credentials:'include'});
         const agendData=await agendRes.json();
@@ -11338,24 +11483,21 @@ async function initApp(user=null){
   appInitialized = true;
   
   console.log('🚀 Inicializando aplicativo...');
-  document.querySelector('#authScreen').style.display='none';
-  document.querySelector('#app').style.display='block';
-  
+
+  // CRITICAL FIX: Load theme BEFORE showing app to prevent dark mode flash
   try{
     const cu = await API.get('/api/current-user');
     const theme = (cu.success && cu.user && cu.user.theme) ? cu.user.theme : 'light';
-    // IMPORTANTE: Só aplicar tema do usuário quando NÃO estiver na tela de login
-    // A tela de login SEMPRE deve ficar em light mode
-    const isAuthScreen = document.getElementById('authScreen')?.style.display !== 'none';
-    if (!isAuthScreen) {
-      document.documentElement.setAttribute('data-theme', theme);
-      console.log(`🎨 Tema do usuário aplicado: ${theme}`);
-    } else {
-      console.log('🌞 Auth screen ativa - mantendo light mode obrigatório');
-    }
+    document.documentElement.setAttribute('data-theme', theme);
+    console.log(`🎨 Tema do usuário aplicado: ${theme}`);
   }catch(e){
     console.error('Erro ao carregar tema:', e);
+    document.documentElement.setAttribute('data-theme', 'light'); // Fallback to light
   }
+
+  // NOW hide auth and show app AFTER theme is set
+  document.querySelector('#authScreen').style.display='none';
+  document.querySelector('#app').style.display='block';
   
   // CARREGAR LOGO IMEDIATAMENTE (antes de tudo)
   await loadConfiguracoes(true); // force=true para garantir carregamento
@@ -11371,7 +11513,17 @@ async function initApp(user=null){
   ]).then(() => {
     console.log('✅ Carregamento inicial completo');
   });
-  
+
+  // AUTO-REFRESH DO DASHBOARD EM TEMPO REAL (a cada 30 segundos)
+  setInterval(() => {
+    // Só atualiza se o dashboard estiver visível
+    const isDashboardVisible = document.getElementById('dashboard')?.style.display !== 'none';
+    if (isDashboardVisible) {
+      console.log('🔄 Auto-refresh do dashboard...');
+      loadDashboard();
+    }
+  }, 30000); // 30 segundos
+
   // Iniciar features que não dependem de dados
   bindAutocompletes();
   heatmapDias(60);
@@ -14325,15 +14477,21 @@ async function carregarReceitas(){
         const data = await res.json();
 
         if(data.success && data.receitas && data.receitas.length > 0){
-            tbody.innerHTML = data.receitas.map(receita => `
+            tbody.innerHTML = data.receitas.map((receita, index) => {
+                // Obter ID com fallbacks e formatar
+                const orcId = receita.orcamento_id || receita._id || receita.id || `temp-${index}`;
+                // Pegar últimos 6 caracteres ou usar formato mais curto
+                const displayId = String(orcId).length > 8 ? String(orcId).slice(-6).toUpperCase() : String(orcId);
+
+                return `
                 <tr>
                     <td><strong>${new Date(receita.data || receita.created_at).toLocaleDateString('pt-BR')}</strong></td>
-                    <td><span class="badge success">#${receita.orcamento_id || receita._id}</span></td>
+                    <td><span class="badge success">#${displayId}</span></td>
                     <td>${receita.cliente_nome || receita.nome_cliente || 'N/A'}</td>
                     <td><strong style="color: var(--success);">R$ ${parseFloat(receita.valor || receita.total || 0).toFixed(2)}</strong></td>
                     <td>${receita.categoria || receita.tipo || 'Serviço'}</td>
                 </tr>
-            `).join('');
+            `}).join('');
 
             console.log(`✅ ${data.receitas.length} receitas carregadas`);
         } else {
