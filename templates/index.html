@@ -3291,16 +3291,52 @@ const activeModals = new Map();
 Swal.fire = function(...args) {
     const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
 
-    // 🛡️ PROTEÇÃO CRÍTICA: Remover timers automáticos dos modais
-    // Isso impede que modais fechem sozinhos
-    if (config.timer !== undefined) {
-        console.warn('⚠️ Timer removido do modal para prevenir fechamento automático');
-        delete config.timer;
+    // 🛡️ SISTEMA INTELIGENTE DE PROTEÇÃO DE MODAIS
+
+    // Detectar se é modal INFORMATIVO (apenas notificação) ou FORMULÁRIO (requer interação)
+    const isFormModal = (
+        config.input ||                              // Tem campo de input
+        config.html?.includes('<input') ||           // HTML contém inputs
+        config.html?.includes('<textarea') ||        // HTML contém textareas
+        config.html?.includes('<select') ||          // HTML contém selects
+        config.showCancelButton ||                   // Tem botão cancelar
+        config.preConfirm ||                         // Tem validação customizada
+        config.inputValidator                        // Tem validação de input
+    );
+
+    if (isFormModal) {
+        // MODAL DE FORMULÁRIO: NÃO fechar automaticamente
+        if (config.timer !== undefined) {
+            console.log('🛡️ Timer removido de modal de formulário');
+            delete config.timer;
+        }
+
+        // Não permitir clicar fora para fechar (preservar dados)
+        if (config.allowOutsideClick === undefined) {
+            config.allowOutsideClick = false;
+        }
+    } else {
+        // MODAL INFORMATIVO: Pode ter timer curto
+        // Limitar timer máximo a 5 segundos para segurança
+        if (config.timer && config.timer > 5000) {
+            console.log('⚠️ Timer reduzido de', config.timer, 'para 5000ms');
+            config.timer = 5000;
+        }
+
+        // Permitir clicar fora em modais informativos (a menos que explicitamente proibido)
+        if (config.allowOutsideClick === undefined) {
+            config.allowOutsideClick = true;
+        }
     }
 
-    // Garantir que modais não fechem ao clicar fora (a menos que explicitamente permitido)
-    if (config.allowOutsideClick === undefined) {
-        config.allowOutsideClick = false;
+    // SEMPRE permitir fechar com ESC
+    if (config.allowEscapeKey === undefined) {
+        config.allowEscapeKey = true;
+    }
+
+    // SEMPRE mostrar botão X de fechar (se não for toast ou modal com botões)
+    if (config.showCloseButton === undefined && !config.toast) {
+        config.showCloseButton = true;
     }
 
     const result = originalSwalFire(config);
@@ -3311,7 +3347,10 @@ Swal.fire = function(...args) {
 // REMOVIDO: Interceptação de Swal.close() que estava causando problemas
 // REMOVIDO: setInterval que limpava backdrops - estava interferindo com modais
 
-console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c✅ Sistema de Modais Inteligente Ativado', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  📝 Modais de formulário: NÃO fecham automaticamente', 'color: blue;');
+console.log('%c  💬 Modais informativos: Fecham automaticamente (máx 5s)', 'color: blue;');
+console.log('%c  🔓 TODOS podem ser fechados manualmente (ESC, X, botões)', 'color: blue;');
 </script>
 
 <div id="authScreen" class="auth-screen">
