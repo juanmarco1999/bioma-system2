@@ -68,8 +68,22 @@ def get_db():
 
 @bp.route('/')
 def index():
+    """Renderiza index.html com cache busting via timestamp"""
+    from flask import make_response
+    import time
+
     db = get_db()
-    return render_template('index.html')
+
+    # Renderizar template
+    html = render_template('index.html', cache_buster=str(int(time.time())))
+
+    # Criar response com headers anti-cache
+    response = make_response(html)
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+
+    return response
 
 @bp.route('/health')
 def health():

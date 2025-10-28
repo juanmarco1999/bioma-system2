@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
+    <!-- BIOMA v4.8.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- Cache Busting Automático: Este timestamp muda a cada deploy -->
+
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
     // Este script é intencionalmente colocado no <head> e é um script de bloqueio.
@@ -3294,23 +3297,34 @@
     <span>Atualizando dados...</span>
 </div>
 
-<!-- SISTEMA DE DEBUG + CORREÇÕES ULTRA AGRESSIVAS -->
+<!-- SISTEMA DE VERSIONING + DEBUG -->
 <script>
 // ============================================================
-// VERSÃO DE CACHE - MUDE ESTE NÚMERO SE VIR LOGS ANTIGOS
+// VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
-const CACHE_VERSION = 'v2025-10-28-CROSS-BROWSER-MOBILE';
-console.log(`%c🔥 BIOMA v4.0 - DEBUG MODE ${CACHE_VERSION}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
+const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
+const APP_VERSION = 'v4.8.0';
+
+console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
+console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
+console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 
 // ============================================================
-// DEBUG 1: VERIFICAR SE CACHE FOI LIMPO
+// VERIFICAR ATUALIZAÇÃO (Sistema de Cache Busting)
 // ============================================================
-if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
-    console.warn('%c⚠️ CACHE NÃO FOI LIMPO! Você está vendo código ANTIGO!', 'background: red; color: white; font-size: 14px; padding: 8px;');
-    console.log('%cFaça: Ctrl+Shift+R ou F12 > Application > Clear Storage', 'font-size: 12px;');
+const cachedBuild = localStorage.getItem('BIOMA_BUILD');
+if (cachedBuild !== BUILD_TIMESTAMP) {
+    console.log('%c🆕 NOVA VERSÃO DETECTADA!', 'background: green; color: white; font-size: 14px; padding: 8px;');
+    console.log('%cBuild Anterior:', 'font-weight: bold', cachedBuild || 'Primeira execução');
+    console.log('%cBuild Atual:', 'font-weight: bold', BUILD_TIMESTAMP);
+    console.log('%c✅ Cache atualizado!', 'color: green; font-weight: bold;');
+    localStorage.setItem('BIOMA_BUILD', BUILD_TIMESTAMP);
+
+    // Limpar outros caches se necessário
+    console.log('%c🧹 Limpando caches antigos...', 'color: orange;');
 } else {
-    localStorage.setItem('BIOMA_CACHE_VERSION', CACHE_VERSION);
-    console.log('%c✅ Cache limpo detectado', 'color: green; font-weight: bold;');
+    console.log('%c✅ Versão atual: ' + APP_VERSION + ' (Build: ' + BUILD_TIMESTAMP + ')', 'color: green; font-weight: bold;');
+    console.log('%c📦 Cache está sincronizado', 'color: green;');
 }
 
 // ============================================================
@@ -3327,144 +3341,101 @@ if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
 // Alias simples para compatibilidade
 window.SafeSwal = Swal;
 
-// ========== WRAPPER GARANTIDOR DE FECHAMENTO - VERSÃO ULTRA-SEGURA ==========
-// Salvar a função original
-const _originalSwalFire = Swal.fire;
-
-// Substituir Swal.fire com wrapper que SEMPRE permite fechar
-Swal.fire = function(...args) {
-    let config;
-
-    // Detectar formato do argumento
-    if (typeof args[0] === 'string') {
-        // Formato antigo: Swal.fire('title', 'text', 'icon')
-        config = {
-            title: args[0],
-            text: args[1],
-            icon: args[2]
-        };
-    } else if (typeof args[0] === 'object') {
-        // Formato novo: Swal.fire({...})
-        config = args[0];
-    } else {
-        config = {};
-    }
-
-    // REGRA DE SEGURANÇA: Se não tem botão Confirmar, DEVE ter botão X
-    if (config.showConfirmButton === false && config.showCloseButton !== true) {
-        config.showCloseButton = true;
-        console.warn('⚠️ Modal sem botão OK: Botão X adicionado automaticamente');
-    }
-
-    // REGRA DE SEGURANÇA 2: Se não tem NENHUMA forma de fechar, adicionar X
-    const naoPodeFechar =
-        config.showConfirmButton === false &&
-        config.allowOutsideClick === false &&
-        config.allowEscapeKey === false &&
-        config.showCloseButton !== true;
-
-    if (naoPodeFechar) {
-        config.showCloseButton = true;
-        console.warn('🔓 Modal completamente travado detectado! Botão X forçado.');
-    }
-
-    // Chamar a função original com config modificado
-    return _originalSwalFire.call(this, config);
-};
-
-// Garantir que Swal.close sempre funcione
-const _originalSwalClose = Swal.close;
-Swal.close = function(...args) {
-    console.log('🔴 Swal.close() chamado');
-    try {
-        return _originalSwalClose.call(this, ...args);
-    } catch (error) {
-        console.error('❌ Erro ao fechar modal:', error);
-        // Forçar fechamento removendo elementos do DOM
-        const containers = document.querySelectorAll('.swal2-container');
-        containers.forEach(c => c.remove());
-    }
-};
-
-// ========== FUNÇÕES AUXILIARES PARA SWEETALERT2 ==========
+// ========== SOLUÇÃO CORRETA PARA MODAIS (Seguindo Roteiro Técnico) ==========
 
 /**
- * Função para obter o tema atual do SweetAlert2 baseado no tema da aplicação
- * @returns {string} 'dark' ou 'default'
- */
-function getSwalTheme() {
-    const appTheme = document.documentElement.getAttribute('data-theme') || 'light';
-    return appTheme === 'dark' ? 'dark' : 'default';
-}
-
-/**
- * Exibe uma NOTIFICAÇÃO temporizada (auto-close)
- * Use para: Sucesso, erro, info, avisos que NÃO exigem ação do usuário
+ * NÃO usar onclick no HTML dos modais!
+ * Usar didOpen para adicionar event listeners corretamente.
  *
- * @param {string} icon - 'success', 'error', 'warning', 'info'
- * @param {string} title - Título da notificação
- * @param {number} timer - Tempo em ms (padrão: 2000ms = 2s)
- * @param {object} extraConfig - Configurações adicionais (opcional)
+ * Exemplo ERRADO:
+ * html: '<button onclick="Swal.close()">Fechar</button>'
+ *
+ * Exemplo CORRETO:
+ * html: '<button id="btn-fechar">Fechar</button>',
+ * didOpen: () => {
+ *     document.getElementById('btn-fechar').addEventListener('click', () => {
+ *         Swal.close();
+ *     });
+ * }
  */
-function showNotification(icon, title, timer = 2000, extraConfig = {}) {
+
+// Não vamos interceptar Swal.fire - vamos usar corretamente!
+// O problema não é o SweetAlert2, é como estávamos usando ele.
+
+// ========== FUNÇÕES AUXILIARES - SEGUINDO ROTEIRO TÉCNICO ==========
+
+/**
+ * FUNÇÃO 1: mostrarNotificacao()
+ * Para mensagens que DESAPARECEM SOZINHAS (sucesso, erro, info)
+ * - SEMPRE tem timer
+ * - SEMPRE mostra barra de progresso
+ * - SEM botão "OK" (showConfirmButton: false)
+ * - COM botão X para fechar manualmente se necessário
+ */
+function mostrarNotificacao(icon, title, timer = 2500) {
     return Swal.fire({
         icon: icon,
         title: title,
         timer: timer,
         timerProgressBar: true,
         showConfirmButton: false,
-        showCloseButton: true, // Permite fechar manualmente se necessário
+        showCloseButton: true,
         allowOutsideClick: false,
-        allowEscapeKey: false,
-        ...extraConfig
+        allowEscapeKey: false
     });
 }
 
 /**
- * Exibe um DIÁLOGO que exige interação do usuário
- * Use para: Confirmações, formulários, decisões importantes
- * NUNCA fecha automaticamente - exige ação explícita do usuário
- *
- * @param {object} config - Configuração do SweetAlert2
+ * FUNÇÃO 2: mostrarConfirmacao()
+ * Para diálogos que EXIGEM DECISÃO do usuário (confirmar/cancelar, sim/não)
+ * - NUNCA tem timer
+ * - SEMPRE usa botões nativos (showConfirmButton, showCancelButton)
+ * - Botões já vêm com lógica de fechamento funcionando
  */
-function showDialog(config) {
-    // Garantir que diálogos NUNCA tenham timer (segurança UX)
+function mostrarConfirmacao(config) {
+    // Garantir que NÃO tem timer (segurança UX)
     const safeConfig = {
         ...config,
-        timer: undefined,
-        showConfirmButton: config.showConfirmButton !== false, // Padrão: true
-        showCloseButton: config.showCloseButton !== false, // Padrão: true (sempre permitir fechar)
-        allowOutsideClick: config.allowOutsideClick !== undefined ? config.allowOutsideClick : true,
-        allowEscapeKey: config.allowEscapeKey !== undefined ? config.allowEscapeKey : true
+        timer: undefined, // NUNCA fechar automaticamente
+        showConfirmButton: true, // Botão OK sempre visível
+        showCancelButton: config.showCancelButton !== false,
+        confirmButtonText: config.confirmButtonText || 'Confirmar',
+        cancelButtonText: config.cancelButtonText || 'Cancelar'
     };
     return Swal.fire(safeConfig);
 }
 
 /**
- * Exibe um LOADING spinner
- * Use para: Operações assíncronas, uploads, processamento
- *
- * @param {string} title - Título do loading
+ * FUNÇÃO 3: mostrarLoading()
+ * Para operações assíncronas (salvando, carregando, processando)
+ * - SEM timer (fica aberto até Swal.close())
+ * - SEM botões
+ * - SEM formas de fechar manualmente (operação em andamento)
+ * - Spinner automático
  */
-function showLoading(title = 'Carregando...') {
+function mostrarLoading(title = 'Processando...') {
     return Swal.fire({
         title: title,
         allowOutsideClick: false,
         allowEscapeKey: false,
         showConfirmButton: false,
-        showCloseButton: false, // Loading não deve ser fechado manualmente
+        showCloseButton: false,
         didOpen: () => {
             Swal.showLoading();
         }
     });
 }
 
-console.log('%c✅ Sistema de Modais ULTRA-SEGURO Carregado', 'color: green; font-weight: bold; font-size: 14px;');
-console.log('%c  🔓 TODO modal TEM forma de fechar', 'color: blue;');
-console.log('%c  🛡️ Swal.close() protegido contra falhas', 'color: blue;');
-console.log('%c  📋 Use showNotification() para notificações', 'color: blue;');
-console.log('%c  💬 Use showDialog() para diálogos interativos', 'color: blue;');
-console.log('%c  ⏳ Use showLoading() para operações assíncronas', 'color: blue;');
+// Aliases para compatibilidade com código antigo
+const showNotification = mostrarNotificacao;
+const showDialog = mostrarConfirmacao;
+const showLoading = mostrarLoading;
+
+console.log('%c✅ Sistema de Modais CORRETO Carregado (Roteiro Técnico)', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  📢 Use mostrarNotificacao() para notificações (COM timer)', 'color: blue;');
+console.log('%c  ❓ Use mostrarConfirmacao() para diálogos (SEM timer)', 'color: blue;');
+console.log('%c  ⏳ Use mostrarLoading() para operações assíncronas', 'color: blue;');
+console.log('%c  🚫 NUNCA use onclick no HTML! Use didOpen + addEventListener', 'color: red; font-weight: bold;');
 </script>
 
 <div id="authScreen" class="auth-screen">
@@ -7466,16 +7437,15 @@ async function carregarHistoricoComissoes() {
 async function marcarComissaoPaga(comissaoId) {
     if (!comissaoId) {
         console.error('❌ ID de comissão inválido');
-        Swal.fire('Erro', 'ID de comissão inválido', 'error');
+        mostrarNotificacao('error', 'ID de comissão inválido');
         return;
     }
 
     try {
-        const result = await Swal.fire({
+        const result = await mostrarConfirmacao({
             title: 'Confirmar Pagamento',
             text: 'Deseja marcar esta comissão como paga?',
             icon: 'question',
-            showCancelButton: true,
             confirmButtonText: '<i class="bi bi-check-circle"></i> Sim, Pagar',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: 'var(--success)',
@@ -7503,13 +7473,7 @@ async function marcarComissaoPaga(comissaoId) {
 
         if (data.success) {
             console.log('✅ Comissão marcada como paga');
-            await Swal.fire({
-                icon: 'success',
-                title: 'Comissão Paga!',
-                text: 'A comissão foi marcada como paga com sucesso',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            await mostrarNotificacao('success', 'Comissão Paga!', 2000);
 
             // Recarregar lista de comissões
             await carregarHistoricoComissoes();
@@ -7518,12 +7482,13 @@ async function marcarComissaoPaga(comissaoId) {
         }
     } catch (error) {
         console.error('❌ Erro ao marcar comissão como paga:', error);
-        Swal.fire({
+        mostrarConfirmacao({
             icon: 'error',
             title: 'Erro ao Pagar Comissão',
             html: `<p>${error.message || 'Não foi possível marcar a comissão como paga'}</p>
                    <small class="text-muted">Verifique o console para mais detalhes</small>`,
-            confirmButtonText: 'OK'
+            confirmButtonText: 'OK',
+            showCancelButton: false
         });
     }
 
@@ -8137,7 +8102,7 @@ async function abrirEntradaEstoque(){
             });
             const data = await res.json();
             if(data.success){
-                Swal.fire('Sucesso', data.message || 'Entrada registrada e aguardando aprovação.', 'success');
+                mostrarNotificacao('success', data.message || 'Entrada registrada e aguardando aprovação.');
                 loadEstoque();
             }else{
                 throw new Error(data.message || 'Não foi possível registrar a entrada');
@@ -8145,7 +8110,7 @@ async function abrirEntradaEstoque(){
         }
     }catch(error){
         console.error('Erro ao registrar entrada', error);
-        Swal.fire('Erro','Não foi possível registrar a entrada.','error');
+        mostrarNotificacao('error', 'Não foi possível registrar a entrada.');
     }
 }
 
@@ -8153,7 +8118,7 @@ async function abrirSaidaEstoque(){
     try{
         const produtos = await ensureProdutosCache();
         if(!produtos.length){
-            Swal.fire('Aviso','Cadastre produtos antes de registrar saídas.','info');
+            mostrarNotificacao('info', 'Cadastre produtos antes de registrar saídas.', 3000);
             return;
         }
         const options = produtos.map(p=>`<option value="${p._id}">${p.nome}${p.sku ? ` - ${p.sku}` : ''} (Estoque: ${p.estoque || 0})</option>`).join('');
@@ -8193,7 +8158,7 @@ async function abrirSaidaEstoque(){
             });
             const data = await res.json();
             if(data.success){
-                Swal.fire('Sucesso', data.message || 'Saída registrada com sucesso.', 'success');
+                mostrarNotificacao('success', data.message || 'Saída registrada com sucesso.');
                 loadEstoque();
             }else{
                 throw new Error(data.message || 'Não foi possível registrar a saída');
@@ -8201,7 +8166,7 @@ async function abrirSaidaEstoque(){
         }
     }catch(error){
         console.error('Erro ao registrar saída', error);
-        Swal.fire('Erro','Não foi possível registrar a saída.','error');
+        mostrarNotificacao('error', 'Não foi possível registrar a saída.');
     }
 }
 
@@ -8210,14 +8175,14 @@ async function aprovarEntradaEstoque(id){
         const res = await fetch(`/api/estoque/entrada/${id}/aprovar`,{method:'POST',credentials:'include'});
         const data = await res.json();
         if(data.success){
-            Swal.fire('Entrada aprovada!','Estoque atualizado com sucesso.','success');
+            mostrarNotificacao('success', 'Entrada aprovada! Estoque atualizado com sucesso.');
             loadEstoque();
         }else{
             throw new Error(data.message || 'Não foi possível aprovar a entrada');
         }
     }catch(error){
         console.error('Erro ao aprovar entrada', error);
-        Swal.fire('Erro','Não foi possível aprovar a entrada.','error');
+        mostrarNotificacao('error', 'Não foi possível aprovar a entrada.');
     }
 }
 
@@ -8242,14 +8207,14 @@ async function rejeitarEntradaEstoque(id){
         });
         const data = await res.json();
         if(data.success){
-            Swal.fire('Entrada rejeitada','Registro atualizado.','info');
+            mostrarNotificacao('info', 'Entrada rejeitada - Registro atualizado.');
             loadEstoque();
         }else{
             throw new Error(data.message || 'Não foi possível rejeitar');
         }
     }catch(error){
         console.error('Erro ao rejeitar entrada', error);
-        Swal.fire('Erro','Não foi possível rejeitar a entrada.','error');
+        mostrarNotificacao('error', 'Não foi possível rejeitar a entrada.');
     }
 }
 
@@ -8261,14 +8226,13 @@ async function importarPlanilhaEstoque(input){
     const formData = new FormData();
     formData.append('file', file);
     formData.append('tipo', 'estoque');
-    Swal.fire({title:'Importando estoque...',allowOutsideClick:false,didOpen:()=>Swal.showLoading()});
+    mostrarLoading('Importando estoque...');
     try{
         const res = await fetch('/api/estoque/importar',{method:'POST',credentials:'include',body:formData});
         const data = await res.json();
         Swal.close();
         if(data.success){
-            Swal.fire('Importação concluída',`Registros processados: ${data.importados || 0}
-Falhas: ${data.erros || 0}`,'success');
+            mostrarNotificacao('success', `Importação concluída! Registros: ${data.importados || 0} | Falhas: ${data.erros || 0}`, 3500);
             loadEstoque();
         }else{
             throw new Error(data.message || 'Erro ao importar arquivo');
@@ -8276,7 +8240,7 @@ Falhas: ${data.erros || 0}`,'success');
     }catch(error){
         console.error('Erro ao importar estoque', error);
         Swal.close();
-        Swal.fire('Erro','Não foi possível importar o arquivo.','error');
+        mostrarNotificacao('error', 'Não foi possível importar o arquivo.');
     }finally{
         input.value='';
     }
@@ -8576,7 +8540,7 @@ async function processarUploadLogo(file, tipo){
             }
         }catch(error){
             console.error('Erro ao processar logo', error);
-            Swal.fire('Erro','Não foi possível enviar a logo. Tente novamente.','error');
+            mostrarNotificacao('error', 'Não foi possível enviar a logo. Tente novamente.');
         }
     };
 
@@ -9098,14 +9062,21 @@ async function loadClientes(){
 }
 
 async function deleteCliente(id){
-    const result=await Swal.fire({title:'Deletar?',icon:'warning',showCancelButton:true});
+    const result = await mostrarConfirmacao({
+        title: 'Deletar Cliente?',
+        text: 'Esta ação não pode ser desfeita',
+        icon: 'warning',
+        confirmButtonText: 'Sim, Deletar',
+        cancelButtonText: 'Cancelar'
+    });
+
     if(result.isConfirmed){
         try{
             await fetch(`/api/clientes/${id}`,{method:'DELETE',credentials:'include'});
-            Swal.fire('Deletado!','','success');
+            mostrarNotificacao('success', 'Cliente deletado com sucesso!');
             loadClientes();
         }catch(e){
-            Swal.fire('Erro','','error');
+            mostrarNotificacao('error', 'Erro ao deletar cliente');
         }
     }
 
@@ -9172,11 +9143,11 @@ function showModalCliente(){
         if(result.isConfirmed){
             try{
                 await fetch('/api/clientes',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(result.value)});
-                Swal.fire('Sucesso!','Cliente cadastrado','success');
+                mostrarNotificacao('success', 'Cliente cadastrado com sucesso!');
                 loadClientes();
             }catch(error){
                 console.error('Erro ao cadastrar cliente', error);
-                Swal.fire('Erro','Não foi possível cadastrar','error');
+                mostrarNotificacao('error', 'Não foi possível cadastrar o cliente');
             }
         }
     });
@@ -9280,12 +9251,12 @@ async function abrirAnamneseCliente(id){
                 credentials:'include',
                 body:JSON.stringify({anamnese:dados})
             });
-            Swal.fire('Sucesso!','Ficha de anamnese atualizada','success');
+            mostrarNotificacao('success', 'Ficha de anamnese atualizada com sucesso!');
             loadClientes();
         }
     }catch(error){
         console.error('Erro ao abrir anamnese', error);
-        Swal.fire('Erro','Não foi possível carregar a ficha','error');
+        mostrarNotificacao('error', 'Não foi possível carregar a ficha');
     }
 }
 
@@ -9312,11 +9283,11 @@ async function abrirProntuarioCliente(id){
                 credentials:'include',
                 body:JSON.stringify({prontuario:dados})
             });
-            Swal.fire('Sucesso!','Prontuário atualizado','success');
+            mostrarNotificacao('success', 'Prontuário atualizado com sucesso!');
         }
     }catch(error){
         console.error('Erro ao abrir prontuário', error);
-        Swal.fire('Erro','Não foi possível carregar o prontuário','error');
+        mostrarNotificacao('error', 'Não foi possível carregar o prontuário');
     }
 }
 
@@ -9440,12 +9411,12 @@ async function editarCliente(id){
                 credentials:'include',
                 body:JSON.stringify(value)
             });
-            Swal.fire('Sucesso!','Cliente atualizado','success');
+            mostrarNotificacao('success', 'Cliente atualizado com sucesso!');
             loadClientes();
         }
     }catch(error){
         console.error('Erro ao carregar cliente para edição', error);
-        Swal.fire('Erro','Não foi possível carregar para edição','error');
+        mostrarNotificacao('error', 'Não foi possível carregar o cliente para edição');
     }
 }
 
@@ -10726,10 +10697,10 @@ function visualizarAgendamentoCalendario(event) {
                     method: 'DELETE',
                     credentials: 'include'
                 });
-                Swal.fire('Cancelado!', 'Agendamento cancelado com sucesso', 'success');
+                mostrarNotificacao('success', 'Agendamento cancelado com sucesso!');
                 carregarCalendario();
             } catch (error) {
-                Swal.fire('Erro', 'Não foi possível cancelar o agendamento', 'error');
+                mostrarNotificacao('error', 'Não foi possível cancelar o agendamento');
             }
         }
     });
@@ -12009,11 +11980,11 @@ function showModalFila(){
                     });
                     loadFila();
                 } else {
-                    Swal.fire('Erro', data.message || 'Erro ao adicionar à fila', 'error');
+                    mostrarNotificacao('error', data.message || 'Erro ao adicionar à fila');
                 }
             }catch(e){
                 console.error('Erro:', e);
-                Swal.fire('Erro','Não foi possível adicionar à fila','error');
+                mostrarNotificacao('error', 'Não foi possível adicionar à fila');
             }
         }
     });
@@ -16037,15 +16008,15 @@ async function novaAnamneseModal() {
                     observacoes: formValues.observacoes
                 })
             });
-            
+
             if (!res.ok) throw new Error('Erro ao salvar anamnese');
-            
-            Swal.fire('Sucesso', 'Anamnese salva com sucesso!', 'success');
+
+            mostrarNotificacao('success', 'Anamnese salva com sucesso!');
             buscarAnamnesesCliente(); // Recarregar lista
-            
+
         } catch (error) {
             console.error('Erro:', error);
-            Swal.fire('Erro', 'Não foi possível salvar a anamnese', 'error');
+            mostrarNotificacao('error', 'Não foi possível salvar a anamnese');
         }
     }
 }
@@ -16240,15 +16211,15 @@ async function novoProntuarioModal() {
                 credentials: 'include',
                 body: JSON.stringify(formValues)
             });
-            
+
             if (!res.ok) throw new Error('Erro ao salvar prontuário');
-            
-            Swal.fire('Sucesso', 'Prontuário salvo com sucesso!', 'success');
+
+            mostrarNotificacao('success', 'Prontuário salvo com sucesso!');
             buscarProntuariosCliente(); // Recarregar lista
-            
+
         } catch (error) {
             console.error('Erro:', error);
-            Swal.fire('Erro', 'Não foi possível salvar o prontuário', 'error');
+            mostrarNotificacao('error', 'Não foi possível salvar o prontuário');
         }
     }
 }
@@ -16348,25 +16319,24 @@ async function editarProntuario(id) {
                 credentials: 'include',
                 body: JSON.stringify(formValues)
             });
-            
+
             if (!updateRes.ok) throw new Error('Erro ao atualizar prontuário');
-            
-            Swal.fire('Sucesso', 'Prontuário atualizado com sucesso!', 'success');
+
+            mostrarNotificacao('success', 'Prontuário atualizado com sucesso!');
             buscarProntuariosCliente(); // Recarregar lista
         }
-        
+
     } catch (error) {
         console.error('Erro:', error);
-        Swal.fire('Erro', 'Não foi possível editar o prontuário', 'error');
+        mostrarNotificacao('error', 'Não foi possível editar o prontuário');
     }
 }
 
 async function deletarProntuario(id) {
-    const result = await Swal.fire({
+    const result = await mostrarConfirmacao({
         title: 'Confirmar exclusão?',
         text: 'Esta ação não pode ser desfeita!',
         icon: 'warning',
-        showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Sim, deletar!',
@@ -17178,11 +17148,11 @@ async function toggleStatusProduto(id, statusAtual) {
                 credentials: 'include',
                 body: JSON.stringify({ status: novoStatus })
             });
-            
+
             if (!res.ok) throw new Error('Erro ao atualizar produto');
-            
-            Swal.fire('Sucesso!', `Produto ${novoStatus.toLowerCase()} com sucesso`, 'success');
-            
+
+            mostrarNotificacao('success', `Produto ${novoStatus.toLowerCase()} com sucesso!`);
+
             // Recarregar a sub-tab atual
             const activeSubTab = document.querySelector('#section-produtos .sub-tab-btn.active');
             if (activeSubTab) {
@@ -17191,10 +17161,10 @@ async function toggleStatusProduto(id, statusAtual) {
                 else if (subtab.includes('ativos')) carregarProdutosAtivos();
                 else if (subtab.includes('inativos')) carregarProdutosInativos();
             }
-            
+
         } catch (error) {
             console.error('Erro:', error);
-            Swal.fire('Erro', 'Não foi possível atualizar o produto', 'error');
+            mostrarNotificacao('error', 'Não foi possível atualizar o produto');
         }
     }
 
@@ -17380,11 +17350,11 @@ async function toggleStatusServico(id, statusAtual) {
                 credentials: 'include',
                 body: JSON.stringify({ status: novoStatus })
             });
-            
+
             if (!res.ok) throw new Error('Erro ao atualizar serviço');
-            
-            Swal.fire('Sucesso!', `Serviço ${novoStatus.toLowerCase()} com sucesso`, 'success');
-            
+
+            mostrarNotificacao('success', `Serviço ${novoStatus.toLowerCase()} com sucesso!`);
+
             // Recarregar a sub-tab atual
             const activeSubTab = document.querySelector('#section-servicos .sub-tab-btn.active');
             if (activeSubTab) {
@@ -17393,10 +17363,10 @@ async function toggleStatusServico(id, statusAtual) {
                 else if (subtab.includes('ativos')) carregarServicosAtivos();
                 else if (subtab.includes('inativos')) carregarServicosInativos();
             }
-            
+
         } catch (error) {
             console.error('Erro:', error);
-            Swal.fire('Erro', 'Não foi possível atualizar o serviço', 'error');
+            mostrarNotificacao('error', 'Não foi possível atualizar o serviço');
         }
     }
 
