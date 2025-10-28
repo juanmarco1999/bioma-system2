@@ -3567,11 +3567,13 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
         <div id="section-agendamentos" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-calendar-check"></i> Agendamentos</h1>
-                <button class="btn btn-primary" onclick="showModalAgendamento()"><i class="bi bi-plus-circle"></i> Novo Agendamento</button>
             </div>
-            
+
             <!-- Sub-tabs de Agendamentos -->
             <div class="sub-tabs" style="margin-bottom:25px;">
+                <button class="sub-tab-btn sub-tab-green-animated" onclick="switchSubTab('agendamentos', 'novo')">
+                    <i class="bi bi-plus-circle-fill"></i> Novo Agendamento
+                </button>
                 <button class="sub-tab-btn active" onclick="switchSubTab('agendamentos', 'hoje')">
                     <i class="bi bi-calendar-day"></i> Hoje
                 </button>
@@ -3585,7 +3587,117 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                     <i class="bi bi-calendar3"></i> Todos
                 </button>
             </div>
-            
+
+            <!-- Sub-tab: Novo Agendamento -->
+            <div id="agendamentos-subtab-novo" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header" style="background: linear-gradient(135deg, #10B981, #059669);">
+                        <i class="bi bi-plus-circle-fill"></i> Criar Novo Agendamento
+                    </div>
+                    <div class="card-body">
+                        <form id="formNovoAgendamento">
+                            <div class="row g-3">
+                                <!-- Cliente -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-person"></i> Cliente *</label>
+                                    <select id="novoAgendCliente" class="form-select" required>
+                                        <option value="">Selecione o cliente...</option>
+                                    </select>
+                                </div>
+
+                                <!-- Profissional -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-person-badge"></i> Profissional *</label>
+                                    <select id="novoAgendProfissional" class="form-select" required>
+                                        <option value="">Selecione o profissional...</option>
+                                    </select>
+                                </div>
+
+                                <!-- Serviço -->
+                                <div class="col-md-12">
+                                    <label class="form-label"><i class="bi bi-scissors"></i> Serviço *</label>
+                                    <select id="novoAgendServico" class="form-select" required>
+                                        <option value="">Selecione o serviço...</option>
+                                    </select>
+                                </div>
+
+                                <!-- Data -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-calendar"></i> Data *</label>
+                                    <input type="date" id="novoAgendData" class="form-control" required>
+                                </div>
+
+                                <!-- Horário -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-clock"></i> Horário *</label>
+                                    <select id="novoAgendHorario" class="form-select" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="08:00">08:00</option>
+                                        <option value="08:30">08:30</option>
+                                        <option value="09:00">09:00</option>
+                                        <option value="09:30">09:30</option>
+                                        <option value="10:00">10:00</option>
+                                        <option value="10:30">10:30</option>
+                                        <option value="11:00">11:00</option>
+                                        <option value="11:30">11:30</option>
+                                        <option value="13:00">13:00</option>
+                                        <option value="13:30">13:30</option>
+                                        <option value="14:00">14:00</option>
+                                        <option value="14:30">14:30</option>
+                                        <option value="15:00">15:00</option>
+                                        <option value="15:30">15:30</option>
+                                        <option value="16:00">16:00</option>
+                                        <option value="16:30">16:30</option>
+                                        <option value="17:00">17:00</option>
+                                        <option value="17:30">17:30</option>
+                                        <option value="18:00">18:00</option>
+                                    </select>
+                                </div>
+
+                                <!-- Status -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-check-circle"></i> Status *</label>
+                                    <select id="novoAgendStatus" class="form-select" required>
+                                        <option value="Pendente" selected>Pendente</option>
+                                        <option value="Confirmado">Confirmado</option>
+                                        <option value="Cancelado">Cancelado</option>
+                                        <option value="Concluído">Concluído</option>
+                                    </select>
+                                </div>
+
+                                <!-- Forma de Pagamento -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-credit-card"></i> Forma de Pagamento</label>
+                                    <select id="novoAgendFormaPagamento" class="form-select">
+                                        <option value="">Não definido</option>
+                                        <option value="Dinheiro">Dinheiro</option>
+                                        <option value="PIX">PIX</option>
+                                        <option value="Débito">Débito</option>
+                                        <option value="Crédito">Crédito</option>
+                                    </select>
+                                </div>
+
+                                <!-- Observações -->
+                                <div class="col-12">
+                                    <label class="form-label"><i class="bi bi-chat-left-text"></i> Observações</label>
+                                    <textarea id="novoAgendObs" class="form-control" rows="3" placeholder="Observações sobre o agendamento..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Botões -->
+                            <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoAgendamento()">
+                                    <i class="bi bi-x-circle"></i> Limpar
+                                </button>
+                                <button type="button" class="btn btn-success" onclick="salvarNovoAgendamento()">
+                                    <i class="bi bi-check-circle"></i> Criar Agendamento
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sub-tab: Hoje -->
             <div id="agendamentos-subtab-hoje" class="sub-tab-content active">
                 <div class="row g-4 mb-4">
