@@ -679,6 +679,146 @@
 
         /* ========== END ACTION BUTTONS ========== */
 
+        /* ========== ANAMNESE & PRONTUÁRIO BUTTONS (Directive 10) ========== */
+        /* Enhanced medical record buttons with professional healthcare styling */
+
+        /* Nova Anamnese & Novo Prontuário buttons */
+        .card-header .btn.btn-success.float-end {
+            background: linear-gradient(135deg, #10B981, #059669);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header .btn.btn-success.float-end:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .card-header .btn.btn-success.float-end:active {
+            transform: translateY(0) scale(1.02);
+        }
+
+        .card-header .btn.btn-success.float-end i {
+            font-size: 1.2rem;
+        }
+
+        /* Sub-tab buttons for Anamnese & Prontuário */
+        .sub-tab-btn[onclick*="anamnese"],
+        .sub-tab-btn[onclick*="prontuario"] {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sub-tab-btn[onclick*="anamnese"]::before,
+        .sub-tab-btn[onclick*="prontuario"]::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: linear-gradient(180deg, #10B981, #059669);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sub-tab-btn[onclick*="anamnese"].active::before,
+        .sub-tab-btn[onclick*="prontuario"].active::before {
+            opacity: 1;
+        }
+
+        .sub-tab-btn[onclick*="anamnese"].active,
+        .sub-tab-btn[onclick*="prontuario"].active {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
+            color: #059669;
+            border-bottom-color: #10B981;
+        }
+
+        /* Anamnese/Prontuário search buttons */
+        button[onclick="buscarAnamnesesCliente()"],
+        button[onclick="buscarProntuariosCliente()"] {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button[onclick="buscarAnamnesesCliente()"]:hover,
+        button[onclick="buscarProntuariosCliente()"]:hover {
+            background: linear-gradient(135deg, #2563EB, #1D4ED8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Table action buttons for anamnese/prontuário */
+        button[onclick*="visualizarAnamnese"],
+        button[onclick*="visualizarProntuario"] {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            border: 2px solid #7C3AED;
+            color: white;
+            min-width: 100px;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button[onclick*="visualizarAnamnese"]:hover,
+        button[onclick*="visualizarProntuario"]:hover {
+            background: linear-gradient(135deg, #7C3AED, #6D28D9);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        }
+
+        button[onclick*="deletarAnamnese"],
+        button[onclick*="deletarProntuario"] {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            border: 2px solid #DC2626;
+            min-width: 100px;
+        }
+
+        /* Alert boxes in anamnese/prontuário sections */
+        #clientes-anamnese .alert-info,
+        #clientes-prontuario .alert-info {
+            background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+            border-left: 5px solid #3B82F6;
+            border-radius: 12px;
+            padding: 18px 24px;
+        }
+
+        #clientes-anamnese .alert-info strong,
+        #clientes-prontuario .alert-info strong {
+            color: #1E40AF;
+            font-size: 1.1rem;
+        }
+
+        /* Medical record cards */
+        #anamnesesResultado .card,
+        #prontuariosResultado .card {
+            border: 2px solid #E0E7FF;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.1);
+        }
+
+        #anamnesesResultado .card-header,
+        #prontuariosResultado .card-header {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+        }
+
+        /* ========== END ANAMNESE & PRONTUÁRIO ========== */
+
         /* ISOLAMENTO DAS SEÇÕES - Otimizado para Performance */
         .content-section:not(.active) {
             display: none !important;
