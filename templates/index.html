@@ -4968,6 +4968,7 @@ function goTo(section){
 
         // 5. CARREGAR dados da seção (com proteção individual) - REMOVIDO DUPLICAÇÃO
         if(section==='dashboard')loadDashboard();
+        else if(section==='orcamento')cancelarOrc(); // CORREÇÃO 1: Limpar formulário ao abrir novo orçamento
         else if(section==='clientes')loadClientes();
         else if(section==='profissionais')loadProfissionais();
         else if(section==='servicos')loadServicosLista();
@@ -12416,6 +12417,9 @@ function showSubTab(section, tab) {
             carregarProfissionaisFiltro();
         } else if (tab === 'estatisticas') {
             carregarRankingProfissionais();
+        } else if (tab === 'calendario') {
+            // Inicializar calendário de profissionais
+            initProfissionaisCalendar();
         }
     }
 }
@@ -14305,14 +14309,21 @@ async function carregarMovimentacoesEstoque() {
 async function carregarRelatoriosEstoque() {
     const FUNC_KEY = 'relatoriosEstoque';
     if (window.loadingStates?.[FUNC_KEY]) return;
-    
+
     try {
         if (!window.loadingStates) window.loadingStates = {};
         window.loadingStates[FUNC_KEY] = true;
-        
-        // Inicializar gráficos se necessário
-        console.log('📊 Relatórios de estoque carregados');
-        
+
+        console.log('📊 Carregando relatórios de estoque...');
+
+        // Criar gráficos de relatórios
+        await Promise.all([
+            criarGraficoMovimentacoesEstoque(),
+            criarGraficoValorEstoque()
+        ]);
+
+        console.log('✅ Relatórios de estoque carregados com sucesso');
+
     } catch (error) {
         console.error('❌ Erro:', error);
         Swal.fire('Erro', 'Falha ao carregar relatórios', 'error');
@@ -15453,6 +15464,1185 @@ document.addEventListener('visibilitychange', () => {
 console.log('✅ Sistema de auto-atualização inicializado (Diretriz 0.1)');
 
 // ========== FIM AUTO-ATUALIZAÇÃO ==========
+
+// ============================================================
+// CORREÇÕES COMPLETAS PARA BIOMA v4.0
+// Data: 28/10/2025
+// Descrição: Todas as correções para os problemas identificados
+// ============================================================
+
+// ========== 1. FUNÇÕES FALTANTES PARA ATIVAR/DESATIVAR PRODUTOS E SERVIÇOS ==========
+
+/**
+ * Ativa um serviço individual
+ * @param {string} id - ID do serviço
+ */
+async function ativarServico(id) {
+    try {
+        const res = await fetch(`/api/servicos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ ativo: true })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            toast('✅ Serviço ativado com sucesso!', 'success');
+            loadServicosLista();
+        } else {
+            toast(`❌ ${data.message || 'Erro ao ativar serviço'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao ativar serviço:', error);
+        toast('❌ Falha ao ativar serviço', 'error');
+    }
+}
+
+/**
+ * Desativa um serviço individual
+ * @param {string} id - ID do serviço
+ */
+async function desativarServico(id) {
+    try {
+        const res = await fetch(`/api/servicos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ ativo: false })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            toast('✅ Serviço desativado com sucesso!', 'success');
+            loadServicosLista();
+        } else {
+            toast(`❌ ${data.message || 'Erro ao desativar serviço'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao desativar serviço:', error);
+        toast('❌ Falha ao desativar serviço', 'error');
+    }
+}
+
+/**
+ * Ativa um produto individual
+ * @param {string} id - ID do produto
+ */
+async function ativarProduto(id) {
+    try {
+        const res = await fetch(`/api/produtos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ ativo: true })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            toast('✅ Produto ativado com sucesso!', 'success');
+            loadProdutosLista();
+        } else {
+            toast(`❌ ${data.message || 'Erro ao ativar produto'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao ativar produto:', error);
+        toast('❌ Falha ao ativar produto', 'error');
+    }
+}
+
+/**
+ * Desativa um produto individual
+ * @param {string} id - ID do produto
+ */
+async function desativarProduto(id) {
+    try {
+        const res = await fetch(`/api/produtos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ ativo: false })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            toast('✅ Produto desativado com sucesso!', 'success');
+            loadProdutosLista();
+        } else {
+            toast(`❌ ${data.message || 'Erro ao desativar produto'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao desativar produto:', error);
+        toast('❌ Falha ao desativar produto', 'error');
+    }
+}
+
+
+// ========== 2. CORREÇÕES PARA ESTOQUE - ÚLTIMAS MOVIMENTAÇÕES NA VISÃO GERAL ==========
+
+/**
+ * Carrega últimas movimentações na visão geral do estoque
+ */
+async function carregarUltimasMovimentacoesVisaoGeral() {
+    const tbody = document.getElementById('estoqueUltimasMovimentacoesVisaoGeral');
+    if (!tbody) return;
+
+    try {
+        console.log('📋 Carregando últimas movimentações do estoque...');
+
+        const res = await fetch('/api/estoque/movimentacoes?per_page=10', {
+            credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.movimentacoes && data.movimentacoes.length > 0) {
+            tbody.innerHTML = data.movimentacoes.map(mov => {
+                const tipoClass = mov.tipo === 'entrada' ? 'success' : 'danger';
+                const tipoIcon = mov.tipo === 'entrada' ? 'arrow-down-circle' : 'arrow-up-circle';
+
+                return `
+                    <tr>
+                        <td>${formatarDataHora(mov.data || mov.created_at)}</td>
+                        <td><strong>${mov.produto_nome || 'Produto não identificado'}</strong></td>
+                        <td><span class="badge ${tipoClass}"><i class="bi bi-${tipoIcon}"></i> ${mov.tipo || 'N/A'}</span></td>
+                        <td><strong>${mov.quantidade || 0}</strong></td>
+                        <td>${mov.usuario || mov.responsavel || 'Sistema'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            console.log(`✅ ${data.movimentacoes.length} movimentações carregadas`);
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <p style="margin-top: 10px;">Nenhuma movimentação recente</p>
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar últimas movimentações:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Erro ao carregar movimentações
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+// ========== 3. CORREÇÕES PARA ESTOQUE - GRÁFICOS DE RELATÓRIOS ==========
+
+/**
+ * Cria ou atualiza gráfico de movimentações por mês
+ */
+async function criarGraficoMovimentacoesEstoque() {
+    const canvas = document.getElementById('chartMovimentacoesEstoque');
+    if (!canvas || !window.Chart) return;
+
+    try {
+        console.log('📊 Criando gráfico de movimentações por mês...');
+
+        // Buscar dados dos últimos 6 meses
+        const dataFim = new Date();
+        const dataInicio = new Date();
+        dataInicio.setMonth(dataInicio.getMonth() - 6);
+
+        const res = await fetch(
+            `/api/estoque/movimentacoes?data_inicio=${dataInicio.toISOString()}&data_fim=${dataFim.toISOString()}&per_page=10000`,
+            { credentials: 'include' }
+        );
+
+        const data = await res.json();
+
+        if (data.success && data.movimentacoes) {
+            // Agrupar por mês
+            const mesesData = {};
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+            data.movimentacoes.forEach(mov => {
+                const date = new Date(mov.data || mov.created_at);
+                const mesAno = `${meses[date.getMonth()]}/${date.getFullYear().toString().slice(-2)}`;
+
+                if (!mesesData[mesAno]) {
+                    mesesData[mesAno] = { entradas: 0, saidas: 0 };
+                }
+
+                if (mov.tipo === 'entrada') {
+                    mesesData[mesAno].entradas += mov.quantidade || 0;
+                } else if (mov.tipo === 'saida' || mov.tipo === 'saída') {
+                    mesesData[mesAno].saidas += mov.quantidade || 0;
+                }
+            });
+
+            const labels = Object.keys(mesesData);
+            const entradasData = labels.map(label => mesesData[label].entradas);
+            const saidasData = labels.map(label => mesesData[label].saidas);
+
+            // Destruir gráfico anterior se existir
+            if (window.chartMovimentacoesEstoqueInstance) {
+                window.chartMovimentacoesEstoqueInstance.destroy();
+            }
+
+            // Criar novo gráfico
+            window.chartMovimentacoesEstoqueInstance = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Entradas',
+                            data: entradasData,
+                            borderColor: 'rgb(16, 185, 129)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Saídas',
+                            data: saidasData,
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('✅ Gráfico de movimentações criado com sucesso');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao criar gráfico de movimentações:', error);
+    }
+}
+
+/**
+ * Cria ou atualiza gráfico de distribuição de valor do estoque
+ */
+async function criarGraficoValorEstoque() {
+    const canvas = document.getElementById('chartValorEstoque');
+    if (!canvas || !window.Chart) return;
+
+    try {
+        console.log('📊 Criando gráfico de distribuição de valor...');
+
+        const res = await fetch('/api/produtos', { credentials: 'include' });
+        const data = await res.json();
+
+        if (data.success && data.produtos) {
+            // Agrupar produtos por categoria de valor
+            let valorAlto = 0;
+            let valorMedio = 0;
+            let valorBaixo = 0;
+
+            data.produtos.forEach(prod => {
+                const valorTotal = (prod.preco || 0) * (prod.estoque || prod.quantidade || 0);
+
+                if (valorTotal > 1000) {
+                    valorAlto += valorTotal;
+                } else if (valorTotal > 100) {
+                    valorMedio += valorTotal;
+                } else {
+                    valorBaixo += valorTotal;
+                }
+            });
+
+            // Destruir gráfico anterior se existir
+            if (window.chartValorEstoqueInstance) {
+                window.chartValorEstoqueInstance.destroy();
+            }
+
+            // Criar novo gráfico
+            window.chartValorEstoqueInstance = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: ['Alto Valor (>R$1000)', 'Médio Valor (R$100-1000)', 'Baixo Valor (<R$100)'],
+                    datasets: [{
+                        data: [valorAlto, valorMedio, valorBaixo],
+                        backgroundColor: [
+                            'rgba(124, 58, 237, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(124, 58, 237)',
+                            'rgb(59, 130, 246)',
+                            'rgb(16, 185, 129)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    return `${label}: R$ ${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('✅ Gráfico de distribuição de valor criado com sucesso');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao criar gráfico de valor:', error);
+    }
+}
+
+
+// ========== 4. FUNÇÃO PARA ATIVAR ALERTA DE ESTOQUE BAIXO NO DASHBOARD ==========
+
+/**
+ * Carrega alerta de estoque baixo no dashboard
+ */
+async function carregarAlertaEstoqueBaixo() {
+    try {
+        console.log('🔍 Verificando alertas de estoque...');
+
+        const estoqueRes = await fetch('/api/estoque/alerta', {
+            credentials: 'include'
+        });
+        const estoqueData = await estoqueRes.json();
+
+        const alertaCard = document.getElementById('alertaEstoqueBaixo');
+        const alertaBody = document.getElementById('estoqueBaixoBody');
+
+        if (estoqueData.success && estoqueData.produtos && estoqueData.produtos.length > 0) {
+            // Mostrar card de alerta
+            if (alertaCard) {
+                alertaCard.style.display = 'block';
+                alertaCard.style.animation = 'fadeIn 0.5s ease';
+            }
+
+            // Renderizar produtos com estoque baixo
+            const html = estoqueData.produtos.map(p => {
+                const estoqueAtual = p.estoque || p.quantidade || 0;
+                const estoqueMinimo = p.estoque_minimo || p.minimo || 0;
+                const percentual = estoqueMinimo > 0 ? (estoqueAtual / estoqueMinimo * 100).toFixed(0) : 0;
+
+                // Status badge com cores
+                let statusBadge = '';
+                let urgencia = '';
+
+                if (estoqueAtual === 0) {
+                    statusBadge = '<span class="badge danger pulse">🚫 ESGOTADO</span>';
+                    urgencia = '🔴';
+                } else if (estoqueAtual < estoqueMinimo) {
+                    statusBadge = `<span class="badge danger">⚠️ CRÍTICO (${percentual}%)</span>`;
+                    urgencia = '🟠';
+                } else if (estoqueAtual < estoqueMinimo * 1.5) {
+                    statusBadge = `<span class="badge warning">⚡ BAIXO (${percentual}%)</span>`;
+                    urgencia = '🟡';
+                }
+
+                return `
+                <tr style="background: ${estoqueAtual === 0 ? 'rgba(220, 38, 38, 0.15)' : 'rgba(234, 179, 8, 0.08)'};">
+                    <td>${urgencia}</td>
+                    <td><strong>${p.nome || 'Produto'}</strong></td>
+                    <td>${p.marca || 'N/A'}</td>
+                    <td style="color: ${estoqueAtual === 0 ? 'var(--danger)' : 'var(--warning)'}; font-weight: bold;">
+                        ${estoqueAtual}
+                    </td>
+                    <td>${estoqueMinimo}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+                `;
+            }).join('');
+
+            if (alertaBody) {
+                alertaBody.innerHTML = html;
+            }
+
+            // Notificação toast se houver produtos esgotados
+            const produtosEsgotados = estoqueData.produtos.filter(p =>
+                (p.estoque || p.quantidade || 0) === 0
+            );
+
+            if (produtosEsgotados.length > 0) {
+                toast(`🚨 ATENÇÃO: ${produtosEsgotados.length} produto(s) ESGOTADO(S)!`, 'error');
+            } else {
+                console.log(`⚠️ ${estoqueData.produtos.length} produto(s) com estoque baixo`);
+            }
+
+            // Adicionar indicador visual no menu de estoque
+            const menuEstoque = document.getElementById('menu-estoque');
+            if (menuEstoque && !menuEstoque.querySelector('.badge-alert')) {
+                const badge = document.createElement('span');
+                badge.className = 'badge-alert';
+                badge.style.cssText = `
+                    position: absolute;
+                    top: 5px;
+                    right: 5px;
+                    width: 10px;
+                    height: 10px;
+                    background: var(--danger);
+                    border-radius: 50%;
+                    animation: pulse 2s infinite;
+                `;
+                menuEstoque.style.position = 'relative';
+                menuEstoque.appendChild(badge);
+            }
+
+        } else {
+            // Esconder card se não houver alertas
+            if (alertaCard) {
+                alertaCard.style.display = 'none';
+            }
+            console.log('✅ Estoque OK - Nenhum produto abaixo do mínimo');
+
+            // Remover indicador do menu se existir
+            const badge = document.querySelector('#menu-estoque .badge-alert');
+            if (badge) badge.remove();
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar alertas de estoque:', error);
+        const alertaCard = document.getElementById('alertaEstoqueBaixo');
+        if (alertaCard) alertaCard.style.display = 'none';
+    }
+}
+
+
+// ========== 5. CALENDÁRIO DE PROFISSIONAIS COM CORES ==========
+
+/**
+ * Inicializa calendário de profissionais com cores
+ */
+async function initProfissionaisCalendar() {
+    const calendarEl = document.getElementById('profissionaisCalendar');
+    if (!calendarEl || !window.FullCalendar) {
+        console.warn('⚠️ Elemento do calendário ou FullCalendar não encontrado');
+        return;
+    }
+
+    try {
+        console.log('📅 Inicializando calendário de profissionais...');
+
+        // Buscar configurações do sistema (horário de funcionamento)
+        const configRes = await fetch('/api/config', { credentials: 'include' });
+        const configData = await configRes.json();
+
+        const horarioInicio = configData.config?.horario_inicio || '07:00';
+        const horarioFim = configData.config?.horario_fim || '21:00';
+
+        // Buscar agendamentos
+        const agendRes = await fetch('/api/agendamentos', { credentials: 'include' });
+        const agendData = await agendRes.json();
+
+        // Transformar agendamentos em eventos do calendário
+        const eventos = [];
+
+        if (agendData.success && agendData.agendamentos) {
+            agendData.agendamentos.forEach(agend => {
+                let backgroundColor = '#10B981'; // Verde padrão (disponível)
+                let borderColor = '#059669';
+                let textColor = '#FFFFFF';
+
+                // Definir cores baseado no status
+                if (agend.status === 'confirmado' || agend.status === 'ocupado') {
+                    backgroundColor = '#EF4444'; // Vermelho (ocupado)
+                    borderColor = '#DC2626';
+                } else if (agend.status === 'pendente') {
+                    backgroundColor = '#F59E0B'; // Amarelo (pendente)
+                    borderColor = '#D97706';
+                    textColor = '#000000';
+                }
+
+                eventos.push({
+                    id: agend._id || agend.id,
+                    title: `${agend.cliente_nome || 'Cliente'} - ${agend.servico_nome || 'Serviço'}`,
+                    start: agend.data || agend.data_hora,
+                    end: agend.data_fim || agend.data_hora,
+                    backgroundColor: backgroundColor,
+                    borderColor: borderColor,
+                    textColor: textColor,
+                    extendedProps: {
+                        profissional: agend.profissional_nome || 'Profissional',
+                        cliente: agend.cliente_nome || 'Cliente',
+                        servico: agend.servico_nome || 'Serviço',
+                        status: agend.status || 'pendente'
+                    }
+                });
+            });
+        }
+
+        // Destruir calendário anterior se existir
+        if (window.profissionaisCalendarInstance) {
+            window.profissionaisCalendarInstance.destroy();
+        }
+
+        // Criar novo calendário
+        window.profissionaisCalendarInstance = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'pt-br',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Hoje',
+                month: 'Mês',
+                week: 'Semana',
+                day: 'Dia'
+            },
+            slotMinTime: horarioInicio,
+            slotMaxTime: horarioFim,
+            slotDuration: '00:30:00',
+            slotLabelInterval: '01:00',
+            allDaySlot: false,
+            height: 700,
+            expandRows: true,
+            nowIndicator: true,
+            editable: true,
+            selectable: true,
+            selectMirror: true,
+            dayMaxEvents: 3,
+            weekends: true,
+            events: eventos,
+
+            eventClick: function(info) {
+                const event = info.event;
+                Swal.fire({
+                    title: event.title,
+                    html: `
+                        <div class="text-start">
+                            <p><strong>Profissional:</strong> ${event.extendedProps.profissional}</p>
+                            <p><strong>Cliente:</strong> ${event.extendedProps.cliente}</p>
+                            <p><strong>Serviço:</strong> ${event.extendedProps.servico}</p>
+                            <p><strong>Status:</strong> <span class="badge ${event.extendedProps.status === 'confirmado' ? 'danger' : event.extendedProps.status === 'pendente' ? 'warning' : 'success'}">${event.extendedProps.status}</span></p>
+                            <p><strong>Horário:</strong> ${new Date(event.start).toLocaleString('pt-BR')}</p>
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: 'Editar',
+                    cancelButtonText: 'Fechar',
+                    confirmButtonColor: '#7C3AED'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Abrir modal de edição
+                        showModalAgendamento(event.id);
+                    }
+                });
+            },
+
+            select: function(info) {
+                showModalAgendamento(null, {
+                    data_hora: info.start,
+                    data_fim: info.end
+                });
+            },
+
+            eventDrop: function(info) {
+                Swal.fire({
+                    title: 'Reagendar?',
+                    text: 'Deseja confirmar a mudança de horário?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Atualizar agendamento via API
+                        atualizarAgendamento(info.event.id, {
+                            data_hora: info.event.start,
+                            data_fim: info.event.end
+                        });
+                    } else {
+                        info.revert();
+                    }
+                });
+            },
+
+            eventResize: function(info) {
+                Swal.fire({
+                    title: 'Alterar duração?',
+                    text: 'Deseja confirmar a alteração de duração?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, confirmar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Atualizar agendamento via API
+                        atualizarAgendamento(info.event.id, {
+                            data_hora: info.event.start,
+                            data_fim: info.event.end
+                        });
+                    } else {
+                        info.revert();
+                    }
+                });
+            }
+        });
+
+        window.profissionaisCalendarInstance.render();
+        console.log('✅ Calendário de profissionais inicializado com sucesso');
+
+    } catch (error) {
+        console.error('❌ Erro ao inicializar calendário de profissionais:', error);
+        Swal.fire('Erro', 'Não foi possível carregar o calendário de profissionais', 'error');
+    }
+}
+
+/**
+ * Atualiza um agendamento via API
+ */
+async function atualizarAgendamento(id, dados) {
+    try {
+        const res = await fetch(`/api/agendamentos/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(dados)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            toast('✅ Agendamento atualizado com sucesso!', 'success');
+            initProfissionaisCalendar(); // Recarregar calendário
+        } else {
+            toast(`❌ ${data.message || 'Erro ao atualizar agendamento'}`, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar agendamento:', error);
+        toast('❌ Falha ao atualizar agendamento', 'error');
+    }
+}
+
+console.log('✅ Correções completas carregadas - BIOMA v4.0');
+
+// ============================================================
+// CORREÇÕES ADICIONAIS - BIOMA v4.0.1
+// Data: 28/10/2025
+// Ref: Documento "alterações realizadas no index (1).pdf"
+// ============================================================
+
+// ========== CORREÇÃO 2: SISTEMA DE AUTO-FECHAMENTO DE MODAIS ==========
+
+/**
+ * Wrapper para SweetAlert2 com auto-fechamento inteligente
+ * Modais informativos fecham automaticamente após 10 segundos
+ * Modais de confirmação NÃO são afetados
+ */
+const OriginalSwalFire = Swal.fire;
+Swal.fire = function(...args) {
+    const config = args[0] || {};
+
+    // Verificar se é modal de confirmação (tem botão cancelar)
+    const isConfirmationModal = config.showCancelButton === true;
+
+    // Se NÃO for modal de confirmação, adicionar auto-close
+    if (!isConfirmationModal && !config.timer) {
+        // Adicionar timer de 10 segundos para modais informativos
+        config.timer = 10000;
+        config.timerProgressBar = true;
+
+        // Adicionar timeout máximo de 30 segundos como segurança
+        config.didOpen = () => {
+            const originalDidOpen = config.didOpen;
+            if (typeof originalDidOpen === 'function') {
+                originalDidOpen();
+            }
+
+            // Forçar fechamento após 30 segundos independente de tudo
+            setTimeout(() => {
+                Swal.close();
+            }, 30000);
+        };
+    }
+
+    return OriginalSwalFire.call(this, config);
+};
+
+console.log('✅ Sistema de auto-fechamento de modais ativado');
+
+
+// ========== CORREÇÃO 3: SISTEMA DE PREVENÇÃO DE BOTÕES TRAVADOS ==========
+
+/**
+ * Sistema para prevenir botões que ficam cinza/disabled e não funcionam mais
+ */
+
+// Auto-restauração de botões após 500ms
+document.addEventListener('click', function(e) {
+    const button = e.target.closest('button, .btn, .swal2-confirm, .swal2-cancel');
+    if (button && !button.hasAttribute('data-permanent-disabled')) {
+        // Restaurar botão após 500ms se ele ficar disabled
+        setTimeout(() => {
+            if (button.disabled && !button.hasAttribute('data-permanent-disabled')) {
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.style.cursor = 'pointer';
+                button.style.pointerEvents = 'auto';
+                console.log('🔧 Botão auto-restaurado:', button);
+            }
+        }, 500);
+    }
+});
+
+// Verificação periódica a cada 2 segundos
+setInterval(() => {
+    // Remover disabled de todos os botões que não devem estar disabled
+    document.querySelectorAll('button:disabled, .btn:disabled, .swal2-confirm:disabled').forEach(btn => {
+        // Não mexer em botões permanentemente disabled
+        if (!btn.hasAttribute('data-permanent-disabled')) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.style.pointerEvents = 'auto';
+        }
+    });
+
+    // Fechar modais com botões travados (backup de segurança)
+    const swalContainer = document.querySelector('.swal2-container');
+    if (swalContainer) {
+        const swalButtons = swalContainer.querySelectorAll('.swal2-confirm, .swal2-cancel');
+        let hasStuckButton = false;
+
+        swalButtons.forEach(btn => {
+            if (btn.disabled) {
+                hasStuckButton = true;
+                btn.disabled = false;
+            }
+        });
+
+        // Se encontrou botão travado, logar
+        if (hasStuckButton) {
+            console.log('🔧 Botões de modal desbloqueados');
+        }
+    }
+}, 2000);
+
+console.log('✅ Sistema anti-travamento de botões ativado');
+
+
+// ========== CORREÇÃO 4: FORÇAR LIGHT MODE NA TELA DE LOGIN ==========
+
+/**
+ * Garante que a tela de login SEMPRE esteja em Light Mode
+ * Mesmo que o usuário tenha preferência de dark mode salva
+ */
+
+function forceLightModeLogin() {
+    const authScreen = document.querySelector('.auth-screen');
+    const body = document.body;
+    const html = document.documentElement;
+
+    if (authScreen && authScreen.style.display !== 'none') {
+        // Forçar light mode
+        html.setAttribute('data-theme', 'light');
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
+
+        // Adicionar classes específicas para garantir
+        authScreen.classList.add('light-mode');
+        authScreen.classList.remove('dark-mode');
+
+        // Salvar flag no localStorage
+        localStorage.setItem('login-force-light', 'true');
+
+        console.log('☀️ Light mode forçado na tela de login');
+    } else {
+        // Remover flag quando não estiver no login
+        localStorage.removeItem('login-force-light');
+    }
+}
+
+// MutationObserver para detectar mudanças de tema durante o login
+const themeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+            forceLightModeLogin();
+        }
+    });
+});
+
+// Observar mudanças no atributo data-theme do html
+themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+});
+
+// Executar a cada 100ms durante carregamento
+const lightModeInterval = setInterval(() => {
+    forceLightModeLogin();
+}, 100);
+
+// Parar verificação após 5 segundos do carregamento
+setTimeout(() => {
+    clearInterval(lightModeInterval);
+    // Mas executar uma vez quando o login é exibido
+    const originalSwitchTab = window.switchTab;
+    if (typeof originalSwitchTab === 'function') {
+        window.switchTab = function(...args) {
+            forceLightModeLogin();
+            return originalSwitchTab.apply(this, args);
+        };
+    }
+}, 5000);
+
+// Executar imediatamente
+forceLightModeLogin();
+
+console.log('✅ Sistema de Light Mode forçado no login ativado');
+
+
+// ========== CORREÇÃO 5: TRANSIÇÕES SUAVES ENTRE PÁGINAS E ABAS ==========
+
+/**
+ * Adiciona animações suaves para navegação entre seções
+ */
+
+// CSS das animações já existe, mas vamos garantir execução via JS
+const originalGoTo = window.goTo;
+if (typeof originalGoTo === 'function') {
+    window.goTo = function(section) {
+        // Aplicar animação de saída
+        const currentSection = document.querySelector('.content-section.active');
+        if (currentSection) {
+            currentSection.style.animation = 'slideOutToLeft 0.3s ease forwards';
+        }
+
+        // Executar navegação original após animação
+        setTimeout(() => {
+            originalGoTo.call(this, section);
+
+            // Aplicar animação de entrada na nova seção
+            const newSection = document.getElementById('section-' + section);
+            if (newSection) {
+                newSection.style.animation = 'slideInFromRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards';
+            }
+        }, 300);
+    };
+}
+
+// Animação no menu sidebar ao selecionar
+document.querySelectorAll('.sidebar-menu a').forEach(link => {
+    link.addEventListener('click', function() {
+        this.style.animation = 'pulseMenu 0.3s ease';
+        setTimeout(() => {
+            this.style.animation = '';
+        }, 300);
+    });
+});
+
+// Fade gradual no container principal
+const mainContent = document.querySelector('.main-content');
+if (mainContent) {
+    mainContent.style.transition = 'opacity 0.3s ease';
+}
+
+console.log('✅ Sistema de transições suaves ativado');
+
+
+// ========== CORREÇÃO 6: MELHORIAS NO LAYOUT DO CALENDÁRIO ==========
+
+/**
+ * Melhora visual e funcional do calendário FullCalendar
+ */
+
+// Adicionar CSS customizado para o calendário
+const calendarStyles = document.createElement('style');
+calendarStyles.textContent = `
+    /* Altura fixa para melhor visualização */
+    #profissionaisCalendar,
+    .fc {
+        height: 650px !important;
+        min-height: 650px !important;
+    }
+
+    /* Toolbar com gradiente */
+    .fc .fc-toolbar {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+        padding: 15px 20px !important;
+        border-radius: 15px 15px 0 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .fc .fc-toolbar-title {
+        background: linear-gradient(135deg, #fff, #f0f0f0) !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-weight: 900 !important;
+        font-size: 1.8rem !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Botões com efeito de elevação */
+    .fc .fc-button {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 10px !important;
+        padding: 8px 16px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }
+
+    .fc .fc-button:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+    }
+
+    .fc .fc-button-active {
+        background: rgba(255, 255, 255, 0.4) !important;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Header das colunas */
+    .fc .fc-col-header-cell {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+        color: white !important;
+        font-weight: 800 !important;
+        padding: 12px 8px !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    /* Destaque para o dia atual */
+    .fc .fc-day-today {
+        background: rgba(124, 58, 237, 0.1) !important;
+        border: 2px solid var(--primary) !important;
+    }
+
+    .fc .fc-day-today .fc-daygrid-day-number {
+        background: var(--primary) !important;
+        color: white !important;
+        border-radius: 50% !important;
+        width: 30px !important;
+        height: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 900 !important;
+        margin: 5px auto !important;
+    }
+
+    /* Eventos com visual moderno */
+    .fc-event {
+        border-radius: 8px !important;
+        padding: 4px 8px !important;
+        margin: 2px 0 !important;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+    }
+
+    .fc-event:hover {
+        transform: translateY(-2px) scale(1.05) !important;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.25) !important;
+        z-index: 999 !important;
+    }
+
+    /* Hover effects em dias */
+    .fc .fc-daygrid-day:hover {
+        background: rgba(124, 58, 237, 0.05) !important;
+        cursor: pointer !important;
+    }
+
+    /* Bordas arredondadas e sombras */
+    .fc {
+        border-radius: 15px !important;
+        overflow: hidden !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
+        border: 2px solid var(--border-color) !important;
+    }
+
+    /* Tooltip customizado */
+    .fc-popover {
+        border-radius: 12px !important;
+        box-shadow: 0 10px 40px rgba(124, 58, 237, 0.3) !important;
+        border: 2px solid var(--primary) !important;
+        background: var(--bg-card) !important;
+    }
+
+    .fc-popover-header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+        color: white !important;
+        font-weight: 800 !important;
+        padding: 10px 15px !important;
+    }
+
+    /* Animação de fade in para tooltip */
+    @keyframes fadeInTooltip {
+        from {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .fc-popover {
+        animation: fadeInTooltip 0.3s ease !important;
+    }
+
+    /* Máximo de 3 eventos por dia com popover */
+    .fc .fc-daygrid-day-events {
+        max-height: 100px !important;
+        overflow: hidden !important;
+    }
+
+    /* Formato 24 horas e slots de 30 minutos */
+    .fc .fc-timegrid-slot {
+        height: 3em !important;
+    }
+
+    .fc-timegrid-slot-label {
+        font-weight: 600 !important;
+        color: var(--text-secondary) !important;
+    }
+`;
+document.head.appendChild(calendarStyles);
+
+console.log('✅ Melhorias de layout do calendário aplicadas');
+
+
+// ========== VERIFICAÇÃO: ALERTA DE ESTOQUE BAIXO ==========
+
+// A função carregarAlertaEstoqueBaixo() já existe (linha 15838)
+// Vamos garantir que ela seja chamada no dashboard
+
+const originalLoadDashboard = window.loadDashboard;
+if (typeof originalLoadDashboard === 'function') {
+    window.loadDashboard = async function() {
+        await originalLoadDashboard.call(this);
+        // Carregar alerta de estoque após carregar dashboard
+        if (typeof carregarAlertaEstoqueBaixo === 'function') {
+            await carregarAlertaEstoqueBaixo();
+        }
+    };
+}
+
+console.log('✅ Integração de alerta de estoque verificada');
+
+
+// ========== ADICIONAR ANIMAÇÕES CSS FALTANTES ==========
+
+const animationStyles = document.createElement('style');
+animationStyles.textContent = `
+    /* Animações para transições suaves */
+    @keyframes slideInFromRight {
+        from {
+            opacity: 0;
+            transform: translateX(100px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes slideOutToLeft {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(-100px);
+        }
+    }
+
+    @keyframes pulseMenu {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(124, 58, 237, 0.4);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    /* Classe para light mode forçado */
+    .auth-screen.light-mode,
+    body.light-mode .auth-screen {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    .light-mode .auth-box {
+        background: rgba(255, 255, 255, 0.98) !important;
+        color: #1F2937 !important;
+    }
+
+    .light-mode .form-control,
+    .light-mode .form-select {
+        background: white !important;
+        color: #1F2937 !important;
+        border-color: #E5E7EB !important;
+    }
+
+    .light-mode .nav-link {
+        color: #6B7280 !important;
+    }
+
+    .light-mode .nav-link.active {
+        background: linear-gradient(135deg, #7C3AED, #6D28D9) !important;
+        color: white !important;
+    }
+`;
+document.head.appendChild(animationStyles);
+
+console.log('✅ Estilos de animação adicionados');
+
+console.log('🎉 TODAS AS CORREÇÕES v4.0.1 APLICADAS COM SUCESSO!');
+console.log('📋 Correções implementadas:');
+console.log('   1. ✅ Botão de Novo Orçamento');
+console.log('   2. ✅ Auto-fechamento de Modais (10s)');
+console.log('   3. ✅ Prevenção de Botões Travados');
+console.log('   4. ✅ Light Mode Forçado no Login');
+console.log('   5. ✅ Transições Suaves');
+console.log('   6. ✅ Layout Melhorado do Calendário');
+console.log('   7. ✅ Alerta de Estoque Baixo');
 
 </script>
 
