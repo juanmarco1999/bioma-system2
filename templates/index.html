@@ -5205,9 +5205,6 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <button class="btn btn-primary" onclick="carregarDadosFinanceiro()">
                 <i class="bi bi-arrow-clockwise"></i> Atualizar
             </button>
-            <button class="btn btn-success" onclick="novaDespesa()">
-                <i class="bi bi-plus-circle"></i> Nova Despesa
-            </button>
         </div>
     </div>
 
@@ -5253,6 +5250,9 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
 
     <!-- Sub-tabs -->
     <div class="sub-tabs">
+        <button class="sub-tab-btn sub-tab-red-animated" onclick="switchSubTab('financeiro', 'nova-despesa')">
+            <i class="bi bi-plus-circle-fill"></i> Nova Despesa
+        </button>
         <button class="sub-tab-btn active" onclick="switchSubTab('financeiro', 'resumo')">
             <i class="bi bi-pie-chart"></i> Resumo
         </button>
@@ -5265,6 +5265,94 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
         <button class="sub-tab-btn" onclick="switchSubTab('financeiro', 'comissoes')">
             <i class="bi bi-cash-stack"></i> Comissões
         </button>
+    </div>
+
+    <!-- Sub-tab: Nova Despesa -->
+    <div id="financeiro-subtab-nova-despesa" class="sub-tab-content">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #EF4444, #DC2626);">
+                <i class="bi bi-plus-circle-fill"></i> Registrar Nova Despesa
+            </div>
+            <div class="card-body">
+                <form id="formNovaDespesa">
+                    <div class="row g-3">
+                        <!-- Descrição -->
+                        <div class="col-md-8">
+                            <label class="form-label"><i class="bi bi-pencil"></i> Descrição *</label>
+                            <input type="text" id="novaDespesaDescricao" class="form-control" placeholder="Ex: Conta de luz, Salário, etc." required>
+                        </div>
+
+                        <!-- Valor -->
+                        <div class="col-md-4">
+                            <label class="form-label"><i class="bi bi-currency-dollar"></i> Valor (R$) *</label>
+                            <input type="number" id="novaDespesaValor" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+                        </div>
+
+                        <!-- Categoria -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-tag"></i> Categoria *</label>
+                            <select id="novaDespesaCategoria" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                <option value="Geral">Geral</option>
+                                <option value="Salários">Salários</option>
+                                <option value="Aluguel">Aluguel</option>
+                                <option value="Contas">Contas (água, luz, internet)</option>
+                                <option value="Produtos">Produtos</option>
+                                <option value="Manutenção">Manutenção</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Impostos">Impostos</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+
+                        <!-- Forma de Pagamento -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-credit-card"></i> Forma de Pagamento *</label>
+                            <select id="novaDespesaFormaPagamento" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="PIX">PIX</option>
+                                <option value="Débito">Cartão de Débito</option>
+                                <option value="Crédito">Cartão de Crédito</option>
+                                <option value="Transferência">Transferência Bancária</option>
+                            </select>
+                        </div>
+
+                        <!-- Data -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-calendar"></i> Data *</label>
+                            <input type="date" id="novaDespesaData" class="form-control" required>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-check-circle"></i> Status *</label>
+                            <select id="novaDespesaStatus" class="form-select" required>
+                                <option value="Pago">Pago</option>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Atrasado">Atrasado</option>
+                            </select>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="col-12">
+                            <label class="form-label"><i class="bi bi-chat-left-text"></i> Observações</label>
+                            <textarea id="novaDespesaObs" class="form-control" rows="3" placeholder="Informações adicionais sobre esta despesa..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaDespesa()">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="salvarNovaDespesa()">
+                            <i class="bi bi-check-circle"></i> Registrar Despesa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Sub-tab: Resumo -->
