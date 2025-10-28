@@ -875,6 +875,13 @@
 
         /* ========== TELA DE LOGIN: SEMPRE LIGHT MODE ========== */
         /* A tela de autenticação NUNCA deve ser afetada por dark mode */
+        /* Máxima especificidade para sobrescrever qualquer dark mode */
+        :root[data-theme="dark"] #authScreen,
+        :root[data-theme="dark"] #authScreen *,
+        :root[data-theme="dark"] .auth-screen,
+        :root[data-theme="dark"] .auth-screen *,
+        :root[data-theme="dark"] .auth-box,
+        :root[data-theme="dark"] .auth-box *,
         #authScreen,
         #authScreen *,
         .auth-screen,
@@ -885,25 +892,39 @@
             color: #1F2937 !important;
         }
 
+        :root[data-theme="dark"] .auth-screen,
         .auth-screen {
             /* Garantir que o fundo do gradiente sempre apareça */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         }
 
+        :root[data-theme="dark"] .auth-box,
         .auth-box {
             /* Box de login sempre claro */
             background: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(10px) !important;
             color: #1F2937 !important;
         }
 
+        :root[data-theme="dark"] .auth-logo h2,
         .auth-logo h2 {
             color: #1F2937 !important;
         }
 
+        :root[data-theme="dark"] .auth-logo p,
         .auth-logo p {
             color: #6B7280 !important;
         }
 
+        /* Inputs na tela de login sempre brancos */
+        :root[data-theme="dark"] #authScreen .form-control,
+        :root[data-theme="dark"] #authScreen .form-select,
+        :root[data-theme="dark"] #authScreen input,
+        :root[data-theme="dark"] #authScreen select,
+        #authScreen .form-control,
+        #authScreen .form-select,
+        #authScreen input,
+        #authScreen select,
         .form-control,
         .form-select {
             background: white !important;
@@ -1613,7 +1634,7 @@
     <span>Atualizando dados...</span>
 </div>
 
-<!-- SAFE SWAL SIMPLIFICADO: Previne modais empilhados -->
+<!-- SAFE SWAL ULTRA-SIMPLIFICADO: Apenas previne empilhamento -->
 <script>
 const _OriginalSwal = (typeof Swal !== 'undefined') ? Swal.fire.bind(Swal) : null;
 
@@ -1622,107 +1643,57 @@ window.SafeSwal = {
     _currentModal: null,
 
     fire: function(config) {
-        // Fechar modal anterior se houver
+        // Fechar modal anterior se houver (previne empilhamento)
         if (this._isOpen) {
             try {
                 Swal.close();
             } catch(e) {
-                console.warn('Erro ao fechar modal anterior:', e);
+                console.warn('⚠️ Fechando modal anterior:', e);
             }
         }
+
         this._isOpen = true;
 
-        // Normalizar config
-        if (typeof config === 'string') config = { title: config };
+        // Normalizar config se for string
+        if (typeof config === 'string') {
+            config = { title: config };
+        }
 
-        // CORREÇÃO CRÍTICA: Garantir que SEMPRE seja possível fechar o modal
-        const safeConfig = {
+        // Preservar callbacks originais e adicionar tracking
+        const originalDidClose = config.didClose;
+        const originalWillClose = config.willClose;
+
+        // Criar nova config sem modificar as opções do usuário
+        const trackedConfig = {
             ...config,
-            allowEscapeKey: config.allowEscapeKey !== false,
-            allowOutsideClick: config.allowOutsideClick !== false,
-            showCloseButton: config.showCloseButton !== false,
-            // Adicionar backdrop para garantir que clicks fora funcionem
-            backdrop: config.backdrop !== false,
-            // Timer de segurança: fechar automaticamente após 5 minutos (previne travamento)
-            timer: config.timer || undefined
-        };
-
-        // Hook para marcar como fechado em TODOS os cenários
-        const originalDidClose = safeConfig.didClose;
-        const originalWillClose = safeConfig.willClose;
-        const originalDidDestroy = safeConfig.didDestroy;
-
-        safeConfig.willClose = () => {
-            this._isOpen = false;
-            this._currentModal = null;
-            if (originalWillClose) originalWillClose();
-        };
-
-        safeConfig.didClose = () => {
-            this._isOpen = false;
-            this._currentModal = null;
-            // Limpar qualquer overlay residual (com null check)
-            try {
-                document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-                    if (el && el.style) el.style.display = 'none';
-                });
-            } catch(e) {
-                console.warn('⚠️ Erro ao limpar overlays:', e);
+            willClose: () => {
+                this._isOpen = false;
+                this._currentModal = null;
+                if (originalWillClose) originalWillClose();
+            },
+            didClose: () => {
+                this._isOpen = false;
+                this._currentModal = null;
+                if (originalDidClose) originalDidClose();
             }
-            if (originalDidClose) originalDidClose();
         };
 
-        safeConfig.didDestroy = () => {
-            this._isOpen = false;
-            this._currentModal = null;
-            if (originalDidDestroy) originalDidDestroy();
-        };
-
-        // Chamar Swal original e guardar referência
-        const result = _OriginalSwal(safeConfig);
+        // Chamar Swal original
+        const result = _OriginalSwal(trackedConfig);
         this._currentModal = result;
 
         return result;
-    },
-
-    // Método de emergência para forçar fechamento
-    forceClose: function() {
-        this._isOpen = false;
-        this._currentModal = null;
-        try {
-            Swal.close();
-            // Forçar remoção de todos os elementos do SweetAlert2
-            document.querySelectorAll('.swal2-container, .swal2-backdrop-show, .swal2-shown').forEach(el => {
-                el.remove();
-            });
-            // Remover classes do body (com null check)
-            if (document.body) {
-                document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-            }
-        } catch(e) {
-            console.error('Erro ao forçar fechamento:', e);
-        }
     }
 };
 
-// Sobrescrever Swal.fire
+// Sobrescrever Swal.fire com wrapper mínimo
 if (typeof Swal !== 'undefined') {
     Swal.fire = function(...args) {
         return window.SafeSwal.fire(...args);
     };
 }
 
-// Listener para ESC fechar modais normalmente (sem força)
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && window.SafeSwal._isOpen) {
-        console.log('⌨️ ESC pressionado - fechando modal');
-        try {
-            Swal.close();
-        } catch(err) {
-            console.warn('⚠️ Erro ao fechar modal com ESC:', err);
-        }
-    }
-});
+console.log('✅ SafeSwal inicializado (modo simplificado)');
 </script>
 
 <div id="authScreen" class="auth-screen">
@@ -12453,27 +12424,37 @@ async function carregarOrcamentosPendentes() {
             return;
         }
 
-        tbody.innerHTML = orcamentos.map(orc => {
+        tbody.innerHTML = orcamentos.map((orc, index) => {
             const dataStr = orc.data || orc.created_at || new Date().toISOString();
             const data = new Date(dataStr).toLocaleDateString('pt-BR');
             const profs = orc.profissionais_vinculados?.map(p => p.nome).join(', ') || 'N/A';
             const nome = orc.cliente_nome || orc.nome || 'Sem nome';
             const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
+
+            // Obter ID com múltiplos fallbacks
+            const orcId = orc._id || orc.id || orc.orcamento_id || `temp-${index}`;
+
+            // Log para debug (remover em produção)
+            if (!orc._id) {
+                console.warn(`⚠️ Orçamento sem _id (índice ${index}):`, orc);
+            }
+
             return `
                 <tr>
+                    <td><strong>#${String(orcId).slice(-6)}</strong></td>
                     <td>${data}</td>
                     <td>${nome}</td>
                     <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${profs}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orc._id}')">
+                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="aprovarOrcamento('${orc._id}')">
+                        <button class="btn btn-sm btn-success" onclick="aprovarOrcamento('${orcId}')" title="Aprovar">
                             <i class="bi bi-check"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejeitarOrcamento('${orc._id}')">
+                        <button class="btn btn-sm btn-danger" onclick="rejeitarOrcamento('${orcId}')" title="Rejeitar">
                             <i class="bi bi-x"></i>
                         </button>
                     </td>
@@ -12503,23 +12484,32 @@ async function carregarOrcamentosAprovados() {
             return;
         }
 
-        tbody.innerHTML = orcamentos.map(orc => {
+        tbody.innerHTML = orcamentos.map((orc, index) => {
             const dataStr = orc.data || orc.created_at || new Date().toISOString();
             const data = new Date(dataStr).toLocaleDateString('pt-BR');
             const nome = orc.cliente_nome || orc.nome || 'Sem nome';
             const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
+
+            // Obter ID com múltiplos fallbacks
+            const orcId = orc._id || orc.id || orc.orcamento_id || `temp-${index}`;
+
+            if (!orc._id) {
+                console.warn(`⚠️ Orçamento aprovado sem _id (índice ${index}):`, orc);
+            }
+
             return `
                 <tr>
+                    <td><strong>#${String(orcId).slice(-6)}</strong></td>
                     <td>${data}</td>
                     <td>${nome}</td>
                     <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${(typeof orc.pagamento === 'object' ? orc.pagamento.tipo : orc.pagamento) || orc.forma_pagamento || 'N/A'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orc._id}')">
+                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="imprimirContrato('${orc._id}')">
+                        <button class="btn btn-sm btn-primary" onclick="imprimirContrato('${orcId}')" title="Imprimir Contrato">
                             <i class="bi bi-printer"></i>
                         </button>
                     </td>
@@ -12549,23 +12539,32 @@ async function carregarOrcamentosRejeitados() {
             return;
         }
 
-        tbody.innerHTML = orcamentos.map(orc => {
+        tbody.innerHTML = orcamentos.map((orc, index) => {
             const dataStr = orc.data || orc.created_at || new Date().toISOString();
             const data = new Date(dataStr).toLocaleDateString('pt-BR');
             const nome = orc.cliente_nome || orc.nome || 'Sem nome';
             const cpf = orc.cliente_cpf || orc.cpf || 'Sem CPF';
+
+            // Obter ID com múltiplos fallbacks
+            const orcId = orc._id || orc.id || orc.orcamento_id || `temp-${index}`;
+
+            if (!orc._id) {
+                console.warn(`⚠️ Orçamento rejeitado sem _id (índice ${index}):`, orc);
+            }
+
             return `
                 <tr>
+                    <td><strong>#${String(orcId).slice(-6)}</strong></td>
                     <td>${data}</td>
                     <td>${nome}</td>
                     <td>${cpf}</td>
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${orc.motivo_rejeicao || 'N/A'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orc._id}')">
+                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deletarOrcamento('${orc._id}')">
+                        <button class="btn btn-sm btn-danger" onclick="deletarOrcamento('${orcId}')" title="Deletar">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
