@@ -3155,46 +3155,121 @@ const activeModals = new Map();
 Swal.fire = function(...args) {
     const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
 
-    // FORÇAR remoção de timers em modais interativos (com input, confirmação, etc)
-    const isInteractiveModal = config.input || config.showCancelButton || config.html;
+    // ============ PROTEÇÃO RADICAL CONTRA FECHAMENTO AUTOMÁTICO ============
+
+    // Identificar tipo de modal
+    const isLoading = config.showLoading || (config.didOpen && config.didOpen.toString().includes('showLoading'));
+    const isToast = config.toast === true;
+    const hasButtons = config.showConfirmButton !== false || config.showCancelButton === true;
+    const hasInput = config.input !== undefined;
+    const hasHTML = config.html !== undefined;
+
+    // Modal interativo = tem botões, input ou HTML (mas não é loading)
+    const isInteractiveModal = (hasButtons || hasInput || hasHTML) && !isLoading && !isToast;
+
     if (isInteractiveModal) {
-        // NUNCA permitir timer em modais interativos
+        // DELETAR timer SEMPRE para modais interativos
         delete config.timer;
         delete config.timerProgressBar;
+        console.log('🛡️ Timer removido de modal interativo para prevenir fechamento automático');
     }
 
-    // FORÇAR allowOutsideClick = false para evitar fechamento acidental
-    // Sobrescrever MESMO se estiver definido explicitamente
-    if (!config.showLoading) {
+    // SEMPRE forçar allowOutsideClick = false para modais interativos
+    if (isInteractiveModal) {
         config.allowOutsideClick = false;
     }
 
-    // Permitir ESC para fechar
-    if (config.allowEscapeKey === undefined) {
-        config.allowEscapeKey = true;
+    // SEMPRE forçar allowEscapeKey = false para modais interativos
+    if (isInteractiveModal) {
+        config.allowEscapeKey = false;
     }
 
-    // Desabilitar backdrop clicks
-    config.backdrop = config.backdrop === false ? false : true;
+    // Desabilitar backdrop clicks para modais interativos
+    if (isInteractiveModal) {
+        config.backdrop = true; // Backdrop visível mas não clicável
+    }
 
-    // Adicionar evento para prevenir fechamento ao passar mouse
+    // Adicionar proteções adicionais no didOpen
     const originalDidOpen = config.didOpen;
     config.didOpen = function(popup) {
         // Executar didOpen original se existir
-        if (originalDidOpen) originalDidOpen(popup);
+        if (originalDidOpen) {
+            try {
+                originalDidOpen(popup);
+            } catch (e) {
+                console.error('Erro no didOpen original:', e);
+            }
+        }
 
-        // Prevenir qualquer comportamento de hover que feche o modal
-        popup.addEventListener('mouseenter', (e) => {
-            e.stopPropagation();
-        });
-        popup.addEventListener('mouseover', (e) => {
-            e.stopPropagation();
-        });
+        // Só proteger modais interativos
+        if (isInteractiveModal) {
+            // PROTEÇÃO 1: Prevenir hover fechando modal
+            popup.addEventListener('mouseenter', (e) => {
+                e.stopPropagation();
+            }, true);
+
+            popup.addEventListener('mouseover', (e) => {
+                e.stopPropagation();
+            }, true);
+
+            popup.addEventListener('mouseleave', (e) => {
+                e.stopPropagation();
+            }, true);
+
+            // PROTEÇÃO 2: Bloquear clicks no backdrop
+            const backdrop = document.querySelector('.swal2-container');
+            if (backdrop) {
+                backdrop.style.pointerEvents = 'auto';
+                backdrop.addEventListener('click', (e) => {
+                    // Só permitir clicks no popup, não no backdrop
+                    if (e.target === backdrop) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        console.log('🛡️ Click no backdrop bloqueado');
+                    }
+                }, true);
+            }
+
+            // PROTEÇÃO 3: Marcar popup como "protegido" (não pode fechar automaticamente)
+            popup.setAttribute('data-swal-interactive', 'true');
+
+            console.log('🛡️ Modal interativo protegido contra fechamento automático');
+        }
     };
 
     const result = originalSwalFire(config);
 
     return result;
+};
+
+// PROTEÇÃO GLOBAL: Interceptar Swal.close() não autorizado
+const originalSwalClose = Swal.close.bind(Swal);
+let allowClose = false; // Flag para permitir fechamento programático
+
+Swal.close = function() {
+    const activePopup = Swal.getPopup();
+
+    // Se não há popup, permitir
+    if (!activePopup) {
+        return originalSwalClose();
+    }
+
+    // Se é um popup interativo protegido e não foi autorizado, bloquear
+    const isProtected = activePopup.getAttribute('data-swal-interactive') === 'true';
+
+    if (isProtected && !allowClose) {
+        console.warn('🛡️ Tentativa de fechar modal protegido bloqueada! Use os botões do modal.');
+        return;
+    }
+
+    // Caso contrário, permitir fechamento
+    allowClose = false; // Reset flag
+    return originalSwalClose();
+};
+
+// Função helper para permitir fechamento programático quando necessário
+window.allowSwalClose = function() {
+    allowClose = true;
 };
 
 // Sistema PASSIVO para prevenir botões travados (não interfere com cliques)
