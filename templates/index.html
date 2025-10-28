@@ -3,10 +3,12 @@
 <head>
     <!-- ULTRA-EARLY THEME ENFORCEMENT - Runs before ANY other code -->
     <script>
-    // Force light mode on login screen - runs IMMEDIATELY
+    // ✅ CORREÇÃO v4.0.1: Force light mode on login screen - runs IMMEDIATELY
     (function() {
         // Set attribute before any CSS loads
         document.documentElement.setAttribute('data-theme', 'light');
+        document.documentElement.classList.remove('dark-mode');
+        document.documentElement.classList.add('light-mode');
 
         // Remove any saved theme from localStorage to prevent flash
         try {
@@ -14,9 +16,53 @@
                                document.getElementById('app')?.style.display === 'none';
             if (authVisible) {
                 localStorage.removeItem('theme');
+                localStorage.setItem('forceLight', 'true');
                 console.log('%c🌞 EARLY LIGHT MODE ENFORCED', 'background: #FBBF24; color: #000; padding: 4px; font-weight: bold;');
             }
         } catch(e) { /* ignore errors on first run */ }
+
+        // ✅ MutationObserver para prevenir mudança de tema no login
+        const observer = new MutationObserver((mutations) => {
+            const appEl = document.getElementById('app');
+            const isLoginVisible = !appEl || appEl.style.display === 'none';
+
+            if (isLoginVisible) {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                if (currentTheme !== 'light') {
+                    console.warn('⚠️ Tentativa de mudar tema no login bloqueada!');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    document.documentElement.classList.remove('dark-mode');
+                    document.documentElement.classList.add('light-mode');
+                }
+            }
+        });
+
+        // Iniciar observador assim que o DOM estiver disponível
+        if (document.documentElement) {
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-theme', 'class']
+            });
+        }
+
+        // ✅ Verificação contínua a cada 100ms durante carregamento
+        let verificacoes = 0;
+        const intervalId = setInterval(() => {
+            const appEl = document.getElementById('app');
+            const isLoginVisible = !appEl || appEl.style.display === 'none';
+
+            if (isLoginVisible) {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.documentElement.classList.remove('dark-mode');
+                document.documentElement.classList.add('light-mode');
+            }
+
+            verificacoes++;
+            if (verificacoes > 50) { // Parar após 5 segundos (50 * 100ms)
+                clearInterval(intervalId);
+                console.log('✅ Verificação de light mode no login concluída');
+            }
+        }, 100);
     })();
     </script>
     <meta charset="UTF-8">
@@ -211,6 +257,292 @@
         .sub-tab-content{display:none;animation:fadeInContent 0.4s ease}
         .sub-tab-content.active{display:block}
         @keyframes fadeInContent{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+        /* ✅ CORREÇÃO v4.0.1: TRANSIÇÕES SUAVES ENTRE PÁGINAS E ABAS */
+
+        /* Animação de entrada suave pela direita */
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Animação de saída suave pela esquerda */
+        @keyframes slideOutToLeft {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+        }
+
+        /* Animação pulse para menu selecionado */
+        @keyframes pulseMenu {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Animação fade in com translateY melhorada */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Aplicar animações nas seções de conteúdo */
+        .content-section {
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                       transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .content-section.active {
+            animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Animações para sub-tabs */
+        .sub-tab-content.active {
+            animation: fadeInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Pulse no menu ao selecionar */
+        .sidebar-menu li a.active {
+            animation: pulseMenu 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Transição suave no main-content */
+        .main-content {
+            transition: opacity 0.2s ease;
+        }
+
+        /* Fade in para cards e elementos */
+        .card, .stat-card {
+            animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation-fill-mode: backwards;
+        }
+
+        /* Delay progressivo para cards (efeito cascata) */
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        /* ✅ CORREÇÃO v4.0.1: LAYOUT MELHORADO DO CALENDÁRIO FULLCALENDAR */
+
+        /* Altura fixa para melhor visualização */
+        #calendarioProfissionais {
+            height: 650px !important;
+            min-height: 650px !important;
+        }
+
+        /* Toolbar com gradiente */
+        .fc .fc-toolbar {
+            background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+            padding: 15px 20px !important;
+            border-radius: 15px 15px 0 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* Título do calendário com gradiente */
+        .fc .fc-toolbar-title {
+            font-size: 1.8rem !important;
+            font-weight: 900 !important;
+            background: linear-gradient(135deg, #fff, rgba(255,255,255,0.8)) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+        }
+
+        /* Botões do calendário */
+        .fc .fc-button {
+            background: rgba(255,255,255,0.2) !important;
+            border: 2px solid rgba(255,255,255,0.3) !important;
+            color: #fff !important;
+            border-radius: 10px !important;
+            padding: 8px 16px !important;
+            font-weight: 700 !important;
+            transition: all 0.3s ease !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        .fc .fc-button:hover {
+            background: rgba(255,255,255,0.3) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+        }
+
+        .fc .fc-button-primary:not(:disabled).fc-button-active {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+            box-shadow: 0 5px 15px rgba(245,158,11,0.4) !important;
+        }
+
+        /* Header das colunas (dias da semana) */
+        .fc .fc-col-header-cell {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+            color: #fff !important;
+            font-weight: 800 !important;
+            padding: 12px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* Células dos dias */
+        .fc .fc-daygrid-day {
+            transition: all 0.2s ease !important;
+        }
+
+        .fc .fc-daygrid-day:hover {
+            background: rgba(124,58,237,0.05) !important;
+            transform: scale(1.02) !important;
+        }
+
+        /* Dia atual destacado */
+        .fc .fc-day-today {
+            background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(236,72,153,0.15)) !important;
+            border: 2px solid var(--primary) !important;
+        }
+
+        .fc .fc-day-today .fc-daygrid-day-number {
+            background: var(--primary) !important;
+            color: #fff !important;
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-weight: 900 !important;
+            box-shadow: 0 4px 10px rgba(124,58,237,0.4) !important;
+        }
+
+        /* Eventos (agendamentos) */
+        .fc-event {
+            border-radius: 8px !important;
+            padding: 4px 8px !important;
+            border: none !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+        }
+
+        .fc-event:hover {
+            transform: translateY(-2px) scale(1.05) !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.25) !important;
+            z-index: 10 !important;
+        }
+
+        /* Tooltip customizado para eventos */
+        .fc-event-title {
+            font-weight: 700 !important;
+        }
+
+        /* Popover para múltiplos eventos */
+        .fc .fc-popover {
+            background: var(--bg-card) !important;
+            border: 2px solid var(--primary) !important;
+            border-radius: 15px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+        }
+
+        .fc .fc-popover-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+            color: #fff !important;
+            padding: 12px !important;
+            font-weight: 800 !important;
+            border-radius: 13px 13px 0 0 !important;
+        }
+
+        /* Grid do calendário */
+        .fc .fc-scrollgrid {
+            border-radius: 0 0 15px 15px !important;
+            overflow: hidden !important;
+            border: 2px solid var(--border-color) !important;
+        }
+
+        /* Linhas do grid */
+        .fc .fc-scrollgrid-section > * {
+            border-color: var(--border-color) !important;
+        }
+
+        /* Horários na view de semana/dia */
+        .fc .fc-timegrid-slot {
+            height: 3em !important;
+        }
+
+        .fc .fc-timegrid-slot-label {
+            font-weight: 600 !important;
+            color: var(--text-secondary) !important;
+        }
+
+        /* Número dos dias */
+        .fc .fc-daygrid-day-number {
+            padding: 6px 8px !important;
+            font-weight: 700 !important;
+            color: var(--text-primary) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .fc .fc-daygrid-day-number:hover {
+            color: var(--primary) !important;
+            transform: scale(1.1) !important;
+        }
+
+        /* Animação fade in para tooltip */
+        @keyframes fadeInTooltip {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .fc-popover {
+            animation: fadeInTooltip 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        /* Responsividade para mobile */
+        @media (max-width: 768px) {
+            #calendarioProfissionais {
+                height: 500px !important;
+                min-height: 500px !important;
+            }
+
+            .fc .fc-toolbar {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            .fc .fc-toolbar-title {
+                font-size: 1.3rem !important;
+            }
+
+            .fc .fc-button {
+                font-size: 0.75rem !important;
+                padding: 6px 12px !important;
+            }
+        }
 
         /* Fotos de perfil profissionais */
         .foto-profissional-container{position:relative;display:inline-block}
@@ -2094,31 +2426,104 @@ setInterval(forceLoginLightMode, 20);
 // Criar alias simples para compatibilidade com código existente
 window.SafeSwal = Swal;
 
-// Debug leve - apenas logar abertura/fechamento sem interceptar clicks
+// ✅ SISTEMA DE AUTO-FECHAMENTO E PREVENÇÃO DE TRAVAMENTO - v4.0.1
 let modalDebugCount = 0;
 const originalSwalFire = Swal.fire.bind(Swal);
+let modalAutoCloseTimers = new Map(); // Rastrear timers de auto-fechamento
 
 Swal.fire = function(...args) {
     modalDebugCount++;
-    console.log(`%c🔔 Modal #${modalDebugCount} aberto`, 'background: #10B981; color: white; padding: 4px; font-weight: bold;');
+    const modalId = modalDebugCount;
+    console.log(`%c🔔 Modal #${modalId} aberto`, 'background: #10B981; color: white; padding: 4px; font-weight: bold;');
 
     // Garantir que modais sempre sejam fecháveis
     const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
+
+    // ✅ CORREÇÃO: Determinar se é modal informativo (sem cancelar) para auto-fechamento
+    const isInformativo = !config.showCancelButton && !config.input;
+    const autoCloseTime = config.timer || (isInformativo ? 10000 : null); // 10s para informativos
+
     const safeConfig = {
         ...config,
-        allowOutsideClick: config.allowOutsideClick !== false, // Default true
-        allowEscapeKey: config.allowEscapeKey !== false, // Default true
-        allowEnterKey: config.allowEnterKey !== false, // Default true
+        allowOutsideClick: config.allowOutsideClick !== false,
+        allowEscapeKey: config.allowEscapeKey !== false,
+        allowEnterKey: config.allowEnterKey !== false,
+        timer: autoCloseTime,
+        timerProgressBar: autoCloseTime ? true : config.timerProgressBar,
     };
 
     const result = originalSwalFire(safeConfig);
 
+    // ✅ CORREÇÃO: Timeout máximo de 30s para forçar fechamento (prevenir modais travados)
+    const forceCloseTimeout = setTimeout(() => {
+        console.warn(`⚠️ Modal #${modalId} forçado a fechar após 30s`);
+        Swal.close();
+    }, 30000);
+
+    modalAutoCloseTimers.set(modalId, forceCloseTimeout);
+
     result.then(() => {
-        console.log(`%c✅ Modal #${modalDebugCount} fechado`, 'background: #6B7280; color: white; padding: 4px;');
+        clearTimeout(forceCloseTimeout);
+        modalAutoCloseTimers.delete(modalId);
+        console.log(`%c✅ Modal #${modalId} fechado`, 'background: #6B7280; color: white; padding: 4px;');
     });
 
     return result;
 };
+
+// ✅ SISTEMA DE PREVENÇÃO DE BOTÕES TRAVADOS
+function restaurarBotoes() {
+    document.querySelectorAll('button[disabled]:not([data-permanently-disabled])').forEach(btn => {
+        // Auto-restaurar botões após 500ms
+        setTimeout(() => {
+            if (btn.disabled && !btn.hasAttribute('data-permanently-disabled')) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                console.log('🔓 Botão auto-restaurado:', btn.textContent?.substring(0, 30));
+            }
+        }, 500);
+    });
+}
+
+// ✅ VERIFICAÇÃO PERIÓDICA DE BOTÕES TRAVADOS
+setInterval(() => {
+    const botoesDisabled = document.querySelectorAll('button[disabled]:not([data-permanently-disabled])');
+    if (botoesDisabled.length > 0) {
+        console.warn(`⚠️ ${botoesDisabled.length} botão(ões) desabilitado(s) detectado(s)`);
+        botoesDisabled.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        });
+    }
+
+    // Limpar backdrops órfãos do SweetAlert2
+    document.querySelectorAll('.swal2-container').forEach((container, index) => {
+        if (!container.querySelector('.swal2-popup')) {
+            console.warn('🗑️ Removendo backdrop órfão do SweetAlert2');
+            container.remove();
+        }
+    });
+}, 2000);
+
+// ✅ OBSERVER PARA RESTAURAR BOTÕES IMEDIATAMENTE
+const buttonObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'disabled') {
+            const btn = mutation.target;
+            if (btn.disabled && !btn.hasAttribute('data-permanently-disabled')) {
+                setTimeout(() => restaurarBotoes(), 100);
+            }
+        }
+    });
+});
+
+// Observar todos os botões do documento
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('button').forEach(btn => {
+        buttonObserver.observe(btn, { attributes: true, attributeFilter: ['disabled'] });
+    });
+});
 
 console.log('%c✅ Sistema de Debug Ativado', 'color: green; font-weight: bold; font-size: 14px;');
 console.log('   → Light mode login: MutationObserver + Interval 20ms');
@@ -4732,6 +5137,22 @@ function switchSubTab(section, subtab) {
         event.target.classList.add('active');
     }
 
+    // ✅ CORREÇÃO: Botão Novo Orçamento - Limpar formulário ao abrir aba "novo"
+    if (section === 'orcamento' && subtab === 'novo') {
+        console.log('🆕 Limpando formulário de novo orçamento...');
+        if (typeof cancelarOrc === 'function') {
+            cancelarOrc();
+        }
+    }
+
+    // ✅ CORREÇÃO: Carregar histórico ao abrir outras abas de orçamento
+    if (section === 'orcamento' && subtab !== 'novo') {
+        console.log('📋 Carregando histórico de orçamentos...');
+        if (typeof loadOrcamentosHistorico === 'function') {
+            loadOrcamentosHistorico();
+        }
+    }
+
     // 5. Carregar dados específicos da sub-tab
     if (typeof carregarDadosSubTab === 'function') {
         carregarDadosSubTab(section, subtab);
@@ -7093,7 +7514,7 @@ async function inicializarCalendario() {
             calendarioProfissionaisInstance.destroy();
         }
 
-        // Criar nova instância do calendário
+        // ✅ CORREÇÃO v4.0.1: Criar nova instância do calendário com melhorias
         calendarioProfissionaisInstance = new FullCalendar.Calendar(calendarEl, {
             locale: 'pt-br',
             initialView: 'dayGridMonth',
@@ -7114,10 +7535,31 @@ async function inicializarCalendario() {
             editable: true,
             selectable: true,
             selectMirror: true,
-            dayMaxEvents: true,
+            dayMaxEvents: 3, // ✅ Máximo de 3 eventos por dia com popover
             weekends: true,
-            slotMinTime: '08:00:00',
-            slotMaxTime: '20:00:00',
+
+            // ✅ Horários expandidos: 07:00 às 21:00
+            slotMinTime: '07:00:00',
+            slotMaxTime: '21:00:00',
+
+            // ✅ Slots de 30 minutos
+            slotDuration: '00:30:00',
+            slotLabelInterval: '00:30:00',
+
+            // ✅ Formato 24 horas
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: false,
+                hour12: false
+            },
+            slotLabelFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: false,
+                hour12: false
+            },
+
             allDaySlot: false,
 
             // Eventos customizados
@@ -7129,12 +7571,40 @@ async function inicializarCalendario() {
                 visualizarAgendamentoCalendario(info.event);
             },
 
-            eventDrop: function(info) {
-                atualizarDataAgendamento(info.event.id, info.event.start, info.event.end);
+            // ✅ Confirmação antes de mover evento
+            eventDrop: async function(info) {
+                const result = await Swal.fire({
+                    title: 'Confirmar alteração?',
+                    text: `Mover agendamento para ${info.event.start.toLocaleDateString('pt-BR')} às ${info.event.start.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, mover',
+                    cancelButtonText: 'Cancelar'
+                });
+
+                if (result.isConfirmed) {
+                    atualizarDataAgendamento(info.event.id, info.event.start, info.event.end);
+                } else {
+                    info.revert(); // Reverte a mudança se cancelado
+                }
             },
 
-            eventResize: function(info) {
-                atualizarDataAgendamento(info.event.id, info.event.start, info.event.end);
+            // ✅ Confirmação antes de redimensionar evento
+            eventResize: async function(info) {
+                const result = await Swal.fire({
+                    title: 'Confirmar alteração de duração?',
+                    text: `Alterar duração do agendamento?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sim, alterar',
+                    cancelButtonText: 'Cancelar'
+                });
+
+                if (result.isConfirmed) {
+                    atualizarDataAgendamento(info.event.id, info.event.start, info.event.end);
+                } else {
+                    info.revert(); // Reverte a mudança se cancelado
+                }
             },
 
             // Carregar eventos
