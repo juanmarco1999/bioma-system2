@@ -2676,9 +2676,6 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
         <div id="section-orcamento" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-file-earmark-plus"></i> Orçamentos</h1>
-                <button class="btn btn-primary" onclick="switchSubTab('orcamento', 'novo')">
-                    <i class="bi bi-plus-circle"></i> Novo Orçamento
-                </button>
             </div>
             
             <!-- Sub-tabs de Orçamentos -->
@@ -5187,10 +5184,29 @@ async function checkAutoLogin(){
                     sessionStorage.setItem('bioma_user', JSON.stringify(response.user));
                     console.log('💾 Sessão salva no sessionStorage');
 
-                    // AUTO-LOGIN SILENCIOSO: Iniciar app diretamente sem modal
-                    console.log('🎯 Iniciando app diretamente (sem modal)...');
-                    await initApp(response.user);
-                    console.log('✅ App inicializado com sucesso!');
+                    // MODAL INFORMATIVO DE AUTO-LOGIN
+                    Swal.fire({
+                        icon: 'success',
+                        title: '🔐 Login Automático',
+                        html: `<p>Bem-vindo de volta, <strong>${response.user.nome}</strong>!</p><p style="color: #10B981;">Acessando o sistema...</p>`,
+                        timer: 2000,
+                        timerProgressBar: true,
+                        showConfirmButton: false,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Iniciar app após mostrar modal
+                    setTimeout(async () => {
+                        console.log('🎯 Iniciando app após auto-login...');
+                        await initApp(response.user);
+
+                        // Fechar modal automaticamente ao entrar no sistema
+                        Swal.close();
+                        console.log('✅ App inicializado - modal fechado!');
+                    }, 1500);
                 } else {
                     // Falha no auto-login: limpar dados salvos
                     console.warn('⚠️ Auto-login falhou:', response.message);
@@ -9949,24 +9965,34 @@ async function editarOrcamento(id){
             atualizarTabelaServicos();
             atualizarTabelaProdutos();
             calcularTotais();
+
+            // Navegar para a seção de orçamento
             goTo('orcamento');
 
-            // CORREÇÃO 2.1: Ir direto para sub-aba "novo" (formulário de edição)
+            // CORREÇÃO: Ir direto para sub-aba "novo" SEM BUG DE SCROLL
             setTimeout(() => {
-                const novoBtn = document.querySelector('[data-subtab="orcamento-novo"]');
-                if (novoBtn) {
-                    novoBtn.click();
-                } else {
-                    // Fallback: mostrar diretamente
-                    document.querySelectorAll('#section-orcamento .sub-tab-content').forEach(tab => tab.classList.remove('active'));
-                    const novoTab = document.getElementById('orcamento-subtab-novo');
-                    if (novoTab) novoTab.classList.add('active');
+                // Chamar switchSubTab diretamente (mais confiável)
+                switchSubTab('orcamento', 'novo');
+
+                // Scroll suave para o formulário (evitar saltos bruscos)
+                const formSection = document.getElementById('orcamento-subtab-novo');
+                if (formSection) {
+                    formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-            }, 100);
+            }, 300); // Aguardar goTo() completar
 
             const pageHeader=document.querySelector('#section-orcamento .page-header h1');
             if(pageHeader){pageHeader.innerHTML=`<i class="bi bi-pencil-square"></i> Editando Orçamento #${orc.numero}`;}
-            Swal.fire({icon:'info',title:'✏️ Modo Edição',html:`<p>Orçamento <strong>#${orc.numero}</strong> carregado</p><p style="color:#7C3AED">Faça as alterações e clique em Salvar</p>`,timer:2500,showConfirmButton:false});
+
+            // Modal informativo
+            Swal.fire({
+                icon:'info',
+                title:'✏️ Modo Edição',
+                html:`<p>Orçamento <strong>#${orc.numero}</strong> carregado</p><p style="color:#7C3AED">Faça as alterações e clique em Salvar</p>`,
+                timer:2500,
+                showConfirmButton:false
+            });
+
             window.orcamentoEditandoId=id;
         }
     }catch(e){
