@@ -3160,12 +3160,17 @@ Swal.fire = function(...args) {
     // Identificar tipo de modal
     const isLoading = config.showLoading || (config.didOpen && config.didOpen.toString().includes('showLoading'));
     const isToast = config.toast === true;
-    const hasButtons = config.showConfirmButton !== false || config.showCancelButton === true;
     const hasInput = config.input !== undefined;
     const hasHTML = config.html !== undefined;
+    const hasCancelButton = config.showCancelButton === true;
 
-    // Modal interativo = tem botões, input ou HTML (mas não é loading)
-    const isInteractiveModal = (hasButtons || hasInput || hasHTML) && !isLoading && !isToast;
+    // Notificações: têm ícone + timer, sem input/formulários
+    const hasIcon = config.icon !== undefined;
+    const hasTimer = config.timer !== undefined;
+    const isNotification = hasIcon && hasTimer && !hasInput && !hasCancelButton;
+
+    // Modal interativo = tem input, HTML com formulários, ou botão cancelar (mas não é loading/toast/notificação)
+    const isInteractiveModal = (hasInput || hasHTML || hasCancelButton) && !isLoading && !isToast && !isNotification;
 
     if (isInteractiveModal) {
         // DELETAR timer SEMPRE para modais interativos
@@ -10005,17 +10010,34 @@ async function inicializarCalendario() {
             selectFiltro.innerHTML = '<option value="">Todos os Profissionais</option>' + optionsHTML;
         }
 
-        // Criar legenda de cores
+        // Criar legenda de cores COM FOTOS e nomes coloridos
         const legendaDiv = document.getElementById('legendaProfissionais');
         if (legendaDiv) {
             const legendaHTML = profissionais.map((p, index) => {
                 const cor = CORES_PROFISSIONAIS[index % CORES_PROFISSIONAIS.length];
-                return `<div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 20px; height: 20px; background: ${cor}; border-radius: 5px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>
-                    <span style="font-size: 0.9rem;">${p.nome}</span>
+
+                // Gerar foto do profissional ou fallback
+                let fotoHTML;
+                if (p.foto && p.foto !== '') {
+                    // Tem foto - mostrar imagem
+                    fotoHTML = `<img src="${p.foto}" alt="${p.nome}" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 3px solid ${cor}; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">`;
+                } else {
+                    // Sem foto - mostrar iniciais com cor do profissional
+                    const iniciais = p.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                    fotoHTML = `<div style="width: 35px; height: 35px; border-radius: 50%; background: ${cor}; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.85rem; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">${iniciais}</div>`;
+                }
+
+                return `<div style="display: flex; align-items: center; gap: 10px; padding: 5px 10px; background: rgba(255,255,255,0.05); border-radius: 10px; transition: all 0.3s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(-2px)';" onmouseleave="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='translateY(0)';">
+                    ${fotoHTML}
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; background: ${cor}; border-radius: 3px; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+                        <span style="font-size: 0.9rem; font-weight: 600; color: ${cor}; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">${p.nome}</span>
+                    </div>
                 </div>`;
             }).join('');
             legendaDiv.innerHTML = legendaHTML;
+
+            console.log(`✅ Legenda criada com ${profissionais.length} profissionais (com fotos e cores)`);
         }
 
         // Inicializar FullCalendar
@@ -10266,6 +10288,8 @@ function carregarCalendario() {
 
 // Função para criar novo agendamento rápido
 function novoAgendamentoRapido(dataInicio, dataFim) {
+    console.log('📅 Abrindo modal de novo agendamento');
+
     let dataDefault = '';
     let horaDefault = '';
 
@@ -10453,16 +10477,25 @@ async function atualizarDataAgendamento(agendamentoId, novaData, novaDataFim) {
 
 // Função para voltar ao dia de hoje
 function calendarioHoje() {
+    console.log('📅 Função calendarioHoje() chamada');
     if (calendarioProfissionaisInstance) {
         calendarioProfissionaisInstance.today();
+        console.log('✅ Calendário navegado para hoje');
+    } else {
+        console.warn('⚠️ Calendário não inicializado ainda. Inicializando...');
+        inicializarCalendario();
     }
 }
 
 // Função para alterar visualização do calendário
 function alterarVisualizacaoCalendario() {
+    console.log('👁️ Alterando visualização do calendário');
     const visualizacao = document.getElementById('visualizacaoCalendario')?.value;
     if (calendarioProfissionaisInstance && visualizacao) {
         calendarioProfissionaisInstance.changeView(visualizacao);
+        console.log(`✅ Visualização alterada para: ${visualizacao}`);
+    } else if (!calendarioProfissionaisInstance) {
+        console.warn('⚠️ Calendário não inicializado');
     }
 }
 
