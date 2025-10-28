@@ -5656,19 +5656,97 @@ def test_email():
                 'message': 'Configurações de e-mail não encontradas no servidor. Verifique as variáveis MAILERSEND_API_KEY e MAILERSEND_FROM_EMAIL no arquivo .env'
             }), 400
 
-        # TODO: Quando MailerSend estiver implementado, enviar e-mail real aqui
-        # Por enquanto, apenas simular envio
-        logger.info(f"✉️ E-mail de teste seria enviado para: {email_destino}")
-        logger.info(f"📧 Configuração MailerSend detectada: {mailersend_from}")
+        # Implementação real do MailerSend
+        import requests
 
-        # Simular sucesso (quando implementar, chamar API do MailerSend aqui)
-        return jsonify({
-            'success': True,
-            'message': f'E-mail de teste enviado com sucesso para {email_destino}!',
-            'destinatario': email_destino,
-            'remetente': mailersend_from,
-            'observacao': 'Esta é uma simulação. Implementação real do MailerSend pendente.'
-        })
+        logger.info(f"✉️ Enviando e-mail de teste para: {email_destino}")
+        logger.info(f"📧 Remetente configurado: {mailersend_from}")
+
+        try:
+            # Chamar API do MailerSend
+            mailersend_api_url = "https://api.mailersend.com/v1/email"
+
+            headers = {
+                "Authorization": f"Bearer {mailersend_key}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "from": {
+                    "email": mailersend_from,
+                    "name": "BIOMA System"
+                },
+                "to": [
+                    {
+                        "email": email_destino,
+                        "name": "Teste"
+                    }
+                ],
+                "subject": "🧪 E-mail de Teste - BIOMA System",
+                "html": """
+                    <html>
+                    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 30px; border-radius: 15px; text-align: center; color: white;">
+                            <h1 style="margin: 0 0 10px 0;">✅ E-mail de Teste</h1>
+                            <p style="margin: 0; font-size: 16px;">Sistema BIOMA</p>
+                        </div>
+                        <div style="padding: 30px 20px; background: #f9fafb; border-radius: 10px; margin-top: 20px;">
+                            <h2 style="color: #7C3AED; margin-top: 0;">Parabéns!</h2>
+                            <p style="color: #374151; line-height: 1.6;">
+                                Se você está lendo esta mensagem, significa que o sistema de e-mail do BIOMA está funcionando corretamente!
+                            </p>
+                            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981;">
+                                <p style="margin: 0; color: #059669;"><strong>✓ Configuração verificada</strong></p>
+                                <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 14px;">
+                                    MailerSend API está configurada e operacional
+                                </p>
+                            </div>
+                            <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                                Este é um e-mail automatizado. Não é necessário responder.
+                            </p>
+                        </div>
+                        <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+                            <p>© 2024 BIOMA System - Sistema de Gestão</p>
+                        </div>
+                    </body>
+                    </html>
+                """,
+                "text": "Este é um e-mail de teste do sistema BIOMA. Se você está lendo esta mensagem, o sistema de e-mail está funcionando corretamente!"
+            }
+
+            response = requests.post(mailersend_api_url, json=payload, headers=headers, timeout=10)
+
+            if response.status_code == 202:
+                logger.info(f"✅ E-mail enviado com sucesso via MailerSend para {email_destino}")
+                return jsonify({
+                    'success': True,
+                    'message': f'✅ E-mail de teste enviado com sucesso para {email_destino}!',
+                    'destinatario': email_destino,
+                    'remetente': mailersend_from,
+                    'status_code': response.status_code,
+                    'observacao': 'E-mail enviado via MailerSend API'
+                })
+            else:
+                logger.error(f"❌ Erro MailerSend: {response.status_code} - {response.text}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Erro ao enviar e-mail: {response.status_code}',
+                    'detalhes': response.text
+                }), response.status_code
+
+        except requests.exceptions.Timeout:
+            logger.error("❌ Timeout ao conectar com MailerSend API")
+            return jsonify({
+                'success': False,
+                'message': 'Timeout ao conectar com servidor de e-mail. Tente novamente.'
+            }), 408
+
+        except requests.exceptions.RequestException as req_err:
+            logger.error(f"❌ Erro de conexão MailerSend: {req_err}")
+            return jsonify({
+                'success': False,
+                'message': f'Erro de conexão: {str(req_err)}'
+            }), 503
 
     except Exception as e:
         logger.error(f"❌ Erro ao testar e-mail: {e}")
@@ -6690,9 +6768,13 @@ def toggle_todos_servicos():
         data = request.get_json()
         ativo = data.get('ativo', True)
 
+        # Atualizar AMBOS os campos status e ativo para máxima compatibilidade
         result = db.servicos.update_many(
             {},
-            {'$set': {'status': 'ativo' if ativo else 'inativo'}}
+            {'$set': {
+                'status': 'ativo' if ativo else 'inativo',
+                'ativo': ativo
+            }}
         )
 
         logger.info(f"✅ {result.modified_count} serviços {'ativados' if ativo else 'desativados'}")
