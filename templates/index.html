@@ -1,14 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- TEMA PERSISTENTE - Carrega tema salvo do localStorage -->
+    <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
-    // Carregar tema salvo (ou usar light como padrão)
+    // Este script é intencionalmente colocado no <head> e é um script de bloqueio.
+    // Ele garante que o tema correto seja aplicado ANTES da página ser renderizada,
+    // prevenindo o "flash" de um tema para o outro no carregamento da página.
     (function() {
-        // SEMPRE iniciar em light mode (ignorar localStorage)
-        // Usuário pode alternar manualmente clicando no botão
-        document.documentElement.setAttribute('data-theme', 'light');
-        console.log('🎨 Tema inicial: light (padrão do sistema)');
+        // A função `getTheme` segue a hierarquia de prioridades:
+        // 1. Preferência do usuário salva no localStorage.
+        // 2. Padrão da aplicação ('light') - NÃO detecta preferência do SO
+        function getTheme() {
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme) {
+                return storedTheme;
+            }
+            // Sempre iniciar em light mode (usuário explicitamente solicitou)
+            return 'light';
+        }
+        const theme = getTheme();
+        // Aplica o atributo `data-theme` ao elemento <html>.
+        document.documentElement.setAttribute('data-theme', theme);
+        console.log('🎨 Tema inicial:', theme, '(light por padrão, dark apenas se usuário escolher)');
     })();
     </script>
     <meta charset="UTF-8">
@@ -3285,36 +3298,83 @@ if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
 // Alias simples para compatibilidade
 window.SafeSwal = Swal;
 
-// ========== WRAPPER MÍNIMO: GARANTIR QUE MODAIS POSSAM FECHAR ==========
-const originalSwalFire = Swal.fire.bind(Swal);
+// ========== FUNÇÕES AUXILIARES PARA SWEETALERT2 (Seguindo Melhores Práticas) ==========
 
-Swal.fire = function(...args) {
-    const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
+/**
+ * Função para obter o tema atual do SweetAlert2 baseado no tema da aplicação
+ * @returns {string} 'dark' ou 'default'
+ */
+function getSwalTheme() {
+    const appTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    return appTheme === 'dark' ? 'dark' : 'default';
+}
 
-    // 🔓 GARANTIR que TODO modal tenha PELO MENOS uma forma de fechar
+/**
+ * Exibe uma NOTIFICAÇÃO temporizada (auto-close)
+ * Use para: Sucesso, erro, info, avisos que NÃO exigem ação do usuário
+ *
+ * @param {string} icon - 'success', 'error', 'warning', 'info'
+ * @param {string} title - Título da notificação
+ * @param {number} timer - Tempo em ms (padrão: 2000ms = 2s)
+ * @param {object} extraConfig - Configurações adicionais (opcional)
+ */
+function showNotification(icon, title, timer = 2000, extraConfig = {}) {
+    return Swal.fire({
+        icon: icon,
+        title: title,
+        timer: timer,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        showCloseButton: true, // Permite fechar manualmente se necessário
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        ...extraConfig
+    });
+}
 
-    // Se não tem botão Confirmar E não permite clicar fora E não permite ESC
-    // Então FORÇAR showCloseButton (botão X)
-    const semBotaoOK = config.showConfirmButton === false;
-    const naoPodeClicarFora = config.allowOutsideClick === false;
-    const naoPodeESC = config.allowEscapeKey === false;
+/**
+ * Exibe um DIÁLOGO que exige interação do usuário
+ * Use para: Confirmações, formulários, decisões importantes
+ * NUNCA fecha automaticamente - exige ação explícita do usuário
+ *
+ * @param {object} config - Configuração do SweetAlert2
+ */
+function showDialog(config) {
+    // Garantir que diálogos NUNCA tenham timer (segurança UX)
+    const safeConfig = {
+        ...config,
+        timer: undefined,
+        showConfirmButton: config.showConfirmButton !== false, // Padrão: true
+        showCloseButton: config.showCloseButton !== false, // Padrão: true (sempre permitir fechar)
+        allowOutsideClick: config.allowOutsideClick !== undefined ? config.allowOutsideClick : true,
+        allowEscapeKey: config.allowEscapeKey !== undefined ? config.allowEscapeKey : true
+    };
+    return Swal.fire(safeConfig);
+}
 
-    if (semBotaoOK && naoPodeClicarFora && naoPodeESC) {
-        // Modal está TRAVADO! Forçar botão X
-        config.showCloseButton = true;
-        console.warn('⚠️ Modal sem forma de fechar! Botão X forçado.');
-    }
+/**
+ * Exibe um LOADING spinner
+ * Use para: Operações assíncronas, uploads, processamento
+ *
+ * @param {string} title - Título do loading
+ */
+function showLoading(title = 'Carregando...') {
+    return Swal.fire({
+        title: title,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        showCloseButton: false, // Loading não deve ser fechado manualmente
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+}
 
-    // Se não tem botão Confirmar, adicionar botão X por segurança
-    if (semBotaoOK && config.showCloseButton === undefined) {
-        config.showCloseButton = true;
-    }
-
-    return originalSwalFire(config);
-};
-
-console.log('%c✅ Sistema Anti-Travamento de Modais Ativo', 'color: green; font-weight: bold; font-size: 14px;');
-console.log('%c  🔓 Todo modal TEM forma de fechar', 'color: blue;');
+console.log('%c✅ Sistema de Modais SweetAlert2 Profissional Carregado', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  📋 Use showNotification() para notificações', 'color: blue;');
+console.log('%c  💬 Use showDialog() para diálogos interativos', 'color: blue;');
+console.log('%c  ⏳ Use showLoading() para operações assíncronas', 'color: blue;');
 </script>
 
 <div id="authScreen" class="auth-screen">
