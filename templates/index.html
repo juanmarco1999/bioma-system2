@@ -819,6 +819,117 @@
 
         /* ========== END ANAMNESE & PRONTUÁRIO ========== */
 
+        /* ========== ANIMATED COLOR SUB-TABS (New Directives) ========== */
+        /* Red animated sub-tabs for critical/add actions */
+
+        .sub-tab-red-animated {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+            border: 2px solid #EF4444;
+            color: #DC2626;
+            animation: pulse-red 2s ease-in-out infinite;
+        }
+
+        .sub-tab-red-animated::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.3), transparent);
+            animation: shine-red 3s infinite;
+        }
+
+        .sub-tab-red-animated:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
+            border-color: #DC2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .sub-tab-red-animated.active {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+            border-color: #DC2626;
+            animation: none;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+
+        @keyframes shine-red {
+            0% {
+                left: -100%;
+            }
+            50%, 100% {
+                left: 100%;
+            }
+        }
+
+        /* Green animated sub-tabs for positive/add actions */
+
+        .sub-tab-green-animated {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05));
+            border: 2px solid #10B981;
+            color: #059669;
+            animation: pulse-green 2s ease-in-out infinite;
+        }
+
+        .sub-tab-green-animated::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.3), transparent);
+            animation: shine-green 3s infinite;
+        }
+
+        .sub-tab-green-animated:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1));
+            border-color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .sub-tab-green-animated.active {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            border-color: #059669;
+            animation: none;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+        }
+
+        @keyframes shine-green {
+            0% {
+                left: -100%;
+            }
+            50%, 100% {
+                left: 100%;
+            }
+        }
+
+        /* ========== END ANIMATED COLOR SUB-TABS ========== */
+
         /* ISOLAMENTO DAS SEÇÕES - Otimizado para Performance */
         .content-section:not(.active) {
             display: none !important;
@@ -4923,11 +5034,89 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
 <div id="section-comissoes" class="content-section">
     <div class="page-header">
         <h1><i class="bi bi-cash-stack"></i> Sistema de Comissões</h1>
-        <button class="btn btn-primary" onclick="showModalComissao()">
-            <i class="bi bi-plus-circle"></i> Nova Regra
+    </div>
+
+    <!-- Sub-tabs para Comissões -->
+    <div class="sub-tabs">
+        <button class="sub-tab-btn sub-tab-red-animated" onclick="switchSubTab('comissoes', 'nova')">
+            <i class="bi bi-plus-circle-fill"></i> Nova Regra
+        </button>
+        <button class="sub-tab-btn active" onclick="switchSubTab('comissoes', 'lista')">
+            <i class="bi bi-list-check"></i> Regras
+        </button>
+        <button class="sub-tab-btn" onclick="switchSubTab('comissoes', 'historico')">
+            <i class="bi bi-calendar3"></i> Histórico
         </button>
     </div>
 
+    <!-- Sub-tab: Nova Regra -->
+    <div id="comissoes-subtab-nova" class="sub-tab-content">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #EF4444, #DC2626);">
+                <i class="bi bi-plus-circle-fill"></i> Criar Nova Regra de Comissão
+            </div>
+            <div class="card-body">
+                <form id="formNovaComissao">
+                    <div class="row g-3">
+                        <!-- Profissional -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-person-badge"></i> Profissional *</label>
+                            <select id="novaComissaoProfissional" class="form-select" required>
+                                <option value="">Selecione o profissional...</option>
+                            </select>
+                        </div>
+
+                        <!-- Tipo de Comissão -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-gear"></i> Tipo de Comissão *</label>
+                            <select id="novaComissaoTipo" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                <option value="percentual">Percentual (%)</option>
+                                <option value="fixo">Valor Fixo (R$)</option>
+                            </select>
+                        </div>
+
+                        <!-- Valor -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-currency-dollar"></i> Valor *</label>
+                            <input type="number" id="novaComissaoValor" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+                            <small class="text-muted">Para percentual: 0-100. Para fixo: valor em R$</small>
+                        </div>
+
+                        <!-- Aplicar a -->
+                        <div class="col-md-6">
+                            <label class="form-label"><i class="bi bi-tag"></i> Aplicar a *</label>
+                            <select id="novaComissaoAplicar" class="form-select" required>
+                                <option value="">Selecione...</option>
+                                <option value="servicos">Apenas Serviços</option>
+                                <option value="produtos">Apenas Produtos</option>
+                                <option value="ambos">Serviços e Produtos</option>
+                            </select>
+                        </div>
+
+                        <!-- Observações -->
+                        <div class="col-12">
+                            <label class="form-label"><i class="bi bi-chat-left-text"></i> Observações</label>
+                            <textarea id="novaComissaoObs" class="form-control" rows="3" placeholder="Informações adicionais sobre esta regra..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaComissao()">
+                            <i class="bi bi-x-circle"></i> Limpar
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="salvarNovaComissao()">
+                            <i class="bi bi-check-circle"></i> Salvar Regra
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub-tab: Lista de Regras -->
+    <div id="comissoes-subtab-lista" class="sub-tab-content active">
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="card">
@@ -4977,28 +5166,32 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             </div>
         </div>
     </div>
+    </div>
 
-    <div class="card mt-4">
-        <div class="card-header">
-            <i class="bi bi-calendar3"></i> Histórico de Comissões
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Profissional</th>
-                            <th>Serviço/Produto</th>
-                            <th>Valor Venda</th>
-                            <th>Comissão</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historicoComissoesBody">
-                        <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
-                    </tbody>
-                </table>
+    <!-- Sub-tab: Histórico -->
+    <div id="comissoes-subtab-historico" class="sub-tab-content">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-calendar3"></i> Histórico de Comissões
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Profissional</th>
+                                <th>Serviço/Produto</th>
+                                <th>Valor Venda</th>
+                                <th>Comissão</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historicoComissoesBody">
+                            <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
