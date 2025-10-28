@@ -299,6 +299,78 @@
     box-shadow:0 5px 15px rgba(124,58,237,0.3) !important;
 }
 
+/* ========== BOTÕES DE REFRESH MANUAL COM ANIMAÇÃO ========== */
+.btn-refresh{
+    position:relative;
+    overflow:hidden;
+    transition:all 0.3s ease;
+}
+
+.btn-refresh i{
+    transition:transform 0.6s ease;
+}
+
+.btn-refresh:hover{
+    transform:translateY(-2px);
+    box-shadow:0 6px 20px rgba(124,58,237,0.4);
+}
+
+.btn-refresh.refreshing{
+    pointer-events:none;
+    opacity:0.7;
+}
+
+.btn-refresh.refreshing i{
+    animation:spinRefresh 1s linear infinite;
+}
+
+.btn-refresh::after{
+    content:'';
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:0;
+    height:0;
+    border-radius:50%;
+    background:rgba(255,255,255,0.5);
+    transform:translate(-50%,-50%);
+    transition:width 0.6s,height 0.6s;
+}
+
+.btn-refresh:active::after{
+    width:300px;
+    height:300px;
+    opacity:0;
+}
+
+@keyframes spinRefresh{
+    from{
+        transform:rotate(0deg);
+    }
+    to{
+        transform:rotate(360deg);
+    }
+}
+
+.btn-refresh-success{
+    animation:successPulse 0.6s ease;
+}
+
+@keyframes successPulse{
+    0%{
+        transform:scale(1);
+        box-shadow:0 0 0 0 rgba(52,211,153,0.7);
+    }
+    50%{
+        transform:scale(1.05);
+        box-shadow:0 0 0 10px rgba(52,211,153,0);
+    }
+    100%{
+        transform:scale(1);
+        box-shadow:0 0 0 0 rgba(52,211,153,0);
+    }
+}
+
 .stat-card{background:var(--bg-card);border-radius:20px;padding:30px;box-shadow:var(--shadow);transition:all .3s;text-align:center;position:relative;overflow:hidden;border:2px solid var(--border-color)}.stat-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:6px;background:linear-gradient(90deg,var(--primary),var(--secondary))}.stat-card:hover{transform:translateY(-10px);box-shadow:var(--shadow-hover);border-color:var(--primary)}.stat-card .icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 15px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 10px 25px rgba(124,58,237,0.3)}.stat-card h3{font-size:3rem;font-weight:900;margin:15px 0 10px;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}.stat-card p{color:var(--text-secondary);font-size:1rem;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:1px}.card{background:var(--bg-card);border-radius:20px;box-shadow:var(--shadow);margin-bottom:30px;overflow:visible;transition:all .3s;border:2px solid var(--border-color)}.card-header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:20px 30px;font-weight:800;font-size:1.2rem;display:flex;align-items:center;gap:12px}.card-body{padding:30px}table{width:100%;border-collapse:collapse;font-size:0.95rem}table thead th{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:16px 14px;text-align:left;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;font-size:0.85rem}table tbody tr{border-bottom:2px solid var(--border-color);transition:all .2s}table tbody tr:hover{background:var(--bg-main);transform:scale(1.01)}table tbody td{padding:16px 14px;vertical-align:middle;color:var(--text-primary)}.badge{padding:8px 16px;border-radius:20px;font-weight:800;font-size:0.8rem;display:inline-block;text-transform:uppercase;letter-spacing:0.5px}.badge.success{background:linear-gradient(135deg,var(--success),#059669);color:#fff}.badge.warning{background:linear-gradient(135deg,var(--warning),#F59E0B);color:#000}.badge.danger{background:linear-gradient(135deg,var(--danger),#DC2626);color:#fff}.spinner{
     width:40px;
     height:40px;
@@ -3373,7 +3445,12 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
 </div>
 
         <div id="section-dashboard" class="content-section active">
-            <div class="page-header"><h1><i class="bi bi-speedometer2"></i> Dashboard</h1></div>
+            <div class="page-header">
+                <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+                <button class="btn btn-primary btn-refresh" onclick="refreshData(this, loadDashboard, 'Dashboard atualizado')">
+                    <i class="bi bi-arrow-clockwise"></i> Atualizar
+                </button>
+            </div>
             <div class="row g-4 mb-4">
                 <div class="col-lg-3 col-md-6"><div class="stat-card"><div class="icon"><i class="bi bi-file-earmark-text"></i></div><h3 id="dashOrcamentos">0</h3><p>Orçamentos</p></div></div>
                 <div class="col-lg-3 col-md-6"><div class="stat-card"><div class="icon"><i class="bi bi-people"></i></div><h3 id="dashClientes">0</h3><p>Clientes</p></div></div>
@@ -4206,6 +4283,9 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <div class="page-header">
                 <h1><i class="bi bi-people"></i> Clientes</h1>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-refresh" onclick="refreshData(this, loadClientes, 'Clientes atualizados')">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
                     <button class="btn btn-success btn-sm" onclick="exportarClientes('excel')" title="Exportar para Excel">
                         <i class="bi bi-file-earmark-excel"></i> Excel
                     </button>
@@ -4516,6 +4596,9 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <div class="page-header">
                 <h1><i class="bi bi-person-workspace"></i> Profissionais</h1>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-refresh" onclick="refreshData(this, loadProfissionais, 'Profissionais atualizados')">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
                     <button class="btn btn-success btn-sm" onclick="exportarProfissionais('excel')" title="Exportar para Excel">
                         <i class="bi bi-file-earmark-excel"></i> Excel
                     </button>
@@ -4931,6 +5014,9 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <div class="page-header">
                 <h1><i class="bi bi-scissors"></i> Serviços</h1>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-refresh" onclick="refreshData(this, loadServicosLista, 'Serviços atualizados')">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
                     <button class="btn btn-success btn-sm" onclick="ativarTodosServicos()" title="Ativar todos os serviços">
                         <i class="bi bi-check-circle-fill"></i> Ativar Todos
                     </button>
@@ -5150,6 +5236,9 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <div class="page-header">
                 <h1><i class="bi bi-box-seam"></i> Produtos</h1>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-primary btn-refresh" onclick="refreshData(this, loadProdutosLista, 'Produtos atualizados')">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
                     <button class="btn btn-success btn-sm" onclick="ativarTodosProdutos()" title="Ativar todos os produtos">
                         <i class="bi bi-check-circle-fill"></i> Ativar Todos
                     </button>
@@ -14171,6 +14260,46 @@ function toast(msg, type='info'){
     }
 }
 function openFile(url){ window.open(url,'_blank','noopener'); }
+
+/**
+ * Helper para botões de refresh manual com animação
+ * Busca dados APENAS do MongoDB via API, sem recarregar UI/modais
+ *
+ * @param {HTMLElement} button - O botão clicado
+ * @param {Function} loadFunction - Função async que busca os dados
+ * @param {string} successMessage - Mensagem de sucesso (opcional)
+ */
+async function refreshData(button, loadFunction, successMessage = 'Dados atualizados') {
+    // Prevenir múltiplos cliques
+    if (button.classList.contains('refreshing')) {
+        return;
+    }
+
+    // Adicionar classe de animação
+    button.classList.add('refreshing');
+
+    try {
+        // Executar função de carregamento (busca do MongoDB)
+        await loadFunction();
+
+        // Remover classe de loading
+        button.classList.remove('refreshing');
+
+        // Adicionar animação de sucesso
+        button.classList.add('btn-refresh-success');
+        setTimeout(() => {
+            button.classList.remove('btn-refresh-success');
+        }, 600);
+
+        // Mostrar toast de sucesso
+        console.log(`✅ ${successMessage}`);
+    } catch (error) {
+        // Remover classe de loading em caso de erro
+        button.classList.remove('refreshing');
+        console.error('❌ Erro ao atualizar dados:', error);
+        toast('Erro ao atualizar dados', 'error');
+    }
+}
 
 // ===== Controle de Loading e Debounce (ANTI-LOOP INFINITO) =====
 const loadingStates = {}; // Track loading state for each function
