@@ -5,9 +5,10 @@
     <script>
     // Carregar tema salvo (ou usar light como padrão)
     (function() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        console.log(`🎨 Tema carregado: ${savedTheme}`);
+        // SEMPRE iniciar em light mode (ignorar localStorage)
+        // Usuário pode alternar manualmente clicando no botão
+        document.documentElement.setAttribute('data-theme', 'light');
+        console.log('🎨 Tema inicial: light (padrão do sistema)');
     })();
     </script>
     <meta charset="UTF-8">
@@ -3284,49 +3285,16 @@ if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
 // Alias simples para compatibilidade
 window.SafeSwal = Swal;
 
-// Sistema de auto-fechamento APENAS para modais informativos
-const originalSwalFire = Swal.fire.bind(Swal);
-const activeModals = new Map();
-
-Swal.fire = function(...args) {
-    const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
-
-    // 🛡️ PROTEÇÃO SIMPLIFICADA - Apenas prevenir timers excessivos
-
-    // Detectar se é modal com formulário/input
-    const hasFormElements = (
-        config.input ||
-        config.html?.includes('<input') ||
-        config.html?.includes('<textarea') ||
-        config.html?.includes('<select')
-    );
-
-    // Remover timer APENAS de modais com formulário
-    if (hasFormElements && config.timer) {
-        console.log('🛡️ Timer removido de modal com formulário');
-        delete config.timer;
-    }
-
-    // Limitar timers muito longos (mais de 5s) em qualquer modal
-    if (config.timer && config.timer > 5000) {
-        console.log('⚠️ Timer limitado a 5000ms');
-        config.timer = 5000;
-    }
-
-    // NÃO forçar nenhuma configuração - deixar SweetAlert2 usar padrões
-    // Isso garante que botões OK, Cancel e X funcionem normalmente
-
-    // Chamar SweetAlert2 original
-    return originalSwalFire(config);
-};
-
-// REMOVIDO: Interceptação de Swal.close() que estava causando problemas
-// REMOVIDO: setInterval que limpava backdrops - estava interferindo com modais
-
-console.log('%c✅ Sistema de Proteção de Modais Ativado (v3 - Simplificado)', 'color: green; font-weight: bold; font-size: 14px;');
-console.log('%c  🛡️ Timers removidos de formulários', 'color: blue;');
-console.log('%c  ⏱️ Timers limitados a máx 5s', 'color: blue;');
-console.log('%c  🔓 Botões funcionam normalmente (padrão SweetAlert2)', 'color: blue;');
+// ========== WRAPPER DE MODAIS COMPLETAMENTE REMOVIDO ==========
+//
+// ⚠️ NENHUMA INTERCEPTAÇÃO DE Swal.fire
+// SweetAlert2 funciona 100% NATIVO sem interferência
+//
+// Se houver problemas com timers, ajuste diretamente nos modais individuais
+//
+console.log('%c✅ SweetAlert2 NATIVO - Zero Interferência', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  🔓 Modais funcionam 100% nativamente', 'color: blue;');
+console.log('%c  ⚠️ Se modais fecharem sozinhos, ajuste timer individual', 'color: orange;');
 </script>
 
 <div id="authScreen" class="auth-screen">
