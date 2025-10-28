@@ -9321,6 +9321,75 @@ function showModalProfissional(){
     });
 }
 
+// Função para cadastrar assistente independente
+function cadastrarAssistenteIndependente(){
+    Swal.fire({
+        title:'Cadastrar Assistente Independente',
+        html:`
+            <input type="text" id="swal-nome-assist" class="form-control mb-3" placeholder="Nome">
+            <input type="text" id="swal-cpf-assist" class="form-control mb-3" placeholder="CPF">
+            <input type="email" id="swal-email-assist" class="form-control mb-3" placeholder="Email (opcional)">
+            <input type="text" id="swal-tel-assist" class="form-control mb-3" placeholder="Telefone (opcional)">
+            <input type="number" id="swal-comissao-assist" class="form-control" placeholder="Comissão %" value="10">
+        `,
+        showCancelButton:true,
+        confirmButtonText: 'Cadastrar',
+        cancelButtonText: 'Cancelar',
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        showCloseButton: true,
+        width: '500px',
+        preConfirm:()=>{
+            const nome=document.getElementById('swal-nome-assist').value;
+            const cpf=document.getElementById('swal-cpf-assist').value;
+            if(!nome||!cpf){
+                Swal.showValidationMessage('Nome e CPF são obrigatórios');
+                return false;
+            }
+            return {
+                nome,
+                cpf,
+                email: document.getElementById('swal-email-assist').value || '',
+                telefone: document.getElementById('swal-tel-assist').value || '',
+                comissao_perc: document.getElementById('swal-comissao-assist').value || 10,
+                tipo: 'assistente'
+            };
+        }
+    }).then(async(result)=>{
+        if(result.isConfirmed){
+            try{
+                const response = await fetch('/api/assistentes',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    credentials:'include',
+                    body:JSON.stringify(result.value)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Assistente Cadastrado!',
+                        text: `${result.value.nome} foi cadastrado com sucesso`,
+                        timer: 2500
+                    });
+                    loadAssistentes(); // Recarregar lista de assistentes
+                } else {
+                    throw new Error(data.message || 'Erro ao cadastrar');
+                }
+            }catch(e){
+                console.error('Erro ao cadastrar assistente:', e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: e.message || 'Não foi possível cadastrar o assistente'
+                });
+            }
+        }
+    });
+}
+
 // ========== FUNÇÕES PARA SUB-ABA "NOVO PROFISSIONAL" ====================
 
 // Variável global para armazenar foto do novo profissional
