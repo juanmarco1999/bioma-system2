@@ -3153,9 +3153,9 @@ const originalSwalFire = Swal.fire.bind(Swal);
 const activeModals = new Map();
 
 Swal.fire = function(...args) {
-    const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
+    let config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
 
-    // ============ PROTEÇÃO RADICAL CONTRA FECHAMENTO AUTOMÁTICO ============
+    // ============ PROTEÇÃO ULTRA-RADICAL CONTRA FECHAMENTO AUTOMÁTICO ============
 
     // Identificar tipo de modal
     const isLoading = config.showLoading || (config.didOpen && config.didOpen.toString().includes('showLoading'));
@@ -3169,29 +3169,40 @@ Swal.fire = function(...args) {
     const hasTimer = config.timer !== undefined;
     const isNotification = hasIcon && hasTimer && !hasInput && !hasCancelButton;
 
-    // Modal interativo = tem input, HTML com formulários, ou botão cancelar (mas não é loading/toast/notificação)
+    // Modal interativo = tem input, HTML, ou botão cancelar (mas não é loading/toast/notificação)
     const isInteractiveModal = (hasInput || hasHTML || hasCancelButton) && !isLoading && !isToast && !isNotification;
 
     if (isInteractiveModal) {
-        // DELETAR timer SEMPRE para modais interativos
-        delete config.timer;
-        delete config.timerProgressBar;
-        console.log('🛡️ Timer removido de modal interativo para prevenir fechamento automático');
-    }
+        // CRIAR NOVO CONFIG COM PROPRIEDADES TRAVADAS
+        const safeConfig = Object.assign({}, config);
 
-    // SEMPRE forçar allowOutsideClick = false para modais interativos
-    if (isInteractiveModal) {
-        config.allowOutsideClick = false;
-    }
+        // FORÇAR propriedades de segurança (NÃO PODEM SER SOBRESCRITAS)
+        Object.defineProperty(safeConfig, 'timer', {
+            value: undefined,
+            writable: false,
+            configurable: false
+        });
 
-    // SEMPRE forçar allowEscapeKey = false para modais interativos
-    if (isInteractiveModal) {
-        config.allowEscapeKey = false;
-    }
+        Object.defineProperty(safeConfig, 'timerProgressBar', {
+            value: false,
+            writable: false,
+            configurable: false
+        });
 
-    // Desabilitar backdrop clicks para modais interativos
-    if (isInteractiveModal) {
-        config.backdrop = true; // Backdrop visível mas não clicável
+        Object.defineProperty(safeConfig, 'allowOutsideClick', {
+            value: false,
+            writable: false,
+            configurable: false
+        });
+
+        Object.defineProperty(safeConfig, 'allowEscapeKey', {
+            value: false,
+            writable: false,
+            configurable: false
+        });
+
+        config = safeConfig;
+        console.log('🛡️ Modal interativo com propriedades TRAVADAS para prevenir fechamento');
     }
 
     // Adicionar proteções adicionais no didOpen
@@ -3208,37 +3219,45 @@ Swal.fire = function(...args) {
 
         // Só proteger modais interativos
         if (isInteractiveModal) {
-            // PROTEÇÃO 1: Prevenir hover fechando modal
-            popup.addEventListener('mouseenter', (e) => {
-                e.stopPropagation();
-            }, true);
+            // PROTEÇÃO 1: Bloquear TODOS os eventos de mouse no container/backdrop
+            const container = document.querySelector('.swal2-container');
+            if (container) {
+                // Remover TODOS os event listeners existentes clonando o elemento
+                const newContainer = container.cloneNode(true);
+                container.parentNode.replaceChild(newContainer, container);
 
-            popup.addEventListener('mouseover', (e) => {
-                e.stopPropagation();
-            }, true);
-
-            popup.addEventListener('mouseleave', (e) => {
-                e.stopPropagation();
-            }, true);
-
-            // PROTEÇÃO 2: Bloquear clicks no backdrop
-            const backdrop = document.querySelector('.swal2-container');
-            if (backdrop) {
-                backdrop.style.pointerEvents = 'auto';
-                backdrop.addEventListener('click', (e) => {
-                    // Só permitir clicks no popup, não no backdrop
-                    if (e.target === backdrop) {
+                // Adicionar APENAS os event listeners necessários
+                newContainer.addEventListener('click', (e) => {
+                    if (e.target === newContainer || e.target.classList.contains('swal2-container')) {
                         e.stopPropagation();
+                        e.stopImmediatePropagation();
                         e.preventDefault();
-                        console.log('🛡️ Click no backdrop bloqueado');
+                        console.log('🛡️ Click no backdrop BLOQUEADO');
+                        return false;
+                    }
+                }, true);
+
+                newContainer.addEventListener('mousedown', (e) => {
+                    if (e.target === newContainer || e.target.classList.contains('swal2-container')) {
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        e.preventDefault();
+                        return false;
                     }
                 }, true);
             }
 
-            // PROTEÇÃO 3: Marcar popup como "protegido" (não pode fechar automaticamente)
-            popup.setAttribute('data-swal-interactive', 'true');
+            // PROTEÇÃO 2: Bloquear eventos no popup
+            popup.addEventListener('mouseleave', (e) => {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }, true);
 
-            console.log('🛡️ Modal interativo protegido contra fechamento automático');
+            // PROTEÇÃO 3: Marcar popup como protegido
+            popup.setAttribute('data-swal-interactive', 'true');
+            popup.setAttribute('data-swal-protected', Date.now());
+
+            console.log('🛡️ Modal interativo ULTRA-PROTEGIDO contra fechamento automático');
         }
     };
 
@@ -6820,8 +6839,19 @@ async function checkAutoLogin(){
         setTimeout(async () => {
             console.log('🚀 Executando auto-login...');
 
+            // MOSTRAR MODAL ANTES DE FAZER LOGIN
+            Swal.fire({
+                title: '🔐 Login Automático',
+                html: '<p>Fazendo login...</p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             try {
-                // Fazer login direto sem modal intermediário
                 const username = data.username;
                 const password = atob(data.password);
 
@@ -6834,22 +6864,15 @@ async function checkAutoLogin(){
                     sessionStorage.setItem('bioma_user', JSON.stringify(response.user));
                     console.log('💾 Sessão salva no sessionStorage');
 
-                    // MODAL INFORMATIVO DE AUTO-LOGIN
+                    // Atualizar modal para sucesso
                     const userName = response.user.nome || response.user.username || 'Usuário';
-                    Swal.fire({
+                    Swal.update({
                         icon: 'success',
                         title: '🔐 Login Automático',
-                        html: `<p>Bem-vindo de volta, <strong>${userName}</strong>!</p><p style="color: #10B981;">Acessando o sistema...</p>`,
-                        timer: 2000,
-                        timerProgressBar: true,
-                        showConfirmButton: false,
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
+                        html: `<p>Bem-vindo de volta, <strong>${userName}</strong>!</p><p style="color: #10B981;">Acessando o sistema...</p>`
                     });
 
-                    // Iniciar app após mostrar modal
+                    // Iniciar app
                     setTimeout(async () => {
                         console.log('🎯 Iniciando app após auto-login...');
                         await initApp(response.user);
@@ -6857,15 +6880,17 @@ async function checkAutoLogin(){
                         // Fechar modal automaticamente ao entrar no sistema
                         Swal.close();
                         console.log('✅ App inicializado - modal fechado!');
-                    }, 1500);
+                    }, 1200);
                 } else {
                     // Falha no auto-login: limpar dados salvos
                     console.warn('⚠️ Auto-login falhou:', response.message);
                     localStorage.removeItem('bioma_remember');
+                    Swal.close();
                 }
             } catch(error) {
                 console.error('❌ Erro no auto-login:', error);
                 localStorage.removeItem('bioma_remember');
+                Swal.close();
             }
         }, 500);
 
@@ -15017,16 +15042,24 @@ async function initApp(user=null){
   // CARREGAR LOGO IMEDIATAMENTE (antes de tudo)
   await loadConfiguracoes(true); // force=true para garantir carregamento
 
-  // Executar loads de forma não-bloqueante para evitar travamento
-  // Cada função tem seu próprio safeCall internamente
+  // ========== REFRESH GERAL INICIAL (antes do auto-refresh) ==========
+  console.log('🔄 Executando REFRESH GERAL de todos os dados...');
+
+  // Carregar TODAS as seções em paralelo para inicialização rápida
   Promise.allSettled([
     loadDashboard(),
     loadClientes(),
     loadProfissionais(),
-    // loadEstoque(), // REMOVIDO: Estoque só deve carregar quando a seção for acessada
+    loadServicosLista(),
+    loadEstoque(), // Incluído: carregar estoque no início
+    loadOrcamentos('pendentes'),
+    loadContratos(),
+    carregarMapaCalor(),
+    loadFila(),
     loadSystem()
   ]).then(() => {
     console.log('✅ Carregamento inicial completo');
+    console.log('🔄 Sistema de auto-atualização iniciará em 60 segundos');
   });
 
   // ========== SISTEMA DE AUTO-REFRESH MELHORADO ==========
