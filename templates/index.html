@@ -1,110 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- FORÇAR LIGHT MODE AGRESSIVAMENTE - ANTES DE TUDO -->
-    <script>
-    (function() {
-        // Executar IMEDIATAMENTE antes de qualquer CSS/JS
-        localStorage.removeItem('theme');
-        localStorage.removeItem('bioma_theme');
-        sessionStorage.removeItem('theme');
-        document.documentElement.setAttribute('data-theme', 'light');
-        document.documentElement.style.setProperty('color-scheme', 'light');
-        console.log('🌞 LIGHT MODE FORÇADO AGRESSIVAMENTE');
-    })();
-    </script>
-
-    <!-- ULTRA FORCE LIGHT MODE - NUCLEAR OVERRIDE ALL CACHE AND CSS -->
-    <style id="force-light-mode-nuclear">
-    /* NUCLEAR OVERRIDE - DESTROY ALL DARK MODE WITH MAXIMUM PRIORITY */
-    * {
-        --bg-main: #F9FAFB !important;
-        --bg-card: #FFFFFF !important;
-        --bg-sidebar: #1F2937 !important;
-        --text-primary: #1F2937 !important;
-        --text-secondary: #6B7280 !important;
-        --text-muted: #9CA3AF !important;
-        --border-color: #E5E7EB !important;
-        --primary: #7C3AED !important;
-        --primary-dark: #6D28D9 !important;
-        --secondary: #EC4899 !important;
-        --success: #10B981 !important;
-        --danger: #EF4444 !important;
-        --warning: #F59E0B !important;
-        --info: #3B82F6 !important;
-    }
-
-    html, html[data-theme], html[data-theme="dark"], html[data-theme="light"],
-    body, body[data-theme], body[data-theme="dark"], body[data-theme="light"] {
-        color-scheme: light only !important;
-        background: #F9FAFB !important;
-        background-color: #F9FAFB !important;
-        color: #1F2937 !important;
-    }
-
-    /* AUTH SCREEN - ULTRA FORCE GRADIENT */
-    #authScreen, .auth-screen, div.auth-screen, body .auth-screen,
-    html .auth-screen, #authScreen.auth-screen {
-        background: linear-gradient(135deg,#667eea 0%,#764ba2 100%) !important;
-        background-image: linear-gradient(135deg,#667eea 0%,#764ba2 100%) !important;
-        background-color: #667eea !important;
-        color: #1F2937 !important;
-    }
-
-    /* AUTH BOX - ULTRA FORCE WHITE */
-    .auth-box, div.auth-box, #authScreen .auth-box {
-        background: rgba(255,255,255,0.98) !important;
-        background-color: rgba(255,255,255,0.98) !important;
-        backdrop-filter: blur(10px) !important;
-        color: #1F2937 !important;
-    }
-
-    /* ALL TEXT - FORCE DARK COLOR */
-    .auth-logo h2, .auth-logo p, .login-label, label,
-    .auth-box *, .auth-screen *, #authScreen * {
-        color: #1F2937 !important;
-    }
-
-    /* FORM INPUTS - ULTRA WHITE */
-    input, input.form-control, .form-control, .form-select,
-    textarea, select, #loginUsername, #loginPassword {
-        background: #FFFFFF !important;
-        background-color: #FFFFFF !important;
-        color: #1F2937 !important;
-        border: 2px solid #E5E7EB !important;
-    }
-
-    input::placeholder {
-        color: #9CA3AF !important;
-    }
-
-    /* NAVIGATION TABS */
-    .nav-pills .nav-link, .nav-link, button.nav-link {
-        color: #6B7280 !important;
-        background: transparent !important;
-    }
-
-    .nav-pills .nav-link.active, .nav-link.active, button.nav-link.active {
-        background: linear-gradient(135deg,#7C3AED,#6D28D9) !important;
-        color: #FFFFFF !important;
-    }
-
-    /* INFO BOX */
-    .alert-info, .info-box {
-        background: linear-gradient(135deg,#E0E7FF,#DBEAFE) !important;
-        color: #1E40AF !important;
-    }
-
-    /* DESTROY DARK MODE ROOT VARIABLES */
-    :root, :root[data-theme="dark"],
-    html:root, html:root[data-theme="dark"] {
-        --bg-main: #F9FAFB !important;
-        --bg-card: #FFFFFF !important;
-        --text-primary: #1F2937 !important;
-        --text-secondary: #6B7280 !important;
-    }
-    </style>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -1559,13 +1455,17 @@
 
     /* ========== THEME TOGGLE MELHORADO ========== */
     .theme-toggle button:hover {
-        transform: scale(1.05) rotate(180deg);
+        transform: scale(1.08);
         background: rgba(255, 255, 255, 0.2);
         box-shadow: 0 5px 20px rgba(124, 58, 237, 0.5);
     }
 
     .theme-toggle button {
-        transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        transition: all 0.3s ease;
+    }
+
+    .theme-toggle button i {
+        transition: transform 0.3s ease;
     }
 </style>
 
@@ -2266,9 +2166,9 @@ window.addEventListener('load', function() {
             <!-- Sub-tab: Mapa de Calor -->
             <div id="relatorios-mapa" class="sub-tab-content">
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados
-                        <button class="btn btn-sm btn-outline" onclick="carregarMapaCalor()" style="float: right;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados</span>
+                        <button class="btn btn-sm btn-outline" onclick="carregarMapaCalor()">
                             <i class="bi bi-arrow-clockwise"></i> Atualizar
                         </button>
                     </div>
@@ -10686,17 +10586,7 @@ async function doLogout(){
 }
 function switchTab(which){ const login=$('#loginForm'), reg=$('#registerForm'); if(which==='login'){ login.style.display='block'; reg.style.display='none'; $('#loginTab').classList.add('active'); $('#registerTab').classList.remove('active'); } else { login.style.display='none'; reg.style.display='block'; $('#registerTab').classList.add('active'); $('#loginTab').classList.remove('active'); } }
 
-// ===== Theme =====
-async function toggleTheme(){
-  const root = document.documentElement;
-  const current = root.getAttribute('data-theme') || 'light';
-  const next = current==='light' ? 'dark' : 'light';
-  root.setAttribute('data-theme', next);
-  const ic = $('#themeIcon'); const tx = $('#themeText');
-  if(ic && tx){ ic.className = next==='dark'?'bi bi-sun-fill':'bi bi-moon-stars-fill'; tx.textContent = next==='dark'?'Modo Claro':'Modo Escuro'; }
-  try{ await API.post('/api/update-theme', { theme: next }); }catch{ /* ignore */ }
-}
-
+// ===== Theme ===== (Função principal está em linha 4353)
 // ===== Navigation ===== [REMOVIDO - usando a função principal na linha 2829]
 
 // ===== Sub-Tabs Navigation =====
@@ -14829,6 +14719,14 @@ async function performAutoUpdate() {
                 // Atualizar apenas visão geral
                 await loadEstoque();
                 console.log('✅ Estoque atualizado');
+                break;
+
+            case 'relatorios':
+                // Atualizar relatórios se houver dados carregados
+                if (typeof loadRelatorios === 'function') {
+                    await loadRelatorios();
+                }
+                console.log('✅ Relatórios atualizados');
                 break;
 
             case 'sistema':

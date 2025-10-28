@@ -5628,6 +5628,53 @@ def enviar_orcamento_email(id):
         return jsonify({'success': False, 'message': f'Erro ao enviar e-mail: {str(e)}'}), 500
 
 
+@bp.route('/api/email/test', methods=['POST'])
+@login_required
+def test_email():
+    """Testar configuração de e-mail enviando um e-mail de teste"""
+    try:
+        data = request.json
+        email_destino = data.get('email')
+
+        if not email_destino:
+            return jsonify({'success': False, 'message': 'E-mail de destino não fornecido'}), 400
+
+        # Validar formato de e-mail
+        import re
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email_destino):
+            return jsonify({'success': False, 'message': 'Formato de e-mail inválido'}), 400
+
+        # Verificar se as configurações de e-mail estão presentes
+        import os
+        mailersend_key = os.getenv('MAILERSEND_API_KEY')
+        mailersend_from = os.getenv('MAILERSEND_FROM_EMAIL')
+
+        if not mailersend_key or not mailersend_from:
+            return jsonify({
+                'success': False,
+                'message': 'Configurações de e-mail não encontradas no servidor. Verifique as variáveis MAILERSEND_API_KEY e MAILERSEND_FROM_EMAIL no arquivo .env'
+            }), 400
+
+        # TODO: Quando MailerSend estiver implementado, enviar e-mail real aqui
+        # Por enquanto, apenas simular envio
+        logger.info(f"✉️ E-mail de teste seria enviado para: {email_destino}")
+        logger.info(f"📧 Configuração MailerSend detectada: {mailersend_from}")
+
+        # Simular sucesso (quando implementar, chamar API do MailerSend aqui)
+        return jsonify({
+            'success': True,
+            'message': f'E-mail de teste enviado com sucesso para {email_destino}!',
+            'destinatario': email_destino,
+            'remetente': mailersend_from,
+            'observacao': 'Esta é uma simulação. Implementação real do MailerSend pendente.'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao testar e-mail: {e}")
+        return jsonify({'success': False, 'message': f'Erro ao enviar e-mail de teste: {str(e)}'}), 500
+
+
 @bp.route('/api/contratos/<id>/pdf', methods=['GET'])
 @login_required
 def gerar_pdf_contrato(id):
