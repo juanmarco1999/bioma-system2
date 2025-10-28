@@ -30,9 +30,9 @@ class Config:
     MONGO_USERNAME = os.getenv('MONGO_USERNAME', '')
     MONGO_PASSWORD = os.getenv('MONGO_PASSWORD', '')
     MONGO_CLUSTER = os.getenv('MONGO_CLUSTER', '')
-    MONGO_TIMEOUT = 3000  # ms
-    MONGO_MAX_POOL_SIZE = 10
-    MONGO_MIN_POOL_SIZE = 1
+    MONGO_TIMEOUT = 30000  # 30s - Aumentado para produção
+    MONGO_MAX_POOL_SIZE = 50  # Aumentado para suportar mais conexões simultâneas
+    MONGO_MIN_POOL_SIZE = 5  # Aumentado para manter pool aquecido
 
     # Cache
     CACHE_TTL = 60  # segundos

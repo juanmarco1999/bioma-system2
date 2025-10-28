@@ -5606,29 +5606,146 @@ def enviar_orcamento_email(id):
         if not email_cliente:
             return jsonify({'success': False, 'message': 'Cliente não possui e-mail cadastrado'}), 400
 
-        # TODO: Implementar envio de email via SMTP ou MailerSend
-        # Por enquanto, apenas retornamos sucesso para não bloquear o frontend
-        # Aqui você pode adicionar:
-        # - Configuração SMTP (Gmail, SendGrid, etc)
-        # - MailerSend API
-        # - Amazon SES
-        # - Outro serviço de email
-
-        logger.info(f"Email seria enviado para: {email_cliente} - Orçamento #{orcamento.get('numero', 'N/A')}")
-
         # Montar dados do orçamento para o email
         numero_orcamento = orcamento.get('numero', str(orcamento['_id'])[-6:])
         cliente_nome = orcamento.get('cliente_nome', 'Cliente')
         total_final = orcamento.get('total_final', 0)
+        servicos = orcamento.get('servicos', [])
+        produtos = orcamento.get('produtos', [])
 
-        # Retornar sucesso (quando implementar email real, enviar aqui)
-        return jsonify({
-            'success': True,
-            'destinatario': email_cliente,
-            'message': f'E-mail enviado com sucesso para {email_cliente}',
-            'orcamento_numero': numero_orcamento,
-            'valor_total': total_final
-        })
+        # Verificar configuração MailerSend
+        import os
+        import requests
+
+        mailersend_key = os.getenv('MAILERSEND_API_KEY')
+        mailersend_from = os.getenv('MAILERSEND_FROM_EMAIL')
+        mailersend_name = os.getenv('MAILERSEND_FROM_NAME', 'BIOMA Uberaba')
+
+        if not mailersend_key or not mailersend_from:
+            return jsonify({
+                'success': False,
+                'message': 'Configurações de e-mail não encontradas no servidor'
+            }), 400
+
+        logger.info(f"📧 Enviando orçamento #{numero_orcamento} para: {email_cliente}")
+
+        # Montar HTML do orçamento
+        servicos_html = ""
+        for srv in servicos:
+            servicos_html += f"""
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">{srv.get('nome', '')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">{srv.get('quantidade', 1)}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">R$ {srv.get('preco', 0):.2f}</td>
+                </tr>
+            """
+
+        produtos_html = ""
+        for prd in produtos:
+            produtos_html += f"""
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">{prd.get('nome', '')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">{prd.get('quantidade', 1)}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">R$ {prd.get('preco', 0):.2f}</td>
+                </tr>
+            """
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+            <div style="background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 40px; border-radius: 15px; text-align: center; color: white; margin-bottom: 30px;">
+                <h1 style="margin: 0 0 10px 0; font-size: 32px;">💼 Orçamento</h1>
+                <p style="margin: 0; font-size: 18px; opacity: 0.95;">#{numero_orcamento}</p>
+            </div>
+
+            <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h2 style="color: #7C3AED; margin-top: 0;">Olá, {cliente_nome}!</h2>
+                <p style="color: #374151; line-height: 1.6;">
+                    Segue o orçamento solicitado para os serviços e produtos da BIOMA Uberaba.
+                </p>
+
+                {"<h3 style='color: #374151; margin-top: 30px; margin-bottom: 15px;'>🛠️ Serviços</h3>" if servicos else ""}
+                {"<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'><thead><tr style='background-color: #f3f4f6;'><th style='padding: 12px; text-align: left; color: #6b7280;'>Serviço</th><th style='padding: 12px; text-align: center; color: #6b7280;'>Qtd</th><th style='padding: 12px; text-align: right; color: #6b7280;'>Valor</th></tr></thead><tbody>" + servicos_html + "</tbody></table>" if servicos else ""}
+
+                {"<h3 style='color: #374151; margin-top: 30px; margin-bottom: 15px;'>📦 Produtos</h3>" if produtos else ""}
+                {"<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'><thead><tr style='background-color: #f3f4f6;'><th style='padding: 12px; text-align: left; color: #6b7280;'>Produto</th><th style='padding: 12px; text-align: center; color: #6b7280;'>Qtd</th><th style='padding: 12px; text-align: right; color: #6b7280;'>Valor</th></tr></thead><tbody>" + produtos_html + "</tbody></table>" if produtos else ""}
+
+                <div style="background: linear-gradient(135deg, #7C3AED, #EC4899); padding: 20px; border-radius: 10px; margin-top: 30px; text-align: center;">
+                    <p style="margin: 0 0 5px 0; color: white; font-size: 14px; opacity: 0.9;">VALOR TOTAL</p>
+                    <h2 style="margin: 0; color: white; font-size: 36px;">R$ {total_final:.2f}</h2>
+                </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #7C3AED;">
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                        Em caso de dúvidas ou para confirmar o orçamento, entre em contato conosco.
+                    </p>
+                </div>
+            </div>
+
+            <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; margin-top: 20px;">
+                <p style="margin: 0;">© 2024 BIOMA Uberaba - Sistema de Gestão</p>
+                <p style="margin: 5px 0 0 0;">Este é um e-mail automático, não é necessário responder</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            # Enviar via MailerSend API
+            mailersend_api_url = "https://api.mailersend.com/v1/email"
+
+            headers = {
+                "Authorization": f"Bearer {mailersend_key}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "from": {
+                    "email": mailersend_from,
+                    "name": mailersend_name
+                },
+                "to": [
+                    {
+                        "email": email_cliente,
+                        "name": cliente_nome
+                    }
+                ],
+                "subject": f"💼 Orçamento #{numero_orcamento} - BIOMA Uberaba",
+                "html": html_content,
+                "text": f"Orçamento #{numero_orcamento} - Total: R$ {total_final:.2f}"
+            }
+
+            response = requests.post(mailersend_api_url, json=payload, headers=headers, timeout=10)
+
+            if response.status_code == 202:
+                logger.info(f"✅ Orçamento enviado via MailerSend para {email_cliente}")
+                return jsonify({
+                    'success': True,
+                    'destinatario': email_cliente,
+                    'message': f'✅ Orçamento enviado com sucesso para {email_cliente}',
+                    'orcamento_numero': numero_orcamento,
+                    'valor_total': total_final
+                })
+            else:
+                logger.error(f"❌ Erro MailerSend: {response.status_code} - {response.text}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Erro ao enviar e-mail: {response.status_code}'
+                }), response.status_code
+
+        except requests.exceptions.Timeout:
+            logger.error("❌ Timeout ao conectar com MailerSend API")
+            return jsonify({
+                'success': False,
+                'message': 'Timeout ao conectar com servidor de e-mail'
+            }), 408
+
+        except requests.exceptions.RequestException as req_err:
+            logger.error(f"❌ Erro de conexão MailerSend: {req_err}")
+            return jsonify({
+                'success': False,
+                'message': f'Erro de conexão: {str(req_err)}'
+            }), 503
 
     except Exception as e:
         logger.error(f"Erro ao enviar e-mail: {e}")
