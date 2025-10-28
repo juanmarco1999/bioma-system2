@@ -7,23 +7,38 @@
     // Ele garante que o tema correto seja aplicado ANTES da página ser renderizada,
     // prevenindo o "flash" de um tema para o outro no carregamento da página.
     (function() {
-        // A função `getTheme` segue a hierarquia de prioridades:
-        // 1. Preferência do usuário salva no localStorage.
-        // 2. Padrão da aplicação ('light') - NÃO detecta preferência do SO
+        // HIERARQUIA DE PRIORIDADES (conforme relatório técnico):
+        // 1. Preferência do USUÁRIO salva no localStorage (MÁXIMA prioridade)
+        // 2. Preferência do SISTEMA OPERACIONAL (matchMedia)
+        // 3. Padrão da aplicação ('light')
         function getTheme() {
+            // 1ª Prioridade: Preferência explícita do usuário
             const storedTheme = localStorage.getItem('theme');
             if (storedTheme) {
+                console.log('🎨 Usando preferência do USUÁRIO:', storedTheme);
                 return storedTheme;
             }
-            // Sempre iniciar em light mode (usuário explicitamente solicitou)
+
+            // 2ª Prioridade: Preferência do Sistema Operacional
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                console.log('🎨 Usando preferência do SO: dark');
+                return 'dark';
+            }
+
+            // 3ª Prioridade: Padrão da aplicação
+            console.log('🎨 Usando padrão da aplicação: light');
             return 'light';
         }
+
         const theme = getTheme();
-        // Aplica o atributo `data-theme` ao elemento <html>.
         document.documentElement.setAttribute('data-theme', theme);
-        console.log('🎨 Tema inicial:', theme, '(light por padrão, dark apenas se usuário escolher)');
     })();
     </script>
+
+    <!-- META TAG PARA EVITAR CACHE - Força reload de assets -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -3312,7 +3327,66 @@ if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
 // Alias simples para compatibilidade
 window.SafeSwal = Swal;
 
-// ========== FUNÇÕES AUXILIARES PARA SWEETALERT2 (Seguindo Melhores Práticas) ==========
+// ========== WRAPPER GARANTIDOR DE FECHAMENTO - VERSÃO ULTRA-SEGURA ==========
+// Salvar a função original
+const _originalSwalFire = Swal.fire;
+
+// Substituir Swal.fire com wrapper que SEMPRE permite fechar
+Swal.fire = function(...args) {
+    let config;
+
+    // Detectar formato do argumento
+    if (typeof args[0] === 'string') {
+        // Formato antigo: Swal.fire('title', 'text', 'icon')
+        config = {
+            title: args[0],
+            text: args[1],
+            icon: args[2]
+        };
+    } else if (typeof args[0] === 'object') {
+        // Formato novo: Swal.fire({...})
+        config = args[0];
+    } else {
+        config = {};
+    }
+
+    // REGRA DE SEGURANÇA: Se não tem botão Confirmar, DEVE ter botão X
+    if (config.showConfirmButton === false && config.showCloseButton !== true) {
+        config.showCloseButton = true;
+        console.warn('⚠️ Modal sem botão OK: Botão X adicionado automaticamente');
+    }
+
+    // REGRA DE SEGURANÇA 2: Se não tem NENHUMA forma de fechar, adicionar X
+    const naoPodeFechar =
+        config.showConfirmButton === false &&
+        config.allowOutsideClick === false &&
+        config.allowEscapeKey === false &&
+        config.showCloseButton !== true;
+
+    if (naoPodeFechar) {
+        config.showCloseButton = true;
+        console.warn('🔓 Modal completamente travado detectado! Botão X forçado.');
+    }
+
+    // Chamar a função original com config modificado
+    return _originalSwalFire.call(this, config);
+};
+
+// Garantir que Swal.close sempre funcione
+const _originalSwalClose = Swal.close;
+Swal.close = function(...args) {
+    console.log('🔴 Swal.close() chamado');
+    try {
+        return _originalSwalClose.call(this, ...args);
+    } catch (error) {
+        console.error('❌ Erro ao fechar modal:', error);
+        // Forçar fechamento removendo elementos do DOM
+        const containers = document.querySelectorAll('.swal2-container');
+        containers.forEach(c => c.remove());
+    }
+};
+
+// ========== FUNÇÕES AUXILIARES PARA SWEETALERT2 ==========
 
 /**
  * Função para obter o tema atual do SweetAlert2 baseado no tema da aplicação
@@ -3385,7 +3459,9 @@ function showLoading(title = 'Carregando...') {
     });
 }
 
-console.log('%c✅ Sistema de Modais SweetAlert2 Profissional Carregado', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c✅ Sistema de Modais ULTRA-SEGURO Carregado', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  🔓 TODO modal TEM forma de fechar', 'color: blue;');
+console.log('%c  🛡️ Swal.close() protegido contra falhas', 'color: blue;');
 console.log('%c  📋 Use showNotification() para notificações', 'color: blue;');
 console.log('%c  💬 Use showDialog() para diálogos interativos', 'color: blue;');
 console.log('%c  ⏳ Use showLoading() para operações assíncronas', 'color: blue;');
