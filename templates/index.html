@@ -3291,8 +3291,17 @@ const activeModals = new Map();
 Swal.fire = function(...args) {
     const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
 
-    // NÃO MODIFICAR O CONFIG - apenas chamar o SweetAlert2 normalmente
-    // A proteção ultra-radical estava quebrando TODOS os modais
+    // 🛡️ PROTEÇÃO CRÍTICA: Remover timers automáticos dos modais
+    // Isso impede que modais fechem sozinhos
+    if (config.timer !== undefined) {
+        console.warn('⚠️ Timer removido do modal para prevenir fechamento automático');
+        delete config.timer;
+    }
+
+    // Garantir que modais não fechem ao clicar fora (a menos que explicitamente permitido)
+    if (config.allowOutsideClick === undefined) {
+        config.allowOutsideClick = false;
+    }
 
     const result = originalSwalFire(config);
 
@@ -3300,26 +3309,7 @@ Swal.fire = function(...args) {
 };
 
 // REMOVIDO: Interceptação de Swal.close() que estava causando problemas
-
-// Sistema PASSIVO para prevenir botões travados (não interfere com cliques)
-setInterval(() => {
-    // Restaurar botões normais que ficaram disabled sem motivo
-    const botoesDisabled = document.querySelectorAll('button[disabled]:not([data-loading]):not(.swal2-loading)');
-    if (botoesDisabled.length > 0) {
-        botoesDisabled.forEach(btn => {
-            // Verificar se não é um botão que deve estar disabled
-            if (!btn.hasAttribute('data-permanently-disabled')) {
-                btn.removeAttribute('disabled');
-                btn.style.opacity = '1';
-                btn.style.cursor = 'pointer';
-            }
-        });
-    }
-
-    // Limpar backdrops órfãos do SweetAlert2
-    const backdrops = document.querySelectorAll('.swal2-container:not(.swal2-shown)');
-    backdrops.forEach(backdrop => backdrop.remove());
-}, 3000); // Verificar a cada 3 segundos
+// REMOVIDO: setInterval que limpava backdrops - estava interferindo com modais
 
 console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: green; font-weight: bold; font-size: 14px;');
 </script>
@@ -13279,8 +13269,8 @@ async function startDashboardRealtime() {
     // Primeira execução imediata
     await updateDashboardRealtime();
 
-    // Atualizar a cada 60 segundos (otimizado para reduzir carga)
-    dashboardRealtimeInterval = setInterval(updateDashboardRealtime, 60000);
+    // ⚠️ AUTO-ATUALIZAÇÃO DESABILITADA - use botão de refresh manual
+    // dashboardRealtimeInterval = setInterval(updateDashboardRealtime, 60000);
 }
 
 async function updateDashboardRealtime() {
@@ -18682,180 +18672,15 @@ let autoUpdateEnabled = true;
 
 // Última seção ativa
 let lastActiveSection = 'dashboard';
+// ========== AUTO-ATUALIZAÇÃO COMPLETAMENTE REMOVIDA ==========
+//
+// ⚠️ TODO O CÓDIGO DE AUTO-ATUALIZAÇÃO FOI DELETADO
+//
+// Use os botões de "Atualizar" em cada seção para refresh manual
+//
+console.log('⚠️ Auto-atualização REMOVIDA - use botões de refresh manual');
 
-function enableAutoUpdate() {
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-    }
-
-    console.log('🔄 Auto-atualização ATIVADA (intervalo: 60s - otimizado)');
-
-    // Atualizar imediatamente ao ativar
-    performAutoUpdate();
-
-    // Configurar intervalo de 60 segundos (otimizado para reduzir carga)
-    autoUpdateInterval = setInterval(() => {
-        if (autoUpdateEnabled) {
-            performAutoUpdate();
-        }
-    }, 60000); // 60 segundos (otimizado)
-}
-
-function disableAutoUpdate() {
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-        autoUpdateInterval = null;
-        console.log('⏸️ Auto-atualização DESATIVADA');
-    }
-    autoUpdateEnabled = false;
-}
-
-async function performAutoUpdate() {
-    try {
-        // Mostrar indicador de atualização
-        const indicator = document.getElementById('auto-refresh-indicator');
-        if (indicator) indicator.classList.add('show');
-
-        // Detectar seção ativa
-        const activeSection = document.querySelector('.content-section.active');
-        if (!activeSection) {
-            if (indicator) indicator.classList.remove('show');
-            return;
-        }
-
-        const sectionId = activeSection.id.replace('section-', '');
-        lastActiveSection = sectionId;
-
-        console.log(`🔄 Auto-atualizando: ${sectionId}`);
-
-        // Atualizar apenas a seção ativa para economizar recursos
-        switch(sectionId) {
-            case 'dashboard':
-                await loadDashboard();
-                console.log('✅ Dashboard atualizado');
-                break;
-
-            case 'clientes':
-                await loadClientes();
-                console.log('✅ Clientes atualizados');
-                break;
-
-            case 'profissionais':
-                await loadProfissionais();
-                console.log('✅ Profissionais atualizados');
-                break;
-
-            case 'fila':
-                await loadFila();
-                console.log('✅ Fila atualizada');
-                break;
-
-            case 'agendamentos':
-                await loadAgendamentos();
-                console.log('✅ Agendamentos atualizados');
-                break;
-
-            case 'financeiro':
-                // Atualizar apenas os cards de resumo (não recarregar tudo)
-                await carregarFinanceiroResumo();
-                console.log('✅ Financeiro atualizado');
-                break;
-
-            case 'estoque':
-                // Atualizar apenas visão geral
-                await loadEstoque();
-                console.log('✅ Estoque atualizado');
-                break;
-
-            case 'relatorios':
-                // Atualizar relatórios se houver dados carregados
-                if (typeof loadRelatorios === 'function') {
-                    await loadRelatorios();
-                }
-                console.log('✅ Relatórios atualizados');
-                break;
-
-            case 'sistema':
-                await verificarStatus();
-                console.log('✅ Sistema atualizado');
-                break;
-
-            default:
-                // Para outras seções, apenas log
-                console.log(`ℹ️ Seção "${sectionId}" não requer auto-atualização`);
-        }
-
-        // Atualizar timestamp na interface (se existir)
-        updateLastRefreshTimestamp();
-
-    } catch (err) {
-        console.error('❌ Erro na auto-atualização:', err);
-    } finally {
-        // Ocultar indicador após 2 segundos
-        setTimeout(() => {
-            const indicator = document.getElementById('auto-refresh-indicator');
-            if (indicator) indicator.classList.remove('show');
-        }, 2000);
-    }
-}
-
-function updateLastRefreshTimestamp() {
-    // Criar ou atualizar badge de última atualização
-    let badge = document.getElementById('lastRefreshBadge');
-
-    if (!badge) {
-        // Criar badge se não existir
-        const pageHeader = document.querySelector('.page-header h1');
-        if (pageHeader) {
-            badge = document.createElement('span');
-            badge.id = 'lastRefreshBadge';
-            badge.style.cssText = `
-                font-size: 0.75rem;
-                font-weight: 600;
-                color: #10B981;
-                background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
-                padding: 4px 12px;
-                border-radius: 12px;
-                margin-left: 15px;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-            `;
-            pageHeader.appendChild(badge);
-        }
-    }
-
-    if (badge) {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        badge.innerHTML = `<i class="bi bi-arrow-clockwise"></i> Atualizado às ${timeStr}`;
-    }
-}
-
-// Iniciar auto-atualização quando o app carregar
-document.addEventListener('DOMContentLoaded', () => {
-    // Aguardar 5 segundos após o load inicial antes de ativar auto-update
-    setTimeout(() => {
-        enableAutoUpdate();
-    }, 5000);
-});
-
-// Pausar auto-atualização quando a aba do navegador não estiver visível
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        console.log('👁️ Página oculta, pausando auto-atualização');
-        autoUpdateEnabled = false;
-    } else {
-        console.log('👁️ Página visível, retomando auto-atualização');
-        autoUpdateEnabled = true;
-        // Atualizar imediatamente ao voltar
-        performAutoUpdate();
-    }
-});
-
-console.log('✅ Sistema de auto-atualização inicializado (Diretriz 0.1)');
-
-// ========== FIM AUTO-ATUALIZAÇÃO ==========
+// ========== FIM ==========
 
 </script>
 
