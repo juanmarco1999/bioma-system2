@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v4.10.1 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- HOTFIX: Correção Swal.update() → Swal.fire() para fechar modais corretamente -->
+    <!-- BIOMA v4.11.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- ULTRA-AGGRESSIVE FIX: Força botões clicáveis quando modal ABRE (didOpen) -->
+    <!-- Remove overlays antigos IMEDIATAMENTE + debug logging + z-index fixes -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -3308,7 +3309,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v4.10.1';
+const APP_VERSION = 'v4.11.0';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -3440,9 +3441,78 @@ function mostrarLoading(title = 'Processando...') {
 }
 
 /**
- * FUNÇÃO 4: limparModalResidual()
- * Limpeza AGRESSIVA de elementos SweetAlert2 que ficam travados na página
- * Resolve o problema de botões ficando desabilitados/cinzas
+ * FUNÇÃO 4A: forcarBotoesClicaveis()
+ * ULTRA-AGRESSIVO: Remove overlays e força botões a serem clicáveis IMEDIATAMENTE
+ * Executa quando modal ABRE (didOpen), não quando fecha
+ */
+function forcarBotoesClicaveis() {
+    // PASSO 1: Remover TODOS os backdrops antigos imediatamente (não esperar timeout)
+    document.querySelectorAll('.swal2-container:not(:last-child)').forEach(el => {
+        console.log('%c🗑️ Removendo container antigo:', 'color: red;', el);
+        el.remove();
+    });
+
+    document.querySelectorAll('.swal2-backdrop-show').forEach(backdrop => {
+        console.log('%c🗑️ Removendo backdrop:', 'color: red;', backdrop);
+        backdrop.remove();
+    });
+
+    // PASSO 2: Garantir que o modal atual está no topo
+    const currentModal = Swal.getContainer();
+    if (currentModal) {
+        currentModal.style.zIndex = '10000';
+        console.log('%c✅ Modal z-index:', 'color: green;', currentModal.style.zIndex);
+    }
+
+    // PASSO 3: Forçar todos os botões a serem clicáveis
+    setTimeout(() => {
+        const popup = Swal.getPopup();
+        if (popup) {
+            const buttons = popup.querySelectorAll('button, .swal2-close');
+            buttons.forEach(btn => {
+                btn.style.pointerEvents = 'auto';
+                btn.style.cursor = 'pointer';
+                btn.style.position = 'relative';
+                btn.style.zIndex = '10001';
+
+                // Debug: Log quando botão é clicado
+                btn.addEventListener('click', function debugClick(e) {
+                    console.log('%c🖱️ BOTÃO CLICADO:', 'color: blue; font-weight: bold;', btn.textContent, e);
+                }, { once: false });
+            });
+            console.log(`%c✅ ${buttons.length} botões forçados a serem clicáveis`, 'color: green; font-weight: bold;');
+        }
+    }, 50);
+
+    // PASSO 4: Verificar se há overlays bloqueando
+    setTimeout(() => {
+        const allElements = document.querySelectorAll('*');
+        const blockingElements = [];
+
+        allElements.forEach(el => {
+            const style = window.getComputedStyle(el);
+            const zIndex = parseInt(style.zIndex) || 0;
+
+            // Detectar elementos com z-index alto que podem bloquear
+            if (zIndex > 9999 && zIndex < 10001) {
+                blockingElements.push({
+                    element: el,
+                    zIndex: zIndex,
+                    pointerEvents: style.pointerEvents,
+                    classList: el.className
+                });
+            }
+        });
+
+        if (blockingElements.length > 0) {
+            console.log('%c⚠️ ELEMENTOS POTENCIALMENTE BLOQUEANDO:', 'color: orange; font-weight: bold;', blockingElements);
+        }
+    }, 100);
+}
+
+/**
+ * FUNÇÃO 4B: limparModalResidual()
+ * Limpeza após fechar modal (mantém função original)
  */
 function limparModalResidual() {
     setTimeout(() => {
@@ -3488,8 +3558,11 @@ window.Swal.fire = function(...args) {
             limparModalResidual();
         };
 
-        // Adiciona acessibilidade ao didOpen
+        // Adiciona ULTRA-AGGRESSIVE cleanup + acessibilidade ao didOpen
         config.didOpen = () => {
+            // CRÍTICO: Forçar botões clicáveis IMEDIATAMENTE quando modal abre
+            forcarBotoesClicaveis();
+
             if (originalDidOpen) originalDidOpen();
 
             // Adicionar aria-labels aos elementos SweetAlert2 para acessibilidade
@@ -3545,12 +3618,14 @@ window.Swal.fire = function(...args) {
     });
 };
 
-console.log('%c✅ Sistema de Modais CORRETO Carregado (Roteiro Técnico)', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c✅ Sistema de Modais ULTRA-AGRESSIVO Carregado (v4.11.0)', 'color: green; font-weight: bold; font-size: 14px;');
 console.log('%c  📢 Use mostrarNotificacao() para notificações (COM timer)', 'color: blue;');
 console.log('%c  ❓ Use mostrarConfirmacao() para diálogos (SEM timer)', 'color: blue;');
 console.log('%c  ⏳ Use mostrarLoading() para operações assíncronas', 'color: blue;');
 console.log('%c  🚫 NUNCA use onclick no HTML! Use didOpen + addEventListener', 'color: red; font-weight: bold;');
 console.log('%c  🧹 Limpeza automática de modais ATIVA (interceptor global)', 'color: orange; font-weight: bold;');
+console.log('%c  ⚡ NOVO: forcarBotoesClicaveis() remove overlays QUANDO ABRE', 'color: magenta; font-weight: bold;');
+console.log('%c  🔍 NOVO: Debug logging para detectar elementos bloqueadores', 'color: cyan; font-weight: bold;');
 </script>
 
 <div id="authScreen" class="auth-screen">
