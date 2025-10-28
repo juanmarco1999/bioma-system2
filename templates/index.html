@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v4.8.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- Cache Busting Automático: Este timestamp muda a cada deploy -->
+    <!-- BIOMA v4.9.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- Cache Busting Automático + Limpeza Agressiva de Modais -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -3303,7 +3303,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v4.8.0';
+const APP_VERSION = 'v4.9.0';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -3381,7 +3381,11 @@ function mostrarNotificacao(icon, title, timer = 2500) {
         showConfirmButton: false,
         showCloseButton: true,
         allowOutsideClick: false,
-        allowEscapeKey: false
+        allowEscapeKey: false,
+        willClose: () => {
+            // Limpeza AGRESSIVA de elementos residuais
+            limparModalResidual();
+        }
     });
 }
 
@@ -3400,7 +3404,11 @@ function mostrarConfirmacao(config) {
         showConfirmButton: true, // Botão OK sempre visível
         showCancelButton: config.showCancelButton !== false,
         confirmButtonText: config.confirmButtonText || 'Confirmar',
-        cancelButtonText: config.cancelButtonText || 'Cancelar'
+        cancelButtonText: config.cancelButtonText || 'Cancelar',
+        willClose: () => {
+            // Limpeza AGRESSIVA de elementos residuais
+            limparModalResidual();
+        }
     };
     return Swal.fire(safeConfig);
 }
@@ -3426,16 +3434,70 @@ function mostrarLoading(title = 'Processando...') {
     });
 }
 
+/**
+ * FUNÇÃO 4: limparModalResidual()
+ * Limpeza AGRESSIVA de elementos SweetAlert2 que ficam travados na página
+ * Resolve o problema de botões ficando desabilitados/cinzas
+ */
+function limparModalResidual() {
+    setTimeout(() => {
+        // Remove TODOS os containers e backdrops do SweetAlert2
+        document.querySelectorAll('.swal2-container, .swal2-backdrop-show, .swal2-shown').forEach(el => {
+            if (!Swal.isVisible()) {
+                el.remove();
+            }
+        });
+
+        // Limpa classes do body que podem estar travando a página
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto', 'swal2-no-backdrop', 'swal2-toast-shown');
+
+        // Remove qualquer padding ou overflow forçado
+        document.body.style.removeProperty('padding-right');
+        document.body.style.removeProperty('overflow');
+
+        // Força re-flow do DOM para garantir que tudo está limpo
+        document.body.offsetHeight;
+
+        console.log('%c🧹 Modal limpo - Elementos residuais removidos', 'color: orange; font-size: 11px;');
+    }, 100);
+}
+
 // Aliases para compatibilidade com código antigo
 const showNotification = mostrarNotificacao;
 const showDialog = mostrarConfirmacao;
 const showLoading = mostrarLoading;
+
+// ========== INTERCEPTOR GLOBAL - ADICIONA LIMPEZA AUTOMÁTICA ==========
+// Para modais antigos que ainda usam Swal.fire() direto
+const SwalOriginal = window.Swal.fire.bind(window.Swal);
+window.Swal.fire = function(...args) {
+    // Se foi passado um objeto de configuração
+    if (typeof args[0] === 'object') {
+        const config = args[0];
+        const originalWillClose = config.willClose;
+
+        // Adiciona nossa limpeza ao willClose existente
+        config.willClose = () => {
+            if (originalWillClose) originalWillClose();
+            limparModalResidual();
+        };
+
+        return SwalOriginal(config);
+    }
+
+    // Se foi passado (title, text, icon) - formato curto
+    return SwalOriginal(...args).then(result => {
+        limparModalResidual();
+        return result;
+    });
+};
 
 console.log('%c✅ Sistema de Modais CORRETO Carregado (Roteiro Técnico)', 'color: green; font-weight: bold; font-size: 14px;');
 console.log('%c  📢 Use mostrarNotificacao() para notificações (COM timer)', 'color: blue;');
 console.log('%c  ❓ Use mostrarConfirmacao() para diálogos (SEM timer)', 'color: blue;');
 console.log('%c  ⏳ Use mostrarLoading() para operações assíncronas', 'color: blue;');
 console.log('%c  🚫 NUNCA use onclick no HTML! Use didOpen + addEventListener', 'color: red; font-weight: bold;');
+console.log('%c  🧹 Limpeza automática de modais ATIVA (interceptor global)', 'color: orange; font-weight: bold;');
 </script>
 
 <div id="authScreen" class="auth-screen">
@@ -7492,13 +7554,6 @@ async function marcarComissaoPaga(comissaoId) {
         });
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 // ========== FUNÇÃO: CARREGAR ASSISTENTES ==========
@@ -9079,14 +9134,6 @@ async function deleteCliente(id){
             mostrarNotificacao('error', 'Erro ao deletar cliente');
         }
     }
-
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 function filtrarClientes(){
@@ -9532,13 +9579,6 @@ async function deleteAssistente(id) {
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 async function deleteProfissional(id){
@@ -9553,13 +9593,6 @@ async function deleteProfissional(id){
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 function showModalProfissional(){
@@ -10974,13 +11007,6 @@ async function ativarTodosServicos() {
         console.log('❌ Operação cancelada pelo usuário');
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 // Função para desativar todos os serviços
@@ -11027,13 +11053,6 @@ async function desativarTodosServicos() {
         console.log('❌ Operação cancelada pelo usuário');
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 async function loadProdutosLista(){
@@ -11102,13 +11121,6 @@ async function deleteProduto(id){
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 function showModalProduto(){
@@ -11181,13 +11193,6 @@ async function ativarTodosProdutos() {
         console.log('❌ Operação cancelada pelo usuário');
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 // Função para desativar todos os produtos
@@ -11234,13 +11239,6 @@ async function desativarTodosProdutos() {
         console.log('❌ Operação cancelada pelo usuário');
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 // Global variable to store all budgets for filtering
@@ -11871,13 +11869,6 @@ async function chamarProximo(id){
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 async function removeFila(id){
@@ -11907,13 +11898,6 @@ async function removeFila(id){
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 function showModalFila(){
@@ -12119,13 +12103,6 @@ async function cancelarAgendamento(id){
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 async function visualizarAgendamento(id){
@@ -14583,13 +14560,6 @@ async function doLogout(){
         location.reload();
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 function switchTab(which){ const login=$('#loginForm'), reg=$('#registerForm'); if(which==='login'){ login.style.display='block'; reg.style.display='none'; $('#loginTab').classList.add('active'); $('#registerTab').classList.remove('active'); } else { login.style.display='none'; reg.style.display='block'; $('#registerTab').classList.add('active'); $('#loginTab').classList.remove('active'); } }
 
@@ -16087,13 +16057,6 @@ async function deletarAnamnese(id) {
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 // ========== PRONTUÁRIO ==========
@@ -16361,13 +16324,6 @@ async function deletarProntuario(id) {
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 // ========== FIM ANAMNESE E PRONTUÁRIO ==========
 
@@ -17168,13 +17124,6 @@ async function toggleStatusProduto(id, statusAtual) {
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 // ========== FIM SUB-TABS PRODUTOS ==========
 
@@ -17370,13 +17319,6 @@ async function toggleStatusServico(id, statusAtual) {
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 // ========== FIM SUB-TABS SERVIÇOS ==========
 
@@ -18532,13 +18474,6 @@ async function excluirDespesa(id){
         }
     }
 
-    // Limpeza de backdrop residual
-    setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-            if (!Swal.isVisible()) el.remove();
-        });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
-    }, 100);
 }
 
 async function carregarDespesas(){
