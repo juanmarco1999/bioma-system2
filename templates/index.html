@@ -4297,6 +4297,8 @@ async function checkAuth(){
             currentTheme=data.user.theme||'light';
             applyTheme(currentTheme);
             showApp();
+            // CORREÇÃO CRÍTICA: Inicializar app após F5 quando usuário já está logado
+            await initApp(data.user);
         }else{
             showAuth();
         }
