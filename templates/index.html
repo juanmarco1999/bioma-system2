@@ -1,68 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- ULTRA-EARLY THEME ENFORCEMENT - Runs before ANY other code -->
+    <!-- TEMA PERSISTENTE - Carrega tema salvo do localStorage -->
     <script>
-    // Force light mode on login screen - runs IMMEDIATELY
+    // Carregar tema salvo (ou usar light como padrão)
     (function() {
-        // Set attribute before any CSS loads
-        document.documentElement.setAttribute('data-theme', 'light');
-        document.documentElement.classList.remove('dark-mode');
-        document.documentElement.classList.add('light-mode');
-        
-        // Remove any saved theme from localStorage to prevent flash
-        try {
-            const authVisible = !document.getElementById('app') ||
-                               document.getElementById('app')?.style.display === 'none';
-            if (authVisible) {
-                localStorage.removeItem('theme');
-                localStorage.setItem('forceLight', 'true');
-                console.log('%c🌞 EARLY LIGHT MODE ENFORCED', 'background: #FBBF24; color: #000; padding: 4px; font-weight: bold;');
-            }
-        } catch(e) { /* ignore errors on first run */ }
-        
-        // Observador para prevenir mudanças de tema
-        const observer = new MutationObserver(function(mutations) {
-            const authScreen = document.getElementById('authScreen');
-            const app = document.getElementById('app');
-            
-            if (authScreen && authScreen.style.display !== 'none' && 
-                (!app || app.style.display === 'none')) {
-                
-                if (document.documentElement.getAttribute('data-theme') !== 'light') {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                    document.documentElement.classList.remove('dark-mode');
-                    document.documentElement.classList.add('light-mode');
-                    console.log('🌞 Revertendo para Light Mode (login)');
-                }
-            }
-        });
-        
-        // Começar a observar assim que o DOM estiver pronto
-        if (document.documentElement) {
-            observer.observe(document.documentElement, {
-                attributes: true,
-                attributeFilter: ['data-theme', 'class']
-            });
-        }
-        
-        // Verificação adicional a cada 100ms durante o carregamento
-        const checkInterval = setInterval(() => {
-            const authScreen = document.getElementById('authScreen');
-            const app = document.getElementById('app');
-            
-            if (authScreen) {
-                if (authScreen.style.display !== 'none' && 
-                    (!app || app.style.display === 'none')) {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                } else {
-                    clearInterval(checkInterval);
-                }
-            }
-        }, 100);
-        
-        // Parar verificação após 5 segundos
-        setTimeout(() => clearInterval(checkInterval), 5000);
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        console.log(`🎨 Tema carregado: ${savedTheme}`);
     })();
     </script>
     <meta charset="UTF-8">
@@ -1218,6 +1163,164 @@
             animation: pulseCritico 2s infinite;
         }
 
+        /* === BOTÃO DE TEMA NA TELA DE LOGIN === */
+        .auth-theme-toggle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.3rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        }
+
+        .auth-theme-toggle i {
+            transition: transform 0.3s ease;
+        }
+
+        /* === MELHORIAS DE DARK MODE (CONTRASTE E LEGIBILIDADE) === */
+
+        /* Tela de login com dark mode */
+        :root[data-theme="dark"] .auth-box {
+            background: rgba(30, 41, 59, 0.95) !important;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+        }
+
+        :root[data-theme="dark"] .auth-logo h2 {
+            color: #F1F5F9 !important;
+        }
+
+        :root[data-theme="dark"] .auth-logo p {
+            color: #CBD5E1 !important;
+        }
+
+        :root[data-theme="dark"] .login-label,
+        :root[data-theme="dark"] .remember-label {
+            color: #F1F5F9 !important;
+        }
+
+        /* Inputs no dark mode com melhor contraste */
+        :root[data-theme="dark"] .form-control,
+        :root[data-theme="dark"] .form-select {
+            background: #0F172A !important;
+            color: #F1F5F9 !important;
+            border-color: #475569 !important;
+        }
+
+        :root[data-theme="dark"] .form-control:focus,
+        :root[data-theme="dark"] .form-select:focus {
+            background: #1E293B !important;
+            border-color: #8B5CF6 !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3) !important;
+        }
+
+        :root[data-theme="dark"] .form-control::placeholder {
+            color: #94A3B8 !important;
+            opacity: 0.8;
+        }
+
+        /* Info box no dark mode */
+        :root[data-theme="dark"] .info-box {
+            background: rgba(59, 130, 246, 0.15) !important;
+            color: #93C5FD !important;
+        }
+
+        :root[data-theme="dark"] .info-code {
+            background: rgba(139, 92, 246, 0.2);
+            color: #C4B5FD;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Tabs no dark mode */
+        :root[data-theme="dark"] .nav-pills .nav-link {
+            color: #CBD5E1 !important;
+        }
+
+        :root[data-theme="dark"] .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            color: white !important;
+        }
+
+        /* Remember box no dark mode */
+        :root[data-theme="dark"] .remember-box {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        /* Melhorar contraste de textos em cards */
+        :root[data-theme="dark"] .card-body {
+            color: #F1F5F9;
+        }
+
+        :root[data-theme="dark"] table tbody td {
+            color: #E2E8F0;
+        }
+
+        /* Badges mais visíveis no dark mode */
+        :root[data-theme="dark"] .badge {
+            filter: brightness(1.3) saturate(1.2);
+        }
+
+        /* Ícones mais visíveis */
+        :root[data-theme="dark"] .bi {
+            opacity: 0.95;
+        }
+
+        /* Melhorar legibilidade de h1, h2, h3 */
+        :root[data-theme="dark"] h1,
+        :root[data-theme="dark"] h2,
+        :root[data-theme="dark"] h3,
+        :root[data-theme="dark"] h4,
+        :root[data-theme="dark"] h5,
+        :root[data-theme="dark"] h6 {
+            color: #F1F5F9 !important;
+        }
+
+        /* Melhorar contraste de labels */
+        :root[data-theme="dark"] label {
+            color: #E2E8F0 !important;
+            font-weight: 600;
+        }
+
+        /* Autocomplete no dark mode */
+        :root[data-theme="dark"] .autocomplete-item {
+            color: #E2E8F0;
+        }
+
+        :root[data-theme="dark"] .autocomplete-item:hover {
+            background: rgba(139, 92, 246, 0.2);
+        }
+
+        :root[data-theme="dark"] .autocomplete-item strong {
+            color: #C4B5FD;
+        }
+
+        /* Melhorar contraste de códigos e small texts */
+        :root[data-theme="dark"] code {
+            background: rgba(139, 92, 246, 0.2);
+            color: #C4B5FD;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        :root[data-theme="dark"] small {
+            color: #CBD5E1;
+        }
+
         /* Animação de entrada para modais SweetAlert */
         /* ========== SWAL2 CORREÇÕES CRÍTICAS ========== */
         /* Garantir que botões e modais sejam SEMPRE clicáveis */
@@ -2327,39 +2430,10 @@ if (localStorage.getItem('BIOMA_CACHE_VERSION') === CACHE_VERSION) {
 }
 
 // ============================================================
-// CORREÇÃO 1: LIGHT MODE NO LOGIN (ULTRA AGRESSIVO)
+// SISTEMA DE TEMA - Light/Dark Mode
 // ============================================================
-let loginLightModeCount = 0;
-const forceLoginLightMode = () => {
-    const authScreen = document.getElementById('authScreen');
-    const appDiv = document.getElementById('app');
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-
-    const isLoginVisible = (authScreen && window.getComputedStyle(authScreen).display !== 'none') ||
-                          (appDiv && window.getComputedStyle(appDiv).display === 'none') ||
-                          !appDiv;
-
-    if (isLoginVisible && currentTheme !== 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-        loginLightModeCount++;
-        console.log(`🔒 LOGIN LIGHT MODE FORÇADO (#${loginLightModeCount})`);
-    }
-};
-
-// Executar ANTES de qualquer outra coisa
-forceLoginLightMode();
-
-// Usar MutationObserver para detectar mudanças no DOM
-const observer = new MutationObserver(forceLoginLightMode);
-observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme'],
-    childList: true,
-    subtree: true
-});
-
-// Interval como backup
-setInterval(forceLoginLightMode, 20);
+// Tema pode ser alternado tanto no login quanto no app
+// Removido: Código que forçava light mode no login
 
 // ============================================================
 // CORREÇÃO 2: SISTEMA DE MODAIS E BOTÕES (SIMPLIFICADO)
@@ -2439,6 +2513,13 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
 
 <div id="authScreen" class="auth-screen">
     <div class="auth-box">
+        <!-- Botão de alternância de tema no login -->
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 10;">
+            <button onclick="toggleTheme()" class="auth-theme-toggle" title="Alternar tema">
+                <i class="bi bi-moon-stars-fill" id="authThemeIcon"></i>
+            </button>
+        </div>
+
         <div class="auth-logo">
             <img id="authLogoCustom" alt="Logo personalizado" style="display:none;max-height:120px;margin:0 auto 20px;">
             <div class="logo-icon">🌳</div>
@@ -5199,22 +5280,24 @@ function switchTab(tab){
 // Remoção feita para evitar duplicação e vazamento de mensagens SweetAlert
 
 function applyTheme(theme){
-    // CRÍTICO: NUNCA aplicar dark mode se estiver na tela de login
-    const authScreen = document.getElementById('authScreen');
-    const isAuthVisible = authScreen && authScreen.style.display !== 'none';
-
-    // Forçar light mode na tela de login
-    if (isAuthVisible) {
-        console.log('🔒 Tela de login detectada - forçando light mode');
-        document.documentElement.setAttribute('data-theme', 'light');
-        return; // Não continuar
-    }
-
-    // Aplicar tema normalmente apenas dentro do app
+    // Aplicar tema em toda a aplicação (login e app)
     document.documentElement.setAttribute('data-theme', theme);
     currentTheme = theme;
 
-    // Atualizar ícone do botão de tema (só existe dentro do app)
+    // Salvar tema no localStorage
+    localStorage.setItem('theme', theme);
+
+    // Atualizar ícone do botão de tema no LOGIN (authThemeIcon)
+    const authThemeIcon = document.getElementById('authThemeIcon');
+    if (authThemeIcon) {
+        if (theme === 'dark') {
+            authThemeIcon.className = 'bi bi-sun-fill';
+        } else {
+            authThemeIcon.className = 'bi bi-moon-stars-fill';
+        }
+    }
+
+    // Atualizar ícone do botão de tema no APP (themeIcon)
     const themeIcon = document.getElementById('themeIcon');
     const themeText = document.getElementById('themeText');
 
@@ -5227,6 +5310,8 @@ function applyTheme(theme){
             themeText.textContent = 'Modo Escuro';
         }
     }
+
+    console.log(`🎨 Tema aplicado: ${theme}`);
 }
 
 async function toggleTheme(){
