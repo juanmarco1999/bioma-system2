@@ -3153,148 +3153,17 @@ const originalSwalFire = Swal.fire.bind(Swal);
 const activeModals = new Map();
 
 Swal.fire = function(...args) {
-    let config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
+    const config = typeof args[0] === 'object' ? args[0] : { title: args[0] };
 
-    // ============ PROTEÇÃO ULTRA-RADICAL CONTRA FECHAMENTO AUTOMÁTICO ============
-
-    // Identificar tipo de modal
-    const isLoading = config.showLoading || (config.didOpen && config.didOpen.toString().includes('showLoading'));
-    const isToast = config.toast === true;
-    const hasInput = config.input !== undefined;
-    const hasHTML = config.html !== undefined;
-    const hasCancelButton = config.showCancelButton === true;
-
-    // Notificações: têm ícone + timer, sem input/formulários
-    const hasIcon = config.icon !== undefined;
-    const hasTimer = config.timer !== undefined;
-    const isNotification = hasIcon && hasTimer && !hasInput && !hasCancelButton;
-
-    // Modal interativo = tem input, HTML, ou botão cancelar (mas não é loading/toast/notificação)
-    const isInteractiveModal = (hasInput || hasHTML || hasCancelButton) && !isLoading && !isToast && !isNotification;
-
-    if (isInteractiveModal) {
-        // CRIAR NOVO CONFIG COM PROPRIEDADES TRAVADAS
-        const safeConfig = Object.assign({}, config);
-
-        // FORÇAR propriedades de segurança (NÃO PODEM SER SOBRESCRITAS)
-        Object.defineProperty(safeConfig, 'timer', {
-            value: undefined,
-            writable: false,
-            configurable: false
-        });
-
-        Object.defineProperty(safeConfig, 'timerProgressBar', {
-            value: false,
-            writable: false,
-            configurable: false
-        });
-
-        Object.defineProperty(safeConfig, 'allowOutsideClick', {
-            value: false,
-            writable: false,
-            configurable: false
-        });
-
-        Object.defineProperty(safeConfig, 'allowEscapeKey', {
-            value: false,
-            writable: false,
-            configurable: false
-        });
-
-        config = safeConfig;
-        console.log('🛡️ Modal interativo com propriedades TRAVADAS para prevenir fechamento');
-    }
-
-    // Adicionar proteções adicionais no didOpen
-    const originalDidOpen = config.didOpen;
-    config.didOpen = function(popup) {
-        // Executar didOpen original se existir
-        if (originalDidOpen) {
-            try {
-                originalDidOpen(popup);
-            } catch (e) {
-                console.error('Erro no didOpen original:', e);
-            }
-        }
-
-        // Só proteger modais interativos
-        if (isInteractiveModal) {
-            // PROTEÇÃO 1: Bloquear TODOS os eventos de mouse no container/backdrop
-            const container = document.querySelector('.swal2-container');
-            if (container) {
-                // Remover TODOS os event listeners existentes clonando o elemento
-                const newContainer = container.cloneNode(true);
-                container.parentNode.replaceChild(newContainer, container);
-
-                // Adicionar APENAS os event listeners necessários
-                newContainer.addEventListener('click', (e) => {
-                    if (e.target === newContainer || e.target.classList.contains('swal2-container')) {
-                        e.stopPropagation();
-                        e.stopImmediatePropagation();
-                        e.preventDefault();
-                        console.log('🛡️ Click no backdrop BLOQUEADO');
-                        return false;
-                    }
-                }, true);
-
-                newContainer.addEventListener('mousedown', (e) => {
-                    if (e.target === newContainer || e.target.classList.contains('swal2-container')) {
-                        e.stopPropagation();
-                        e.stopImmediatePropagation();
-                        e.preventDefault();
-                        return false;
-                    }
-                }, true);
-            }
-
-            // PROTEÇÃO 2: Bloquear eventos no popup
-            popup.addEventListener('mouseleave', (e) => {
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }, true);
-
-            // PROTEÇÃO 3: Marcar popup como protegido
-            popup.setAttribute('data-swal-interactive', 'true');
-            popup.setAttribute('data-swal-protected', Date.now());
-
-            console.log('🛡️ Modal interativo ULTRA-PROTEGIDO contra fechamento automático');
-        }
-    };
+    // NÃO MODIFICAR O CONFIG - apenas chamar o SweetAlert2 normalmente
+    // A proteção ultra-radical estava quebrando TODOS os modais
 
     const result = originalSwalFire(config);
 
     return result;
 };
 
-// PROTEÇÃO GLOBAL: Interceptar Swal.close() não autorizado
-const originalSwalClose = Swal.close.bind(Swal);
-let allowClose = false; // Flag para permitir fechamento programático
-
-Swal.close = function() {
-    const activePopup = Swal.getPopup();
-
-    // Se não há popup, permitir
-    if (!activePopup) {
-        return originalSwalClose();
-    }
-
-    // Se é um popup interativo protegido e não foi autorizado, bloquear
-    const isProtected = activePopup.getAttribute('data-swal-interactive') === 'true';
-
-    if (isProtected && !allowClose) {
-        console.warn('🛡️ Tentativa de fechar modal protegido bloqueada! Use os botões do modal.');
-        return;
-    }
-
-    // Caso contrário, permitir fechamento
-    allowClose = false; // Reset flag
-    return originalSwalClose();
-};
-
-// Função helper para permitir fechamento programático quando necessário
-window.allowSwalClose = function() {
-    allowClose = true;
-};
+// REMOVIDO: Interceptação de Swal.close() que estava causando problemas
 
 // Sistema PASSIVO para prevenir botões travados (não interfere com cliques)
 setInterval(() => {
@@ -3895,8 +3764,11 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
             <!-- Sub-tab: Mapa de Calor -->
             <div id="relatorios-mapa" class="sub-tab-content">
                 <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados</span>
+                        <button class="btn btn-sm btn-primary" onclick="carregarMapaCalor()" title="Atualizar Mapa de Calor">
+                            <i class="bi bi-arrow-clockwise"></i> Atualizar
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
@@ -15052,38 +14924,78 @@ async function initApp(user=null){
     loadProfissionais(),
     loadServicosLista(),
     loadEstoque(), // Incluído: carregar estoque no início
-    loadOrcamentos('pendentes'),
     loadContratos(),
     carregarMapaCalor(),
     loadFila(),
     loadSystem()
   ]).then(() => {
     console.log('✅ Carregamento inicial completo');
-    console.log('🔄 Sistema de auto-atualização iniciará em 60 segundos');
+    console.log('🔄 Sistema de auto-atualização iniciará em segundos...');
   });
 
-  // ========== SISTEMA DE AUTO-REFRESH MELHORADO ==========
-  // AUTO-REFRESH INTELIGENTE (a cada 60 segundos)
-  let autoRefreshCounter = 0;
+  // ========== SISTEMA DE AUTO-REFRESH MELHORADO (DUPLO) ==========
+
+  // AUTO-REFRESH RÁPIDO (15s) - Para seções críticas: Dashboard, Financeiro, Estoque, Orçamentos
+  let autoRefreshRapidoCounter = 0;
 
   setInterval(() => {
-    autoRefreshCounter++;
-    console.log(`🔄 Auto-refresh #${autoRefreshCounter} iniciando...`);
-
-    // Mostrar indicador visual de auto-refresh
-    showAutoRefreshIndicator();
+    autoRefreshRapidoCounter++;
+    console.log(`⚡ Auto-refresh RÁPIDO #${autoRefreshRapidoCounter} iniciando...`);
 
     let updated = false;
 
     // 1. Atualizar DASHBOARD se estiver visível
     const isDashboardVisible = document.getElementById('section-dashboard')?.classList.contains('active');
     if (isDashboardVisible) {
-      console.log('  📊 Atualizando dashboard...');
+      console.log('  📊 [RÁPIDO] Atualizando dashboard...');
       loadDashboard();
       updated = true;
     }
 
-    // 2. Atualizar CLIENTES se estiver visível
+    // 2. Atualizar FINANCEIRO se estiver visível
+    const isFinanceiroVisible = document.getElementById('section-financeiro')?.classList.contains('active');
+    if (isFinanceiroVisible) {
+      console.log('  💵 [RÁPIDO] Atualizando financeiro...');
+      atualizarResumoFinanceiro();
+      updated = true;
+    }
+
+    // 3. Atualizar ESTOQUE se estiver visível
+    const isEstoqueVisible = document.getElementById('section-estoque')?.classList.contains('active');
+    if (isEstoqueVisible) {
+      console.log('  📦 [RÁPIDO] Atualizando estoque...');
+      loadEstoque();
+      updated = true;
+    }
+
+    // 4. Atualizar ORÇAMENTOS se estiver visível
+    const isOrcamentosVisible = document.getElementById('section-orcamento')?.classList.contains('active');
+    if (isOrcamentosVisible) {
+      console.log('  💰 [RÁPIDO] Atualizando orçamentos...');
+      // Recarregar a sub-tab ativa
+      const activeSubTab = document.querySelector('#section-orcamento .sub-tab-content.active')?.id;
+      if (activeSubTab) {
+        const subTabName = activeSubTab.replace('orcamento-subtab-', '');
+        showSubTab('orcamento', subTabName);
+      }
+      updated = true;
+    }
+
+    if (updated) {
+      console.log(`✅ Auto-refresh RÁPIDO #${autoRefreshRapidoCounter} concluído!`);
+    }
+  }, 15000); // 15 segundos - refresh rápido
+
+  // AUTO-REFRESH NORMAL (60s) - Para outras seções
+  let autoRefreshCounter = 0;
+
+  setInterval(() => {
+    autoRefreshCounter++;
+    console.log(`🔄 Auto-refresh GERAL #${autoRefreshCounter} iniciando...`);
+
+    let updated = false;
+
+    // 1. Atualizar CLIENTES se estiver visível
     const isClientesVisible = document.getElementById('section-clientes')?.classList.contains('active');
     if (isClientesVisible) {
       console.log('  👥 Atualizando clientes...');
@@ -15091,7 +15003,7 @@ async function initApp(user=null){
       updated = true;
     }
 
-    // 3. Atualizar PROFISSIONAIS se estiver visível
+    // 2. Atualizar PROFISSIONAIS se estiver visível
     const isProfissionaisVisible = document.getElementById('section-profissionais')?.classList.contains('active');
     if (isProfissionaisVisible) {
       console.log('  👨‍⚕️ Atualizando profissionais...');
@@ -15099,7 +15011,7 @@ async function initApp(user=null){
       updated = true;
     }
 
-    // 4. Atualizar SERVIÇOS se estiver visível
+    // 3. Atualizar SERVIÇOS se estiver visível
     const isServicosVisible = document.getElementById('section-servicos')?.classList.contains('active');
     if (isServicosVisible) {
       console.log('  💇 Atualizando serviços...');
@@ -15107,7 +15019,7 @@ async function initApp(user=null){
       updated = true;
     }
 
-    // 5. Atualizar PRODUTOS se estiver visível
+    // 4. Atualizar PRODUTOS se estiver visível
     const isProdutosVisible = document.getElementById('section-produtos')?.classList.contains('active');
     if (isProdutosVisible) {
       console.log('  📦 Atualizando produtos...');
@@ -15115,15 +15027,7 @@ async function initApp(user=null){
       updated = true;
     }
 
-    // 6. Atualizar ORÇAMENTOS se estiver visível
-    const isOrcamentosVisible = document.getElementById('section-orcamentos')?.classList.contains('active');
-    if (isOrcamentosVisible) {
-      console.log('  💰 Atualizando orçamentos...');
-      loadOrcamentos();
-      updated = true;
-    }
-
-    // 7. Atualizar CONTRATOS se estiver visível
+    // 5. Atualizar CONTRATOS se estiver visível
     const isContratosVisible = document.getElementById('section-contratos')?.classList.contains('active');
     if (isContratosVisible) {
       console.log('  📄 Atualizando contratos...');
@@ -15131,15 +15035,7 @@ async function initApp(user=null){
       updated = true;
     }
 
-    // 8. Atualizar RELATÓRIOS/MAPA DE CALOR se estiver visível
-    const isMapaCalorVisible = document.getElementById('relatorios-mapa')?.classList.contains('active');
-    if (isMapaCalorVisible) {
-      console.log('  🗺️ Atualizando mapa de calor...');
-      carregarMapaCalor();
-      updated = true;
-    }
-
-    // 9. Atualizar STATUS DO SISTEMA se estiver visível
+    // 6. Atualizar STATUS DO SISTEMA se estiver visível
     const isSistemaVisible = document.getElementById('section-sistema')?.classList.contains('active');
     if (isSistemaVisible) {
       console.log('  ⚙️ Atualizando status do sistema...');
@@ -15147,7 +15043,7 @@ async function initApp(user=null){
       updated = true;
     }
 
-    // 10. Atualizar FILA se estiver visível
+    // 7. Atualizar FILA se estiver visível
     const isFilaVisible = document.getElementById('section-fila')?.classList.contains('active');
     if (isFilaVisible) {
       console.log('  📋 Atualizando fila...');
@@ -15156,14 +15052,13 @@ async function initApp(user=null){
     }
 
     if (updated) {
-      console.log(`✅ Auto-refresh #${autoRefreshCounter} concluído com sucesso!`);
-    } else {
-      console.log(`⏭️ Auto-refresh #${autoRefreshCounter} - nenhuma seção visível`);
+      console.log(`✅ Auto-refresh GERAL #${autoRefreshCounter} concluído!`);
     }
+  }, 60000); // 60 segundos - refresh geral
 
-    // Esconder indicador após 2 segundos
-    setTimeout(hideAutoRefreshIndicator, 2000);
-  }, 60000); // 60 segundos
+  console.log('✅ Sistema de auto-refresh DUPLO inicializado:');
+  console.log('  ⚡ 15s: Dashboard, Financeiro, Estoque, Orçamentos');
+  console.log('  🔄 60s: Clientes, Profissionais, Serviços, Produtos, Contratos, Sistema, Fila');
 
   // Funções para mostrar/esconder indicador de auto-refresh
   function showAutoRefreshIndicator() {
