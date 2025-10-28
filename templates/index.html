@@ -1467,6 +1467,141 @@
     .theme-toggle button i {
         transition: transform 0.3s ease;
     }
+
+    /* ========== CORREÇÕES ABRANGENTES DARK MODE ========== */
+    /* Garantir que TODOS os inputs/selects/textareas funcionem no dark mode */
+    :root[data-theme="dark"] .form-control,
+    :root[data-theme="dark"] .form-select,
+    :root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+    :root[data-theme="dark"] select,
+    :root[data-theme="dark"] textarea {
+        background: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+        border-color: var(--border-color) !important;
+    }
+
+    :root[data-theme="dark"] .form-control:focus,
+    :root[data-theme="dark"] .form-select:focus,
+    :root[data-theme="dark"] input:focus,
+    :root[data-theme="dark"] select:focus,
+    :root[data-theme="dark"] textarea:focus {
+        background: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+        border-color: var(--primary) !important;
+    }
+
+    /* Placeholders visíveis no dark mode */
+    :root[data-theme="dark"] input::placeholder,
+    :root[data-theme="dark"] textarea::placeholder {
+        color: var(--text-muted) !important;
+        opacity: 0.7;
+    }
+
+    /* Labels e textos no dark mode */
+    :root[data-theme="dark"] label,
+    :root[data-theme="dark"] .form-label {
+        color: var(--text-primary) !important;
+    }
+
+    /* Alertas no dark mode */
+    :root[data-theme="dark"] .alert-info {
+        background: rgba(59, 130, 246, 0.15) !important;
+        color: var(--info) !important;
+    }
+
+    :root[data-theme="dark"] .alert-success {
+        background: rgba(16, 185, 129, 0.15) !important;
+        color: var(--success) !important;
+    }
+
+    /* ========== TRANSIÇÕES SUAVES ENTRE PÁGINAS/ABAS ========== */
+    .content-section {
+        transition: opacity 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+                    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    .content-section.active {
+        opacity: 1;
+        transform: translateY(0);
+        animation: smoothPageTransition 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes smoothPageTransition {
+        0% {
+            opacity: 0;
+            transform: translateY(30px) scale(0.98);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* Sub-tabs com transição suave */
+    .sub-tab-content {
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        opacity: 0;
+        transform: translateX(-15px);
+        display: none;
+    }
+
+    .sub-tab-content.active {
+        opacity: 1;
+        transform: translateX(0);
+        display: block;
+        animation: smoothSubTabTransition 0.4s ease;
+    }
+
+    @keyframes smoothSubTabTransition {
+        0% {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Tabs do menu lateral com transição */
+    .sidebar-menu li a {
+        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    .sidebar-menu li a:hover {
+        transition-duration: 0.2s;
+    }
+
+    /* Cards com transição suave */
+    .card {
+        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    .stat-card {
+        transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Botões com transição mais fluida */
+    .btn {
+        transition: all 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    .btn:hover {
+        transition-duration: 0.15s;
+    }
+
+    /* Smooth scroll global */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Transição de cor no body ao mudar tema */
+    body {
+        transition: background-color 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+                    color 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
 </style>
 
 </head>
@@ -1577,61 +1712,16 @@ if (typeof Swal !== 'undefined') {
     };
 }
 
-// Adicionar listener de emergência para ESC (funciona mesmo se modal não responder)
+// Listener para ESC fechar modais normalmente (sem força)
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && window.SafeSwal._isOpen) {
-        console.log('🚨 ESC pressionado - forçando fechamento do modal');
-        window.SafeSwal.forceClose();
-    }
-});
-
-// Botão de emergência invisível para fechar modais travados
-window.addEventListener('load', function() {
-    // Verificar se document.body existe antes de criar botão
-    if (!document.body) {
-        console.warn('⚠️ document.body não disponível - botão de emergência não criado');
-        return;
-    }
-
-    const emergencyButton = document.createElement('div');
-    emergencyButton.id = 'modalEmergencyClose';
-    emergencyButton.innerHTML = '✕ Fechar';
-    emergencyButton.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 999999;
-        background: #EF4444;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: bold;
-        box-shadow: 0 4px 12px rgba(239,68,68,0.4);
-        display: none;
-        font-size: 14px;
-    `;
-    emergencyButton.onclick = function() {
-        console.log('🆘 Botão de emergência acionado');
-        window.SafeSwal.forceClose();
-        if (this.style) this.style.display = 'none';
-    };
-    document.body.appendChild(emergencyButton);
-
-    // Mostrar botão de emergência se modal estiver aberto por mais de 3 segundos
-    setInterval(function() {
-        // Verificar se emergencyButton ainda existe no DOM
-        if (!emergencyButton || !emergencyButton.style) return;
-
-        if (window.SafeSwal._isOpen) {
-            const modalVisible = document.querySelector('.swal2-container');
-            if (modalVisible) {
-                emergencyButton.style.display = 'block';
-            }
-        } else {
-            emergencyButton.style.display = 'none';
+        console.log('⌨️ ESC pressionado - fechando modal');
+        try {
+            Swal.close();
+        } catch(err) {
+            console.warn('⚠️ Erro ao fechar modal com ESC:', err);
         }
-    }, 3000);
+    }
 });
 </script>
 
@@ -10349,13 +10439,16 @@ console.log('%c📅 2025-10-05 22:38 UTC | Dev: @juanmarco1999','color:#6B7280;f
 
 document.addEventListener('click',function(e){
     if(!e.target.closest('#orcCPF')&&!e.target.closest('#cpfResults')){
-        document.getElementById('cpfResults').style.display='none';
+        const cpfResults = document.getElementById('cpfResults');
+        if(cpfResults) cpfResults.style.display='none';
     }
     if(!e.target.closest('#buscaServico')&&!e.target.closest('#servicoResults')){
-        document.getElementById('servicoResults').style.display='none';
+        const servicoResults = document.getElementById('servicoResults');
+        if(servicoResults) servicoResults.style.display='none';
     }
     if(!e.target.closest('#buscaProduto')&&!e.target.closest('#produtoResults')){
-        document.getElementById('produtoResults').style.display='none';
+        const produtoResults = document.getElementById('produtoResults');
+        if(produtoResults) produtoResults.style.display='none';
     }
     if(!e.target.closest('.global-search-container')){
         limparResultadosBuscaGlobal();
