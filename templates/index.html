@@ -4092,12 +4092,14 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                     <button class="btn btn-info btn-sm" onclick="exportarServicos('csv')" title="Exportar para CSV">
                         <i class="bi bi-file-earmark-text"></i> CSV
                     </button>
-                    <button class="btn btn-primary" onclick="showModalServico()"><i class="bi bi-plus-circle"></i> Novo</button>
                 </div>
             </div>
 
             <!-- Sub-tabs para Serviços -->
             <div class="sub-tabs">
+                <button class="sub-tab-btn" onclick="switchSubTab('servicos', 'novo')">
+                    <i class="bi bi-plus-circle-fill"></i> Novo Serviço
+                </button>
                 <button class="sub-tab-btn active" onclick="switchSubTab('servicos', 'todos')">
                     <i class="bi bi-list-ul"></i> Todos
                 </button>
@@ -4107,6 +4109,92 @@ console.log('%c✅ Sistema de Modais Ativado (v2 - Sem Recursão)', 'color: gree
                 <button class="sub-tab-btn" onclick="switchSubTab('servicos', 'inativos')">
                     <i class="bi bi-x-circle"></i> Inativos
                 </button>
+            </div>
+
+            <!-- Sub-tab: NOVO SERVIÇO - COMPLETO -->
+            <div id="servicos-subtab-novo" class="sub-tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-plus-circle-fill"></i> Cadastrar Novo Serviço
+                    </div>
+                    <div class="card-body">
+                        <form id="formNovoServico">
+                            <div class="row g-3">
+                                <!-- Nome do Serviço -->
+                                <div class="col-md-8">
+                                    <label class="form-label"><i class="bi bi-scissors"></i> Nome do Serviço *</label>
+                                    <input type="text" id="novoServicoNome" class="form-control" placeholder="Ex: Corte de Cabelo, Manicure..." required>
+                                </div>
+
+                                <!-- Status -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-toggle-on"></i> Status *</label>
+                                    <select id="novoServicoStatus" class="form-select" required>
+                                        <option value="ativo" selected>Ativo</option>
+                                        <option value="inativo">Inativo</option>
+                                    </select>
+                                </div>
+
+                                <!-- Categoria -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-tags"></i> Categoria *</label>
+                                    <select id="novoServicoCategoria" class="form-select" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="Estética">Estética</option>
+                                        <option value="Capilar">Capilar</option>
+                                        <option value="Corporal">Corporal</option>
+                                        <option value="Facial">Facial</option>
+                                    </select>
+                                </div>
+
+                                <!-- Tamanho -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-rulers"></i> Tamanho *</label>
+                                    <select id="novoServicoTamanho" class="form-select" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="Pequeno">Pequeno</option>
+                                        <option value="Médio">Médio</option>
+                                        <option value="Grande">Grande</option>
+                                    </select>
+                                </div>
+
+                                <!-- Preço -->
+                                <div class="col-md-4">
+                                    <label class="form-label"><i class="bi bi-currency-dollar"></i> Preço (R$) *</label>
+                                    <input type="number" id="novoServicoPreco" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+                                </div>
+
+                                <!-- Duração -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-clock"></i> Duração (minutos)</label>
+                                    <input type="number" id="novoServicoDuracao" class="form-control" placeholder="Ex: 60" min="0">
+                                </div>
+
+                                <!-- Comissão do Profissional -->
+                                <div class="col-md-6">
+                                    <label class="form-label"><i class="bi bi-percent"></i> Comissão Profissional (%)</label>
+                                    <input type="number" id="novoServicoComissao" class="form-control" placeholder="10" value="10" min="0" max="100" step="0.1">
+                                </div>
+
+                                <!-- Descrição -->
+                                <div class="col-12">
+                                    <label class="form-label"><i class="bi bi-chat-left-text"></i> Descrição</label>
+                                    <textarea id="novoServicoDescricao" class="form-control" rows="3" placeholder="Descreva os detalhes do serviço..."></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Botões de Ação -->
+                            <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoServico()">
+                                    <i class="bi bi-x-circle"></i> Limpar
+                                </button>
+                                <button type="button" class="btn btn-primary" onclick="salvarNovoServico()">
+                                    <i class="bi bi-check-circle"></i> Salvar Serviço
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <!-- Sub-tab: Todos -->
@@ -7977,6 +8065,115 @@ async function salvarNovoCliente() {
             icon: 'error',
             title: 'Erro no servidor',
             text: 'Não foi possível salvar o cliente'
+        });
+    }
+}
+
+// ========== NOVO SERVIÇO - FUNÇÕES COMPLETAS ====================
+
+/**
+ * Limpar formulário de novo serviço
+ */
+function limparFormularioNovoServico() {
+    document.getElementById('novoServicoNome').value = '';
+    document.getElementById('novoServicoCategoria').value = '';
+    document.getElementById('novoServicoTamanho').value = '';
+    document.getElementById('novoServicoPreco').value = '';
+    document.getElementById('novoServicoDuracao').value = '';
+    document.getElementById('novoServicoComissao').value = '10';
+    document.getElementById('novoServicoDescricao').value = '';
+    document.getElementById('novoServicoStatus').value = 'ativo';
+    console.log('✅ Formulário de novo serviço limpo');
+}
+
+/**
+ * Salvar novo serviço
+ */
+async function salvarNovoServico() {
+    // Validar campos obrigatórios
+    const nome = document.getElementById('novoServicoNome').value.trim();
+    const categoria = document.getElementById('novoServicoCategoria').value;
+    const tamanho = document.getElementById('novoServicoTamanho').value;
+    const preco = document.getElementById('novoServicoPreco').value;
+    const status = document.getElementById('novoServicoStatus').value;
+
+    if (!nome || !categoria || !tamanho || !preco) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos obrigatórios',
+            text: 'Preencha Nome, Categoria, Tamanho e Preço',
+            timer: 3000
+        });
+        return;
+    }
+
+    try {
+        // Criar objeto com dados do serviço
+        const servicoData = {
+            nome: nome,
+            categoria: categoria,
+            tamanho: tamanho,
+            preco: parseFloat(preco),
+            duracao_minutos: parseInt(document.getElementById('novoServicoDuracao').value) || 0,
+            comissao_perc: parseFloat(document.getElementById('novoServicoComissao').value) || 10,
+            descricao: document.getElementById('novoServicoDescricao').value.trim(),
+            ativo: status === 'ativo'
+        };
+
+        // Mostrar loading
+        Swal.fire({
+            title: 'Salvando...',
+            html: 'Cadastrando serviço no sistema',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Enviar para API
+        const response = await fetch('/api/servicos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(servicoData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Serviço cadastrado!',
+                html: `<strong>${nome}</strong> foi adicionado aos serviços`,
+                timer: 2500,
+                showConfirmButton: false
+            });
+
+            // Limpar formulário
+            limparFormularioNovoServico();
+
+            // Recarregar lista
+            loadServicos();
+
+            // Voltar para aba de todos
+            setTimeout(() => {
+                switchSubTab('servicos', 'todos');
+            }, 2500);
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro ao cadastrar',
+                text: data.message || 'Verifique os dados e tente novamente'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erro ao salvar serviço:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro no servidor',
+            text: 'Não foi possível salvar o serviço'
         });
     }
 }
