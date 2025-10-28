@@ -1526,10 +1526,14 @@ window.SafeSwal = {
         safeConfig.didClose = () => {
             this._isOpen = false;
             this._currentModal = null;
-            // Limpar qualquer overlay residual
-            document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
-                if (el.style) el.style.display = 'none';
-            });
+            // Limpar qualquer overlay residual (com null check)
+            try {
+                document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+                    if (el && el.style) el.style.display = 'none';
+                });
+            } catch(e) {
+                console.warn('⚠️ Erro ao limpar overlays:', e);
+            }
             if (originalDidClose) originalDidClose();
         };
 
@@ -1556,8 +1560,10 @@ window.SafeSwal = {
             document.querySelectorAll('.swal2-container, .swal2-backdrop-show, .swal2-shown').forEach(el => {
                 el.remove();
             });
-            // Remover classes do body
-            document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+            // Remover classes do body (com null check)
+            if (document.body) {
+                document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+            }
         } catch(e) {
             console.error('Erro ao forçar fechamento:', e);
         }
@@ -1581,6 +1587,12 @@ document.addEventListener('keydown', function(e) {
 
 // Botão de emergência invisível para fechar modais travados
 window.addEventListener('load', function() {
+    // Verificar se document.body existe antes de criar botão
+    if (!document.body) {
+        console.warn('⚠️ document.body não disponível - botão de emergência não criado');
+        return;
+    }
+
     const emergencyButton = document.createElement('div');
     emergencyButton.id = 'modalEmergencyClose';
     emergencyButton.innerHTML = '✕ Fechar';
@@ -1602,12 +1614,15 @@ window.addEventListener('load', function() {
     emergencyButton.onclick = function() {
         console.log('🆘 Botão de emergência acionado');
         window.SafeSwal.forceClose();
-        this.style.display = 'none';
+        if (this.style) this.style.display = 'none';
     };
     document.body.appendChild(emergencyButton);
 
     // Mostrar botão de emergência se modal estiver aberto por mais de 3 segundos
     setInterval(function() {
+        // Verificar se emergencyButton ainda existe no DOM
+        if (!emergencyButton || !emergencyButton.style) return;
+
         if (window.SafeSwal._isOpen) {
             const modalVisible = document.querySelector('.swal2-container');
             if (modalVisible) {
