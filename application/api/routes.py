@@ -224,7 +224,7 @@ def current_user():
                         'role': user.get('role', 'admin'),
                         'tipo_acesso': user.get('tipo_acesso', 'Admin'),
                         'theme': user.get('theme', 'light'),
-                        'permissions': permissions_data['permissions'] if permissions_data else {}
+                        'permissions': permissions_data.get('permissoes', []) if permissions_data else []
                     }
                 })
         except Exception as e:
@@ -241,8 +241,8 @@ def get_permissions():
     if permissions_data:
         return jsonify({
             'success': True,
-            'tipo_acesso': permissions_data['tipo_acesso'],
-            'permissions': permissions_data['permissions']
+            'tipo_acesso': permissions_data.get('tipo_acesso', 'Profissional'),
+            'permissions': permissions_data.get('permissoes', [])
         })
     else:
         return jsonify({
