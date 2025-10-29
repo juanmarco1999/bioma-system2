@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v4.11.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- ULTRA-AGGRESSIVE FIX: Força botões clicáveis quando modal ABRE (didOpen) -->
-    <!-- Remove overlays antigos IMEDIATAMENTE + debug logging + z-index fixes -->
+    <!-- BIOMA v4.11.1 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- HOTFIX: Fecha modais customizados (#modalFotoServico) + z-index 99999 -->
+    <!-- Solução definitiva para elementos bloqueadores detectados no console -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -3309,7 +3309,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v4.11.0';
+const APP_VERSION = 'v4.11.1';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -3446,6 +3446,21 @@ function mostrarLoading(title = 'Processando...') {
  * Executa quando modal ABRE (didOpen), não quando fecha
  */
 function forcarBotoesClicaveis() {
+    // PASSO 0: FECHAR TODOS OS MODAIS CUSTOMIZADOS QUE POSSAM ESTAR BLOQUEANDO
+    // Esses modais customizados têm z-index: 10000 e bloqueiam o SweetAlert2
+    const modaisCustomizados = [
+        'modalFotoServico',
+        // Adicione aqui outros IDs de modais customizados se existirem
+    ];
+
+    modaisCustomizados.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.style.display = 'none';
+            console.log(`%c🚫 Modal customizado fechado: #${id}`, 'color: red; font-weight: bold;');
+        }
+    });
+
     // PASSO 1: Remover TODOS os backdrops antigos imediatamente (não esperar timeout)
     document.querySelectorAll('.swal2-container:not(:last-child)').forEach(el => {
         console.log('%c🗑️ Removendo container antigo:', 'color: red;', el);
@@ -3457,34 +3472,37 @@ function forcarBotoesClicaveis() {
         backdrop.remove();
     });
 
-    // PASSO 2: Garantir que o modal atual está no topo
+    // PASSO 2: Garantir que o modal atual está MUITO ACIMA de tudo (z-index 99999)
     const currentModal = Swal.getContainer();
     if (currentModal) {
-        currentModal.style.zIndex = '10000';
-        console.log('%c✅ Modal z-index:', 'color: green;', currentModal.style.zIndex);
+        currentModal.style.zIndex = '99999';
+        console.log('%c✅ Modal z-index:', 'color: green; font-weight: bold;', currentModal.style.zIndex);
     }
 
-    // PASSO 3: Forçar todos os botões a serem clicáveis
+    // PASSO 3: Forçar todos os botões a serem clicáveis com z-index ALTÍSSIMO
     setTimeout(() => {
         const popup = Swal.getPopup();
         if (popup) {
+            // Garantir que o popup também tem z-index alto
+            popup.style.zIndex = '100000';
+
             const buttons = popup.querySelectorAll('button, .swal2-close');
             buttons.forEach(btn => {
                 btn.style.pointerEvents = 'auto';
                 btn.style.cursor = 'pointer';
                 btn.style.position = 'relative';
-                btn.style.zIndex = '10001';
+                btn.style.zIndex = '100001'; // ACIMA DO POPUP
 
                 // Debug: Log quando botão é clicado
                 btn.addEventListener('click', function debugClick(e) {
                     console.log('%c🖱️ BOTÃO CLICADO:', 'color: blue; font-weight: bold;', btn.textContent, e);
                 }, { once: false });
             });
-            console.log(`%c✅ ${buttons.length} botões forçados a serem clicáveis`, 'color: green; font-weight: bold;');
+            console.log(`%c✅ ${buttons.length} botões forçados a serem clicáveis (z-index: 100001)`, 'color: green; font-weight: bold;');
         }
     }, 50);
 
-    // PASSO 4: Verificar se há overlays bloqueando
+    // PASSO 4: Verificar se há overlays bloqueando (apenas para debug)
     setTimeout(() => {
         const allElements = document.querySelectorAll('*');
         const blockingElements = [];
@@ -3493,19 +3511,23 @@ function forcarBotoesClicaveis() {
             const style = window.getComputedStyle(el);
             const zIndex = parseInt(style.zIndex) || 0;
 
-            // Detectar elementos com z-index alto que podem bloquear
-            if (zIndex > 9999 && zIndex < 10001) {
+            // Detectar elementos com z-index que possam competir com o SweetAlert2
+            if (zIndex >= 10000 && zIndex < 100002) {
                 blockingElements.push({
                     element: el,
+                    id: el.id || '(sem id)',
                     zIndex: zIndex,
                     pointerEvents: style.pointerEvents,
+                    display: style.display,
                     classList: el.className
                 });
             }
         });
 
         if (blockingElements.length > 0) {
-            console.log('%c⚠️ ELEMENTOS POTENCIALMENTE BLOQUEANDO:', 'color: orange; font-weight: bold;', blockingElements);
+            console.log('%c⚠️ ELEMENTOS COM Z-INDEX ALTO:', 'color: orange; font-weight: bold;', blockingElements);
+        } else {
+            console.log('%c✅ Nenhum elemento bloqueador detectado!', 'color: green; font-weight: bold;');
         }
     }, 100);
 }
@@ -3618,14 +3640,15 @@ window.Swal.fire = function(...args) {
     });
 };
 
-console.log('%c✅ Sistema de Modais ULTRA-AGRESSIVO Carregado (v4.11.0)', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c✅ Sistema de Modais ULTRA-AGRESSIVO Carregado (v4.11.1)', 'color: green; font-weight: bold; font-size: 14px;');
 console.log('%c  📢 Use mostrarNotificacao() para notificações (COM timer)', 'color: blue;');
 console.log('%c  ❓ Use mostrarConfirmacao() para diálogos (SEM timer)', 'color: blue;');
 console.log('%c  ⏳ Use mostrarLoading() para operações assíncronas', 'color: blue;');
 console.log('%c  🚫 NUNCA use onclick no HTML! Use didOpen + addEventListener', 'color: red; font-weight: bold;');
 console.log('%c  🧹 Limpeza automática de modais ATIVA (interceptor global)', 'color: orange; font-weight: bold;');
-console.log('%c  ⚡ NOVO: forcarBotoesClicaveis() remove overlays QUANDO ABRE', 'color: magenta; font-weight: bold;');
-console.log('%c  🔍 NOVO: Debug logging para detectar elementos bloqueadores', 'color: cyan; font-weight: bold;');
+console.log('%c  ⚡ forcarBotoesClicaveis() remove overlays QUANDO ABRE', 'color: magenta; font-weight: bold;');
+console.log('%c  🚫 NOVO v4.11.1: Fecha modais customizados (#modalFotoServico)', 'color: red; font-weight: bold;');
+console.log('%c  ⬆️  NOVO v4.11.1: z-index ALTÍSSIMO (99999 container, 100001 botões)', 'color: cyan; font-weight: bold;');
 </script>
 
 <div id="authScreen" class="auth-screen">
