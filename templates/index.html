@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v4.11.2 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- FIX: Debug detalhado + força elementos NÃO-SWAL para z-index 9999 -->
-    <!-- FEATURE: Ícones da aba contratos com animação glamour-shine -->
+    <!-- BIOMA v5.0.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- MAJOR: Sistema de Modais 100% Customizado - SEM SweetAlert2 -->
+    <!-- HTML5 <dialog> nativo - SEM problemas de z-index ou overlays -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -55,9 +55,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- BIOMA v4.0 - Sistema Consolidado -->
+    <!-- BIOMA v5.0 - Sistema Consolidado -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SweetAlert2 REMOVIDO - Usando sistema de modais customizado -->
     <!-- SheetJS para exportação Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- jsPDF para geração de PDFs profissionais -->
@@ -2289,45 +2289,219 @@
             color: #CBD5E1;
         }
 
-        /* Animação de entrada para modais SweetAlert */
-        /* ========== SWAL2 CORREÇÕES CRÍTICAS ========== */
-        /* Garantir que botões e modais sejam SEMPRE clicáveis */
-        .swal2-popup {
-            animation: swal2FadeInDown 0.3s ease-out !important;
-            pointer-events: auto !important;
-            z-index: 9999 !important;
+        /* ========== SISTEMA DE MODAIS CUSTOMIZADO BIOMA ========== */
+        /* Usando HTML5 <dialog> nativo - SEM SweetAlert2 */
+
+        dialog.bioma-dialog {
+            border: none;
+            border-radius: 20px;
+            padding: 0;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: biomaModalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--bg-card);
+            color: var(--text);
         }
 
-        .swal2-container {
-            pointer-events: auto !important;
-            z-index: 9998 !important;
+        dialog.bioma-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            animation: biomaBackdropFadeIn 0.3s ease;
         }
 
-        /* Garantir que TODOS os botões do SweetAlert sejam clicáveis */
-        .swal2-confirm,
-        .swal2-cancel,
-        .swal2-deny,
-        .swal2-close,
-        .swal2-actions button {
-            pointer-events: auto !important;
-            cursor: pointer !important;
-            z-index: 10000 !important;
-        }
-
-        /* Garantir que backdrop permita cliques */
-        .swal2-backdrop-show {
-            pointer-events: auto !important;
-        }
-
-        @keyframes swal2FadeInDown {
+        @keyframes biomaModalSlideIn {
             from {
                 opacity: 0;
-                transform: translateY(-50px) scale(0.8);
+                transform: translateY(-30px) scale(0.95);
             }
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
             }
+        }
+
+        @keyframes biomaBackdropFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Modal Header */
+        .bioma-dialog-header {
+            padding: 30px 30px 20px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .bioma-dialog-icon {
+            font-size: 2.5rem;
+            line-height: 1;
+        }
+
+        .bioma-dialog-icon.success { color: #10B981; }
+        .bioma-dialog-icon.error { color: #EF4444; }
+        .bioma-dialog-icon.warning { color: #F59E0B; }
+        .bioma-dialog-icon.info { color: #3B82F6; }
+        .bioma-dialog-icon.question { color: #8B5CF6; }
+
+        .bioma-dialog-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--text);
+        }
+
+        /* Modal Body */
+        .bioma-dialog-body {
+            padding: 25px 30px;
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        /* Modal Footer */
+        .bioma-dialog-footer {
+            padding: 20px 30px 30px 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .bioma-dialog-footer button {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .bioma-dialog-footer button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .bioma-btn-confirm {
+            background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+            color: white;
+        }
+
+        .bioma-btn-confirm:hover {
+            background: linear-gradient(135deg, #6D28D9, #7C3AED);
+        }
+
+        .bioma-btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text);
+        }
+
+        .bioma-btn-cancel:hover {
+            background: var(--border-color);
+        }
+
+        /* Toast Notifications */
+        .bioma-toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .bioma-toast {
+            background: var(--bg-card);
+            color: var(--text);
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 400px;
+            animation: biomaToastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
+            border-left: 4px solid;
+        }
+
+        .bioma-toast.success { border-left-color: #10B981; }
+        .bioma-toast.error { border-left-color: #EF4444; }
+        .bioma-toast.warning { border-left-color: #F59E0B; }
+        .bioma-toast.info { border-left-color: #3B82F6; }
+
+        .bioma-toast-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .bioma-toast-content {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .bioma-toast-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .bioma-toast-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text);
+        }
+
+        @keyframes biomaToastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .bioma-toast.removing {
+            animation: biomaToastSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes biomaToastSlideOut {
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Loading Spinner */
+        .bioma-loading {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: #7C3AED;
+            border-radius: 50%;
+            animation: biomaSpinning 0.8s linear infinite;
+        }
+
+        @keyframes biomaSpinning {
+            to { transform: rotate(360deg); }
         }
 
         /* Hover em tabelas com elevação */
@@ -3336,7 +3510,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v4.11.2';
+const APP_VERSION = 'v5.0.0';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -3367,338 +3541,292 @@ if (cachedBuild !== BUILD_TIMESTAMP) {
 // Removido: Código que forçava light mode no login
 
 // ============================================================
-// CORREÇÃO 2: SISTEMA DE MODAIS E BOTÕES (SIMPLIFICADO)
 // ============================================================
-// Versão limpa sem recursão que não interfere com modais existentes
+// SISTEMA DE MODAIS CUSTOMIZADO BIOMA v5.0
+// ============================================================
+// 100% customizado - SEM SweetAlert2
+// Usando HTML5 <dialog> nativo
+// ============================================================
 
-// Alias simples para compatibilidade
-window.SafeSwal = Swal;
+// Container global para toasts
+let biomaToastContainer = null;
+let currentDialog = null;
+let currentLoadingDialog = null;
 
-// ========== SOLUÇÃO CORRETA PARA MODAIS (Seguindo Roteiro Técnico) ==========
+// Criar container de toasts (executar uma única vez)
+function createToastContainer() {
+    if (!biomaToastContainer) {
+        biomaToastContainer = document.createElement('div');
+        biomaToastContainer.className = 'bioma-toast-container';
+        document.body.appendChild(biomaToastContainer);
+    }
+    return biomaToastContainer;
+}
 
+// ============================================================
+// SISTEMA DE MODAIS CUSTOMIZADO BIOMA v5.0
+// ============================================================
+// 100% customizado - SEM SweetAlert2
+// Usando HTML5 <dialog> nativo
+// ============================================================
+
+// Container global para toasts
+let biomaToastContainer = null;
+let currentDialog = null;
+let currentLoadingDialog = null;
+
+// Criar container de toasts (executar uma única vez)
+function createToastContainer() {
+    if (!biomaToastContainer) {
+        biomaToastContainer = document.createElement('div');
+        biomaToastContainer.className = 'bioma-toast-container';
+        document.body.appendChild(biomaToastContainer);
+    }
+    return biomaToastContainer;
+}
+
+// ========== FUNÇÃO 1: mostrarNotificacao() - Toast Notifications ==========
 /**
- * NÃO usar onclick no HTML dos modais!
- * Usar didOpen para adicionar event listeners corretamente.
- *
- * Exemplo ERRADO:
- * html: '<button onclick="Swal.close()">Fechar</button>'
- *
- * Exemplo CORRETO:
- * html: '<button id="btn-fechar">Fechar</button>',
- * didOpen: () => {
- *     document.getElementById('btn-fechar').addEventListener('click', () => {
- *         Swal.close();
- *     });
- * }
- */
-
-// Não vamos interceptar Swal.fire - vamos usar corretamente!
-// O problema não é o SweetAlert2, é como estávamos usando ele.
-
-// ========== FUNÇÕES AUXILIARES - SEGUINDO ROTEIRO TÉCNICO ==========
-
-/**
- * FUNÇÃO 1: mostrarNotificacao()
- * Para mensagens que DESAPARECEM SOZINHAS (sucesso, erro, info)
- * - SEMPRE tem timer
- * - SEMPRE mostra barra de progresso
- * - SEM botão "OK" (showConfirmButton: false)
- * - COM botão X para fechar manualmente se necessário
+ * Mostra notificação toast que desaparece automaticamente
+ * @param {string} icon - Tipo: 'success', 'error', 'warning', 'info'
+ * @param {string} title - Mensagem a exibir
+ * @param {number} timer - Tempo em ms (padrão: 2500)
  */
 function mostrarNotificacao(icon, title, timer = 2500) {
-    return Swal.fire({
-        icon: icon,
-        title: title,
-        timer: timer,
-        timerProgressBar: true,
-        showConfirmButton: false,
-        showCloseButton: true,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        willClose: () => {
-            // Limpeza AGRESSIVA de elementos residuais
-            limparModalResidual();
-        }
-    });
-}
+    const container = createToastContainer();
 
-/**
- * FUNÇÃO 2: mostrarConfirmacao()
- * Para diálogos que EXIGEM DECISÃO do usuário (confirmar/cancelar, sim/não)
- * - NUNCA tem timer
- * - SEMPRE usa botões nativos (showConfirmButton, showCancelButton)
- * - Botões já vêm com lógica de fechamento funcionando
- */
-function mostrarConfirmacao(config) {
-    // Garantir que NÃO tem timer (segurança UX)
-    const safeConfig = {
-        ...config,
-        timer: undefined, // NUNCA fechar automaticamente
-        showConfirmButton: true, // Botão OK sempre visível
-        showCancelButton: config.showCancelButton !== false,
-        confirmButtonText: config.confirmButtonText || 'Confirmar',
-        cancelButtonText: config.cancelButtonText || 'Cancelar',
-        willClose: () => {
-            // Limpeza AGRESSIVA de elementos residuais
-            limparModalResidual();
-        }
+    const toast = document.createElement('div');
+    toast.className = `bioma-toast ${icon}`;
+
+    const iconMap = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
     };
-    return Swal.fire(safeConfig);
-}
 
-/**
- * FUNÇÃO 3: mostrarLoading()
- * Para operações assíncronas (salvando, carregando, processando)
- * - SEM timer (fica aberto até Swal.close())
- * - SEM botões
- * - SEM formas de fechar manualmente (operação em andamento)
- * - Spinner automático
- */
-function mostrarLoading(title = 'Processando...') {
-    return Swal.fire({
-        title: title,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        showCloseButton: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-}
+    toast.innerHTML = `
+        <div class="bioma-toast-icon">${iconMap[icon] || 'ℹ'}</div>
+        <div class="bioma-toast-content">${title}</div>
+        <button class="bioma-toast-close" aria-label="Fechar">×</button>
+    `;
 
-/**
- * FUNÇÃO 4A: forcarBotoesClicaveis()
- * ULTRA-AGRESSIVO: Remove overlays e força botões a serem clicáveis IMEDIATAMENTE
- * Executa quando modal ABRE (didOpen), não quando fecha
- */
-function forcarBotoesClicaveis() {
-    // PASSO 0: FECHAR TODOS OS MODAIS CUSTOMIZADOS QUE POSSAM ESTAR BLOQUEANDO
-    // Esses modais customizados têm z-index: 10000 e bloqueiam o SweetAlert2
-    const modaisCustomizados = [
-        'modalFotoServico',
-        // Adicione aqui outros IDs de modais customizados se existirem
-    ];
+    container.appendChild(toast);
 
-    modaisCustomizados.forEach(id => {
-        const modal = document.getElementById(id);
-        if (modal) {
-            modal.style.display = 'none';
-            console.log(`%c🚫 Modal customizado fechado: #${id}`, 'color: red; font-weight: bold;');
-        }
+    // Fechar ao clicar no X
+    const closeBtn = toast.querySelector('.bioma-toast-close');
+    closeBtn.addEventListener('click', () => {
+        removeToast(toast);
     });
 
-    // PASSO 1: Remover TODOS os backdrops antigos imediatamente (não esperar timeout)
-    document.querySelectorAll('.swal2-container:not(:last-child)').forEach(el => {
-        console.log('%c🗑️ Removendo container antigo:', 'color: red;', el);
-        el.remove();
-    });
-
-    document.querySelectorAll('.swal2-backdrop-show').forEach(backdrop => {
-        console.log('%c🗑️ Removendo backdrop:', 'color: red;', backdrop);
-        backdrop.remove();
-    });
-
-    // PASSO 2: Garantir que o modal atual está MUITO ACIMA de tudo (z-index 99999)
-    const currentModal = Swal.getContainer();
-    if (currentModal) {
-        currentModal.style.zIndex = '99999';
-        console.log('%c✅ Modal z-index:', 'color: green; font-weight: bold;', currentModal.style.zIndex);
+    // Auto-fechar após timer
+    if (timer > 0) {
+        setTimeout(() => {
+            removeToast(toast);
+        }, timer);
     }
 
-    // PASSO 3: Forçar todos os botões a serem clicáveis com z-index ALTÍSSIMO
-    setTimeout(() => {
-        const popup = Swal.getPopup();
-        if (popup) {
-            // Garantir que o popup também tem z-index alto
-            popup.style.zIndex = '100000';
-
-            const buttons = popup.querySelectorAll('button, .swal2-close');
-            buttons.forEach(btn => {
-                btn.style.pointerEvents = 'auto';
-                btn.style.cursor = 'pointer';
-                btn.style.position = 'relative';
-                btn.style.zIndex = '100001'; // ACIMA DO POPUP
-
-                // Debug: Log quando botão é clicado
-                btn.addEventListener('click', function debugClick(e) {
-                    console.log('%c🖱️ BOTÃO CLICADO:', 'color: blue; font-weight: bold;', btn.textContent, e);
-                }, { once: false });
-            });
-            console.log(`%c✅ ${buttons.length} botões forçados a serem clicáveis (z-index: 100001)`, 'color: green; font-weight: bold;');
-        }
-    }, 50);
-
-    // PASSO 4: Verificar e CORRIGIR overlays bloqueando (DEBUG + FIX AUTOMÁTICO)
-    setTimeout(() => {
-        const allElements = document.querySelectorAll('*');
-        const blockingElements = [];
-
-        allElements.forEach(el => {
-            const style = window.getComputedStyle(el);
-            const zIndex = parseInt(style.zIndex) || 0;
-
-            // Detectar elementos com z-index que possam competir com o SweetAlert2
-            if (zIndex >= 10000 && zIndex < 100002) {
-                blockingElements.push({
-                    element: el,
-                    id: el.id || '(sem id)',
-                    tagName: el.tagName,
-                    zIndex: zIndex,
-                    pointerEvents: style.pointerEvents,
-                    display: style.display,
-                    position: style.position,
-                    classList: el.className
-                });
-            }
-        });
-
-        if (blockingElements.length > 0) {
-            console.log('%c⚠️ ELEMENTOS COM Z-INDEX ALTO DETECTADOS:', 'color: orange; font-weight: bold; font-size: 14px;');
-            blockingElements.forEach((item, index) => {
-                console.log(`  ${index + 1}. ${item.tagName}#${item.id} {`);
-                console.log(`      z-index: ${item.zIndex}`);
-                console.log(`      pointer-events: ${item.pointerEvents}`);
-                console.log(`      display: ${item.display}`);
-                console.log(`      position: ${item.position}`);
-                console.log(`      class: "${item.classList}"`);
-                console.log(`  }`);
-            });
-            console.log('%c🔥 FORÇANDO ELEMENTOS NÃO-SWAL PARA TRÁS:', 'color: red; font-weight: bold;');
-
-            // SOLUÇÃO RADICAL: Forçar todos elementos NÃO-SWAL para z-index baixo
-            blockingElements.forEach(item => {
-                const el = item.element;
-                // Se NÃO for elemento do SweetAlert2, jogar para trás
-                if (!el.classList.contains('swal2-container') &&
-                    !el.classList.contains('swal2-popup') &&
-                    !el.closest('.swal2-container')) {
-                    el.style.zIndex = '9999'; // ABAIXO do SweetAlert2
-                    console.log(`  ✅ ${item.tagName}#${item.id} → z-index: 9999 (forçado para trás)`);
-                }
-            });
-        } else {
-            console.log('%c✅ Nenhum elemento bloqueador detectado!', 'color: green; font-weight: bold;');
-        }
-    }, 100);
+    return toast;
 }
 
+function removeToast(toast) {
+    toast.classList.add('removing');
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 300);
+}
+
+// ========== FUNÇÃO 2: mostrarConfirmacao() - Dialog Confirmation ==========
 /**
- * FUNÇÃO 4B: limparModalResidual()
- * Limpeza após fechar modal (mantém função original)
+ * Mostra diálogo de confirmação com botões
+ * @param {object} config - Configuração do modal
+ * @returns {Promise<{isConfirmed: boolean, isDenied: boolean, isDismissed: boolean}>}
  */
-function limparModalResidual() {
-    setTimeout(() => {
-        // Remove TODOS os containers e backdrops do SweetAlert2
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show, .swal2-shown').forEach(el => {
-            if (!Swal.isVisible()) {
-                el.remove();
-            }
+function mostrarConfirmacao(config) {
+    return new Promise((resolve) => {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'bioma-dialog';
+
+        const iconMap = {
+            success: { icon: '✓', class: 'success' },
+            error: { icon: '✕', class: 'error' },
+            warning: { icon: '⚠', class: 'warning' },
+            info: { icon: 'ℹ', class: 'info' },
+            question: { icon: '?', class: 'question' }
+        };
+
+        const iconData = iconMap[config.icon] || iconMap.info;
+
+        const confirmText = config.confirmButtonText || 'Confirmar';
+        const cancelText = config.cancelButtonText || 'Cancelar';
+        const showCancel = config.showCancelButton !== false;
+        const showDeny = config.showDenyButton === true;
+        const denyText = config.denyButtonText || 'Recusar';
+
+        dialog.innerHTML = `
+            <div class="bioma-dialog-header">
+                <div class="bioma-dialog-icon ${iconData.class}">${iconData.icon}</div>
+                <h2 class="bioma-dialog-title">${config.title || ''}</h2>
+            </div>
+            <div class="bioma-dialog-body">
+                ${config.html || config.text || ''}
+            </div>
+            <div class="bioma-dialog-footer">
+                ${showCancel ? `<button class="bioma-btn-cancel" data-action="cancel">${cancelText}</button>` : ''}
+                ${showDeny ? `<button class="bioma-btn-cancel" data-action="deny" style="background: #EF4444; color: white;">${denyText}</button>` : ''}
+                <button class="bioma-btn-confirm" data-action="confirm">${confirmText}</button>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+        currentDialog = dialog;
+
+        // Adicionar event listeners aos botões
+        dialog.querySelectorAll('button[data-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.target.getAttribute('data-action');
+                dialog.close();
+                dialog.remove();
+                currentDialog = null;
+
+                resolve({
+                    isConfirmed: action === 'confirm',
+                    isDenied: action === 'deny',
+                    isDismissed: action === 'cancel',
+                    value: action === 'confirm'
+                });
+            });
         });
 
-        // Limpa classes do body que podem estar travando a página
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto', 'swal2-no-backdrop', 'swal2-toast-shown');
+        // Executar didOpen callback se existir
+        if (config.didOpen) {
+            setTimeout(() => config.didOpen(dialog), 100);
+        }
 
-        // Remove qualquer padding ou overflow forçado
-        document.body.style.removeProperty('padding-right');
-        document.body.style.removeProperty('overflow');
+        // Abrir modal
+        dialog.showModal();
 
-        // Força re-flow do DOM para garantir que tudo está limpo
-        document.body.offsetHeight;
-
-        console.log('%c🧹 Modal limpo - Elementos residuais removidos', 'color: orange; font-size: 11px;');
-    }, 100);
+        // Fechar com ESC se permitido
+        if (config.allowEscapeKey !== false) {
+            dialog.addEventListener('cancel', (e) => {
+                e.preventDefault();
+                dialog.close();
+                dialog.remove();
+                currentDialog = null;
+                resolve({
+                    isConfirmed: false,
+                    isDenied: false,
+                    isDismissed: true
+                });
+            });
+        }
+    });
 }
 
-// Aliases para compatibilidade com código antigo
+// ========== FUNÇÃO 3: mostrarLoading() - Loading Dialog ==========
+/**
+ * Mostra diálogo de loading (sem botões)
+ * @param {string} title - Título do loading
+ */
+function mostrarLoading(title = 'Processando...') {
+    // Fechar loading anterior se existir
+    if (currentLoadingDialog) {
+        currentLoadingDialog.close();
+        currentLoadingDialog.remove();
+    }
+
+    const dialog = document.createElement('dialog');
+    dialog.className = 'bioma-dialog';
+
+    dialog.innerHTML = `
+        <div class="bioma-dialog-header" style="border-bottom: none; padding-bottom: 30px;">
+            <div class="bioma-loading"></div>
+            <h2 class="bioma-dialog-title">${title}</h2>
+        </div>
+    `;
+
+    document.body.appendChild(dialog);
+    currentLoadingDialog = dialog;
+    dialog.showModal();
+
+    return dialog;
+}
+
+// ========== COMPATIBILIDADE COM CÓDIGO ANTIGO ==========
+
+// Criar objeto Swal falso para compatibilidade
+window.Swal = {
+    fire: function(...args) {
+        if (typeof args[0] === 'object') {
+            const config = args[0];
+
+            // Se tem timer e não tem botões, é notificação
+            if (config.timer && config.showConfirmButton === false) {
+                return Promise.resolve(mostrarNotificacao(config.icon || 'info', config.title, config.timer));
+            }
+
+            // Se é loading (showLoading ou didOpen com showLoading)
+            if (config.didOpen && config.showConfirmButton === false && !config.timer) {
+                return Promise.resolve(mostrarLoading(config.title));
+            }
+
+            // Senão é confirmação
+            return mostrarConfirmacao(config);
+        } else if (args.length >= 1) {
+            // Formato curto: Swal.fire(title, text, icon)
+            return mostrarConfirmacao({
+                title: args[0],
+                text: args[1] || '',
+                icon: args[2] || 'info'
+            });
+        }
+    },
+
+    close: function() {
+        if (currentLoadingDialog) {
+            currentLoadingDialog.close();
+            currentLoadingDialog.remove();
+            currentLoadingDialog = null;
+        }
+        if (currentDialog) {
+            currentDialog.close();
+            currentDialog.remove();
+            currentDialog = null;
+        }
+    },
+
+    isVisible: function() {
+        return currentDialog !== null || currentLoadingDialog !== null;
+    },
+
+    getContainer: function() {
+        return currentDialog || currentLoadingDialog;
+    },
+
+    getPopup: function() {
+        return currentDialog || currentLoadingDialog;
+    },
+
+    showLoading: function() {
+        // Já mostrado no mostrarLoading()
+    }
+};
+
+// Aliases para compatibilidade
 const showNotification = mostrarNotificacao;
 const showDialog = mostrarConfirmacao;
 const showLoading = mostrarLoading;
 
-// ========== INTERCEPTOR GLOBAL - ADICIONA LIMPEZA AUTOMÁTICA + ACESSIBILIDADE ==========
-// Para modais antigos que ainda usam Swal.fire() direto
-const SwalOriginal = window.Swal.fire.bind(window.Swal);
-window.Swal.fire = function(...args) {
-    // Se foi passado um objeto de configuração
-    if (typeof args[0] === 'object') {
-        const config = args[0];
-        const originalWillClose = config.willClose;
-        const originalDidOpen = config.didOpen;
+// Log do sistema
+console.log('%c✅ Sistema de Modais Customizado BIOMA v5.0 Carregado', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c  📢 mostrarNotificacao() - Toast notifications', 'color: blue;');
+console.log('%c  ❓ mostrarConfirmacao() - Diálogos de confirmação', 'color: blue;');
+console.log('%c  ⏳ mostrarLoading() - Loading sem botões', 'color: blue;');
+console.log('%c  🎨 100% Customizado - SEM SweetAlert2', 'color: magenta; font-weight: bold;');
+console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: green; font-weight: bold;');
 
-        // Adiciona nossa limpeza ao willClose existente
-        config.willClose = () => {
-            if (originalWillClose) originalWillClose();
-            limparModalResidual();
-        };
-
-        // Adiciona ULTRA-AGGRESSIVE cleanup + acessibilidade ao didOpen
-        config.didOpen = () => {
-            // CRÍTICO: Forçar botões clicáveis IMEDIATAMENTE quando modal abre
-            forcarBotoesClicaveis();
-
-            if (originalDidOpen) originalDidOpen();
-
-            // Adicionar aria-labels aos elementos SweetAlert2 para acessibilidade
-            const container = Swal.getContainer();
-            if (container) {
-                const input = container.querySelector('#swal2-input');
-                if (input && !input.getAttribute('aria-label')) {
-                    input.setAttribute('aria-label', 'Campo de entrada');
-                }
-
-                const file = container.querySelector('.swal2-file');
-                if (file && !file.getAttribute('aria-label')) {
-                    file.setAttribute('aria-label', 'Selecionar arquivo');
-                }
-
-                const range = container.querySelector('input[type="range"]');
-                if (range && !range.getAttribute('aria-label')) {
-                    range.setAttribute('aria-label', 'Controle deslizante');
-                    range.setAttribute('aria-valuemin', range.min || '0');
-                    range.setAttribute('aria-valuemax', range.max || '100');
-                    range.setAttribute('aria-valuenow', range.value || '50');
-                }
-
-                const checkbox = container.querySelector('#swal2-checkbox');
-                if (checkbox && !checkbox.getAttribute('aria-label')) {
-                    checkbox.setAttribute('aria-label', 'Marcar opção');
-                }
-
-                const textarea = container.querySelector('#swal2-textarea');
-                if (textarea && !textarea.getAttribute('aria-label')) {
-                    textarea.setAttribute('aria-label', 'Área de texto');
-                }
-
-                const image = container.querySelector('.swal2-image');
-                if (image && !image.getAttribute('alt')) {
-                    image.setAttribute('alt', 'Imagem do modal');
-                }
-
-                const select = container.querySelector('#swal2-select');
-                if (select && !select.getAttribute('aria-label')) {
-                    select.setAttribute('aria-label', 'Seleção de opções');
-                }
-            }
-        };
-
-        return SwalOriginal(config);
-    }
-
-    // Se foi passado (title, text, icon) - formato curto
-    return SwalOriginal(...args).then(result => {
-        limparModalResidual();
-        return result;
-    });
-};
-
-console.log('%c✅ Sistema de Modais ULTRA-AGRESSIVO Carregado (v4.11.2)', 'color: green; font-weight: bold; font-size: 14px;');
-console.log('%c  📢 Use mostrarNotificacao() para notificações (COM timer)', 'color: blue;');
-console.log('%c  ❓ Use mostrarConfirmacao() para diálogos (SEM timer)', 'color: blue;');
-console.log('%c  ⏳ Use mostrarLoading() para operações assíncronas', 'color: blue;');
-console.log('%c  🧹 Limpeza automática de modais ATIVA (interceptor global)', 'color: orange; font-weight: bold;');
-console.log('%c  🔥 NOVO v4.11.2: Debug DETALHADO mostra tagName, id, position', 'color: red; font-weight: bold;');
-console.log('%c  ⚡ NOVO v4.11.2: Força elementos NÃO-SWAL para z-index 9999', 'color: cyan; font-weight: bold;');
-console.log('%c  ✨ NOVO v4.11.2: Ícones da aba Contratos com glamour-shine', 'color: magenta; font-weight: bold;');
 </script>
 
 <div id="authScreen" class="auth-screen">
@@ -8974,7 +9102,7 @@ async function testarEnvioEmail() {
             title: '📧 Testar Envio de E-mail',
             html: `
                 <p style="margin-bottom: 15px;">Digite o e-mail de destino para receber o e-mail de teste:</p>
-                <input type="email" id="emailTeste" class="swal2-input" placeholder="exemplo@email.com" value="juanmarco.bss@hotmail.com" style="width: 80%;">
+                <input type="email" id="emailTeste" class="form-control" placeholder="exemplo@email.com" value="juanmarco.bss@hotmail.com" style="width: 80%;">
             `,
             icon: 'question',
             showCancelButton: true,
@@ -9246,10 +9374,10 @@ async function downloadLocalDatabase() {
 
         // Limpar backdrop residual
         setTimeout(() => {
-            document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+            document.querySelectorAll('.bioma-dialog').forEach(el => {
                 if (!Swal.isVisible()) el.remove();
             });
-            document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+            // Classes swal2 removidas - nao mais necessario
         }, 100);
 
     } catch (error) {
@@ -14552,7 +14680,7 @@ function toast(msg, type='info'){
             },
             didClose: () => {
                 // Limpar qualquer backdrop residual de toasts
-                document.querySelectorAll('.swal2-container.swal2-backdrop-show').forEach(el => {
+                document.querySelectorAll('.bioma-dialog').forEach(el => {
                     if(el.classList.contains('swal2-toast-shown')){
                         el.remove();
                     }
@@ -16167,7 +16295,7 @@ async function novaAnamneseModal() {
         html: `
             <div style="text-align:left;">
                 <label>Observações Gerais:</label>
-                <textarea id="anamneseObs" class="swal2-textarea" placeholder="Digite as observações da anamnese..."></textarea>
+                <textarea id="anamneseObs" class="form-control" placeholder="Digite as observações da anamnese..."></textarea>
                 
                 <div class="alert alert-info mt-3" style="font-size:0.9rem;">
                     <i class="bi bi-info-circle"></i> Campos adicionais podem ser preenchidos posteriormente no formulário completo
@@ -16353,19 +16481,19 @@ async function novoProntuarioModal() {
         html: `
             <div style="text-align:left;">
                 <label>Data do Atendimento:</label>
-                <input type="date" id="prontDataAtend" class="swal2-input" value="${new Date().toISOString().split('T')[0]}">
+                <input type="date" id="prontDataAtend" class="form-control" value="${new Date().toISOString().split('T')[0]}">
                 
                 <label>Profissional:</label>
-                <input type="text" id="prontProfissional" class="swal2-input" placeholder="Nome do profissional">
+                <input type="text" id="prontProfissional" class="form-control" placeholder="Nome do profissional">
                 
                 <label>Procedimento:</label>
-                <input type="text" id="prontProcedimento" class="swal2-input" placeholder="Tipo de procedimento">
+                <input type="text" id="prontProcedimento" class="form-control" placeholder="Tipo de procedimento">
                 
                 <label>Observações:</label>
-                <textarea id="prontObs" class="swal2-textarea" placeholder="Observações do atendimento"></textarea>
+                <textarea id="prontObs" class="form-control" placeholder="Observações do atendimento"></textarea>
                 
                 <label>Próxima Sessão (opcional):</label>
-                <input type="date" id="prontProxima" class="swal2-input">
+                <input type="date" id="prontProxima" class="form-control">
             </div>
         `,
         width: 600,
@@ -16462,19 +16590,19 @@ async function editarProntuario(id) {
             html: `
                 <div style="text-align:left;">
                     <label>Data do Atendimento:</label>
-                    <input type="date" id="prontDataAtend" class="swal2-input" value="${prontuario.data_atendimento.split('T')[0]}">
+                    <input type="date" id="prontDataAtend" class="form-control" value="${prontuario.data_atendimento.split('T')[0]}">
                     
                     <label>Profissional:</label>
-                    <input type="text" id="prontProfissional" class="swal2-input" value="${prontuario.profissional || ''}" placeholder="Nome do profissional">
+                    <input type="text" id="prontProfissional" class="form-control" value="${prontuario.profissional || ''}" placeholder="Nome do profissional">
                     
                     <label>Procedimento:</label>
-                    <input type="text" id="prontProcedimento" class="swal2-input" value="${prontuario.procedimento || ''}" placeholder="Tipo de procedimento">
+                    <input type="text" id="prontProcedimento" class="form-control" value="${prontuario.procedimento || ''}" placeholder="Tipo de procedimento">
                     
                     <label>Observações:</label>
-                    <textarea id="prontObs" class="swal2-textarea" placeholder="Observações do atendimento">${prontuario.observacoes || ''}</textarea>
+                    <textarea id="prontObs" class="form-control" placeholder="Observações do atendimento">${prontuario.observacoes || ''}</textarea>
                     
                     <label>Próxima Sessão (opcional):</label>
-                    <input type="date" id="prontProxima" class="swal2-input" value="${prontuario.proxima_sessao ? prontuario.proxima_sessao.split('T')[0] : ''}">
+                    <input type="date" id="prontProxima" class="form-control" value="${prontuario.proxima_sessao ? prontuario.proxima_sessao.split('T')[0] : ''}">
                 </div>
             `,
             width: 600,
@@ -18650,12 +18778,12 @@ async function novaDespesa(){
 
     // Limpeza de segurança: remover qualquer backdrop residual
     setTimeout(() => {
-        document.querySelectorAll('.swal2-container, .swal2-backdrop-show').forEach(el => {
+        document.querySelectorAll('.bioma-dialog').forEach(el => {
             if (!Swal.isVisible()) {
                 el.remove();
             }
         });
-        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+        // Classes swal2 removidas - nao mais necessario
     }, 100);
 }
 
