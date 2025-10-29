@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v4.11.1 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- HOTFIX: Fecha modais customizados (#modalFotoServico) + z-index 99999 -->
-    <!-- Solução definitiva para elementos bloqueadores detectados no console -->
+    <!-- BIOMA v4.11.2 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- FIX: Debug detalhado + força elementos NÃO-SWAL para z-index 9999 -->
+    <!-- FEATURE: Ícones da aba contratos com animação glamour-shine -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -1803,6 +1803,33 @@
             }
         }
 
+        /* ========== ÍCONES COM BRILHO GLAMOUR ========== */
+        .icon-glamour-shine {
+            display: inline-block;
+            animation: logoGlamourGlow 4s ease-in-out infinite;
+            filter: brightness(1.1) drop-shadow(0 0 5px rgba(124, 58, 237, 0.3));
+        }
+
+        /* Variação de brilho suave para ícones */
+        @keyframes iconGlamourShine {
+            0%, 100% {
+                filter: brightness(1) drop-shadow(0 0 3px rgba(124, 58, 237, 0.3));
+                text-shadow: 0 0 5px rgba(124, 58, 237, 0.2);
+            }
+            25% {
+                filter: brightness(1.2) drop-shadow(0 0 8px rgba(236, 72, 153, 0.5));
+                text-shadow: 0 0 10px rgba(236, 72, 153, 0.4);
+            }
+            50% {
+                filter: brightness(1.15) drop-shadow(0 0 6px rgba(139, 92, 246, 0.5));
+                text-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+            }
+            75% {
+                filter: brightness(1.2) drop-shadow(0 0 8px rgba(124, 58, 237, 0.5));
+                text-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
+            }
+        }
+
         /* Quando há logo personalizado, esconder texto */
         .sidebar-logo.has-custom-logo h1,
         .sidebar-logo.has-custom-logo p {
@@ -3309,7 +3336,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v4.11.1';
+const APP_VERSION = 'v4.11.2';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -3502,7 +3529,7 @@ function forcarBotoesClicaveis() {
         }
     }, 50);
 
-    // PASSO 4: Verificar se há overlays bloqueando (apenas para debug)
+    // PASSO 4: Verificar e CORRIGIR overlays bloqueando (DEBUG + FIX AUTOMÁTICO)
     setTimeout(() => {
         const allElements = document.querySelectorAll('*');
         const blockingElements = [];
@@ -3516,16 +3543,40 @@ function forcarBotoesClicaveis() {
                 blockingElements.push({
                     element: el,
                     id: el.id || '(sem id)',
+                    tagName: el.tagName,
                     zIndex: zIndex,
                     pointerEvents: style.pointerEvents,
                     display: style.display,
+                    position: style.position,
                     classList: el.className
                 });
             }
         });
 
         if (blockingElements.length > 0) {
-            console.log('%c⚠️ ELEMENTOS COM Z-INDEX ALTO:', 'color: orange; font-weight: bold;', blockingElements);
+            console.log('%c⚠️ ELEMENTOS COM Z-INDEX ALTO DETECTADOS:', 'color: orange; font-weight: bold; font-size: 14px;');
+            blockingElements.forEach((item, index) => {
+                console.log(`  ${index + 1}. ${item.tagName}#${item.id} {`);
+                console.log(`      z-index: ${item.zIndex}`);
+                console.log(`      pointer-events: ${item.pointerEvents}`);
+                console.log(`      display: ${item.display}`);
+                console.log(`      position: ${item.position}`);
+                console.log(`      class: "${item.classList}"`);
+                console.log(`  }`);
+            });
+            console.log('%c🔥 FORÇANDO ELEMENTOS NÃO-SWAL PARA TRÁS:', 'color: red; font-weight: bold;');
+
+            // SOLUÇÃO RADICAL: Forçar todos elementos NÃO-SWAL para z-index baixo
+            blockingElements.forEach(item => {
+                const el = item.element;
+                // Se NÃO for elemento do SweetAlert2, jogar para trás
+                if (!el.classList.contains('swal2-container') &&
+                    !el.classList.contains('swal2-popup') &&
+                    !el.closest('.swal2-container')) {
+                    el.style.zIndex = '9999'; // ABAIXO do SweetAlert2
+                    console.log(`  ✅ ${item.tagName}#${item.id} → z-index: 9999 (forçado para trás)`);
+                }
+            });
         } else {
             console.log('%c✅ Nenhum elemento bloqueador detectado!', 'color: green; font-weight: bold;');
         }
@@ -3640,15 +3691,14 @@ window.Swal.fire = function(...args) {
     });
 };
 
-console.log('%c✅ Sistema de Modais ULTRA-AGRESSIVO Carregado (v4.11.1)', 'color: green; font-weight: bold; font-size: 14px;');
+console.log('%c✅ Sistema de Modais ULTRA-AGRESSIVO Carregado (v4.11.2)', 'color: green; font-weight: bold; font-size: 14px;');
 console.log('%c  📢 Use mostrarNotificacao() para notificações (COM timer)', 'color: blue;');
 console.log('%c  ❓ Use mostrarConfirmacao() para diálogos (SEM timer)', 'color: blue;');
 console.log('%c  ⏳ Use mostrarLoading() para operações assíncronas', 'color: blue;');
-console.log('%c  🚫 NUNCA use onclick no HTML! Use didOpen + addEventListener', 'color: red; font-weight: bold;');
 console.log('%c  🧹 Limpeza automática de modais ATIVA (interceptor global)', 'color: orange; font-weight: bold;');
-console.log('%c  ⚡ forcarBotoesClicaveis() remove overlays QUANDO ABRE', 'color: magenta; font-weight: bold;');
-console.log('%c  🚫 NOVO v4.11.1: Fecha modais customizados (#modalFotoServico)', 'color: red; font-weight: bold;');
-console.log('%c  ⬆️  NOVO v4.11.1: z-index ALTÍSSIMO (99999 container, 100001 botões)', 'color: cyan; font-weight: bold;');
+console.log('%c  🔥 NOVO v4.11.2: Debug DETALHADO mostra tagName, id, position', 'color: red; font-weight: bold;');
+console.log('%c  ⚡ NOVO v4.11.2: Força elementos NÃO-SWAL para z-index 9999', 'color: cyan; font-weight: bold;');
+console.log('%c  ✨ NOVO v4.11.2: Ícones da aba Contratos com glamour-shine', 'color: magenta; font-weight: bold;');
 </script>
 
 <div id="authScreen" class="auth-screen">
@@ -4165,10 +4215,10 @@ console.log('%c  ⬆️  NOVO v4.11.1: z-index ALTÍSSIMO (99999 container, 1000
 
         <div id="section-contratos" class="content-section">
             <div class="page-header">
-                <h1><i class="bi bi-file-earmark-check"></i> Contratos Aprovados</h1>
+                <h1><i class="bi bi-file-earmark-check icon-glamour-shine"></i> Contratos Aprovados</h1>
             </div>
             <div class="card">
-                <div class="card-header"><i class="bi bi-file-check-fill"></i> Orçamentos Aprovados como Contratos</div>
+                <div class="card-header"><i class="bi bi-file-check-fill icon-glamour-shine"></i> Orçamentos Aprovados como Contratos</div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table>
