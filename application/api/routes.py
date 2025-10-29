@@ -1061,10 +1061,52 @@ def delete_profissional(id):
     except:
         return jsonify({'success': False}), 500
 
-@bp.route('/api/profissionais/<id>', methods=['GET'])
+@bp.route('/api/profissionais/<id>', methods=['GET', 'PUT'])
 @login_required
-def get_profissional(id):
+def profissional_detalhes(id):
     db = get_db()
+
+    # PUT - Atualizar profissional
+    if request.method == 'PUT':
+        """Atualizar dados de um profissional"""
+        try:
+            data = request.get_json()
+
+            update_data = {}
+            if 'nome' in data:
+                update_data['nome'] = data['nome']
+            if 'cpf' in data:
+                update_data['cpf'] = data['cpf']
+            if 'especialidade' in data:
+                update_data['especialidade'] = data['especialidade']
+            if 'telefone' in data:
+                update_data['telefone'] = data.get('telefone', '')
+            if 'email' in data:
+                update_data['email'] = data.get('email', '')
+            if 'comissao_perc' in data:
+                update_data['comissao_perc'] = float(data['comissao_perc'])
+            if 'ativo' in data:
+                update_data['ativo'] = bool(data['ativo'])
+
+            if not update_data:
+                return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
+
+            result = db.profissionais.update_one(
+                {'_id': ObjectId(id)},
+                {'$set': update_data}
+            )
+
+            if result.modified_count > 0:
+                logger.info(f"✅ Profissional {id} atualizado: {update_data}")
+                return jsonify({'success': True, 'message': 'Profissional atualizado com sucesso'})
+
+            return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao atualizar profissional: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    # GET - Visualizar profissional com estatísticas
     """Visualizar um profissional especifico com estatisticas completas"""
     if db is None:
         return jsonify({'success': False}), 500
@@ -3610,20 +3652,35 @@ def uploaded_file(filename):
 @login_required
 def upload_foto_profissional_form():
     """Upload de foto de perfil de profissional via form data (armazenado como base64, SEM arquivos externos)"""
+    db = get_db()
+    if db is None:
+        logger.error("❌ Database offline em upload foto")
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
     try:
+        logger.info(f"📤 Upload foto - Files: {list(request.files.keys())}, Form: {list(request.form.keys())}")
+
         if 'foto' not in request.files:
+            logger.warning("⚠️ Nenhum arquivo 'foto' encontrado")
             return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
 
         file = request.files['foto']
         profissional_id = request.form.get('profissional_id')
 
         if not profissional_id:
+            logger.warning("⚠️ profissional_id não fornecido")
             return jsonify({'success': False, 'message': 'ID do profissional não fornecido'}), 400
 
         if file.filename == '':
+            logger.warning("⚠️ Arquivo com nome vazio")
             return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
 
-        if file and allowed_file(file.filename):
+        # Função allowed_file inline (se não existir)
+        def allowed_file_check(filename):
+            ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+            return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+        if file and allowed_file_check(file.filename):
             import base64
 
             # Ler arquivo em memória (SEM salvar em /tmp)
