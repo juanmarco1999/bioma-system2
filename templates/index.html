@@ -2385,9 +2385,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 99999;
     display: flex;
     align-items: center;
@@ -11967,7 +11967,7 @@ function showModalServico(){
 async function ativarTodosServicos() {
     console.log('🔄 ativarTodosServicos() chamada');
 
-    const result = await SafeSwal.fire({
+    const result = await window.Swal.fire({
         title: 'Ativar Todos os Serviços?',
         text: 'Esta ação irá ativar todos os serviços cadastrados no sistema.',
         icon: 'question',
@@ -12013,7 +12013,7 @@ async function ativarTodosServicos() {
 async function desativarTodosServicos() {
     console.log('🔄 desativarTodosServicos() chamada');
 
-    const result = await SafeSwal.fire({
+    const result = await window.Swal.fire({
         title: 'Desativar Todos os Serviços?',
         text: 'Esta ação irá desativar todos os serviços cadastrados no sistema.',
         icon: 'warning',
@@ -12153,7 +12153,7 @@ function showModalProduto(){
 async function ativarTodosProdutos() {
     console.log('🔄 ativarTodosProdutos() chamada');
 
-    const result = await SafeSwal.fire({
+    const result = await window.Swal.fire({
         title: 'Ativar Todos os Produtos?',
         text: 'Esta ação irá ativar todos os produtos cadastrados no sistema.',
         icon: 'question',
@@ -12199,7 +12199,7 @@ async function ativarTodosProdutos() {
 async function desativarTodosProdutos() {
     console.log('🔄 desativarTodosProdutos() chamada');
 
-    const result = await SafeSwal.fire({
+    const result = await window.Swal.fire({
         title: 'Desativar Todos os Produtos?',
         text: 'Esta ação irá desativar todos os produtos cadastrados no sistema.',
         icon: 'warning',
@@ -12749,7 +12749,7 @@ async function loadTopPerformers(){
 
 // Função para modal de nova comissão
 function showModalComissao() {
-    SafeSwal.fire({
+    window.Swal.fire({
         title: '<i class="bi bi-info-circle"></i> Comissões Automáticas',
         html: `
             <div style="text-align: left; padding: 20px;">
@@ -15337,7 +15337,7 @@ function money(v){ if(v==null||isNaN(v)) v=0; return v.toLocaleString('pt-BR',{s
 function fmtDate(d){ try{ return new Date(d).toLocaleString('pt-BR'); }catch{ return d||''; } }
 function toast(msg, type='info'){
     if(window.Swal){
-        // Usar Swal diretamente para toasts (não SafeSwal, pois toasts devem ser não-bloqueantes)
+        // Usar Swal diretamente para toasts (não window.Swal, pois toasts devem ser não-bloqueantes)
         const Toast = Swal.mixin({
             toast: true,
             position: 'bottom-end',
@@ -19352,7 +19352,7 @@ async function carregarReceitas(){
 // ========== GERENCIAMENTO DE DESPESAS ==========
 
 async function novaDespesa(){
-    const result = await SafeSwal.fire({
+    const result = await window.Swal.fire({
         title: '<i class="bi bi-plus-circle"></i> Nova Despesa',
         html: `
             <div style="text-align: left;">
@@ -19459,7 +19459,7 @@ async function novaDespesa(){
 }
 
 async function excluirDespesa(id){
-    const result = await SafeSwal.fire({
+    const result = await window.Swal.fire({
         title: 'Confirmar Exclusão',
         text: 'Tem certeza que deseja excluir esta despesa? Esta ação não pode ser desfeita.',
         icon: 'warning',

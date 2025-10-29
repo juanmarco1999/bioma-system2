@@ -6722,6 +6722,54 @@ def listar_produtos():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@bp.route('/api/produtos/buscar', methods=['GET'])
+@login_required
+def buscar_produtos():
+    db = get_db()
+    """Busca produtos por termo (nome, marca, sku)"""
+    try:
+        termo = request.args.get('termo', '').strip()
+
+        if not termo or len(termo) < 2:
+            return jsonify({'success': True, 'produtos': []})
+
+        regex = {'$regex': termo, '$options': 'i'}
+
+        produtos = list(db.produtos.find({
+            '$or': [
+                {'nome': regex},
+                {'marca': regex},
+                {'sku': regex}
+            ]
+        }).sort('nome', ASCENDING).limit(20))
+
+        resultado = []
+        for p in produtos:
+            ativo_val = p.get('ativo', None)
+            if ativo_val is None:
+                status_val = p.get('status', 'Ativo')
+                ativo_val = (status_val == 'Ativo' or status_val == 'ativo')
+
+            resultado.append({
+                '_id': str(p['_id']),
+                'id': str(p['_id']),
+                'nome': p.get('nome', 'Sem nome'),
+                'marca': p.get('marca', ''),
+                'preco': float(p.get('preco', 0)),
+                'estoque': int(p.get('estoque', 0)),
+                'ativo': ativo_val,
+                'sku': p.get('sku', ''),
+                'categoria': p.get('categoria', 'Geral')
+            })
+
+        logger.info(f"🔍 Busca de produtos: '{termo}' - {len(resultado)} resultados")
+        return jsonify({'success': True, 'produtos': resultado})
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar produtos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @bp.route('/api/produtos/baixo-estoque', methods=['GET'])
 @login_required
 def produtos_baixo_estoque():
