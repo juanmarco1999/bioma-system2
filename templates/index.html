@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v5.3.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- UI SYSTEM: Modais TOTALMENTE Repaginados + Sistema de Busca Completo -->
-    <!-- Modais sólidos brancos + Busca global + Autocomplete + Sem spinners -->
+    <!-- BIOMA v5.3.1 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- UI SYSTEM: Overlay Transparente + Light Mode Login Corrigido -->
+    <!-- Overlay 65% + Blur leve + Login light mode + clear_cache fix -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -2087,6 +2087,24 @@
 
         /* === MELHORIAS DE DARK MODE (CONTRASTE E LEGIBILIDADE) === */
 
+        /* ===== TELA DE LOGIN LIGHT MODE ===== */
+        :root[data-theme="light"] .auth-screen {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #F472B6 100%) !important;
+        }
+
+        :root[data-theme="light"] .auth-box {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 2px solid rgba(124, 58, 237, 0.1);
+        }
+
+        :root[data-theme="light"] .auth-logo h2 {
+            color: #1F2937 !important;
+        }
+
+        :root[data-theme="light"] .auth-logo p {
+            color: #6B7280 !important;
+        }
+
         /* ===== TELA DE LOGIN DARK MODE - VERSÃO MELHORADA ===== */
 
         /* Fundo gradiente dark mode */
@@ -2385,9 +2403,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.95);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 99999;
     display: flex;
     align-items: center;
@@ -4002,7 +4020,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.3.0';
+const APP_VERSION = 'v5.3.1';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -4308,7 +4326,7 @@ const showNotification = mostrarNotificacao;
 const showDialog = mostrarConfirmacao;
 const showLoading = mostrarLoading;
 
-console.log('%c✅ BIOMA UI System v5.3.0 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
+console.log('%c✅ BIOMA UI System v5.3.1 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
 console.log('%c  🎨 Modais modernos e detalhados (DIV com gradientes)', 'color: #3B82F6;');
 console.log('%c  🔔 Toast notifications estilo Toastify', 'color: #3B82F6;');
 console.log('%c  ✨ Botões com efeito glamour shine', 'color: #3B82F6;');

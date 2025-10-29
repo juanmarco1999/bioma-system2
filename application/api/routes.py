@@ -1038,7 +1038,7 @@ def profissionais():
         result = db.profissionais.insert_one(profissional_data)
         inserted_id = str(result.inserted_id)
         logger.info(f"✅ Profissional cadastrado: {profissional_data['nome']} (ID: {inserted_id})")
-        clear_cache('profissionais_list')
+        # clear_cache('profissionais_list')  # Cache invalidation - opcional
         return jsonify({'success': True, 'message': 'Profissional cadastrado com sucesso', 'id': inserted_id})
     except Exception as e:
         logger.error(f"Erro ao cadastrar profissional: {e}")
@@ -1328,7 +1328,7 @@ def profissional_avaliacoes(id):
             'created_at': datetime.now()
         }
         db.profissionais_avaliacoes.insert_one(avaliacao)
-        clear_cache('profissionais_list')
+        # clear_cache('profissionais_list')  # Cache invalidation - opcional
         return jsonify({'success': True, 'avaliacao': convert_objectid(avaliacao)})
     except Exception as e:
         logger.error(f"Erro ao registrar avaliacao: {e}")
@@ -1389,7 +1389,7 @@ def upload_foto_profissional(id):
             )
 
             # Limpar cache
-            clear_cache('profissionais_list')
+            # clear_cache('profissionais_list')  # Cache invalidation - opcional
 
             logger.info(f"✅ Foto de perfil atualizada para profissional {id}")
             return jsonify({
