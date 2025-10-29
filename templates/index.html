@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v5.0.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- MAJOR: Sistema de Modais 100% Customizado - SEM SweetAlert2 -->
-    <!-- HTML5 <dialog> nativo - SEM problemas de z-index ou overlays -->
+    <!-- BIOMA v5.1.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- UI SYSTEM: Modais Customizados Bonitos + Sistema de Botões Moderno -->
+    <!-- Modais DIV estilizados (não nativos) + Toasts + Botões gradiente -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -2289,220 +2289,499 @@
             color: #CBD5E1;
         }
 
-        /* ========== SISTEMA DE MODAIS CUSTOMIZADO BIOMA ========== */
-        /* Usando HTML5 <dialog> nativo - SEM SweetAlert2 */
+        /* ========== SISTEMA DE MODAIS E BOTÕES BIOMA v5.1.0 ========== */
+/* ============================================================
+   BIOMA UI SYSTEM v5.1.0 - Modais Bonitos + Botões Modernos
+   ============================================================ */
 
-        dialog.bioma-dialog {
-            border: none;
-            border-radius: 20px;
-            padding: 0;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: biomaModalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: var(--bg-card);
-            color: var(--text);
-        }
+/* ========== TOAST NOTIFICATIONS (Toastify-style) ========== */
+.bioma-toast-stack {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
 
-        dialog.bioma-dialog::backdrop {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            animation: biomaBackdropFadeIn 0.3s ease;
-        }
+.bioma-toast {
+    pointer-events: auto;
+    background: var(--bg-card);
+    color: var(--text);
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 320px;
+    max-width: 420px;
+    border-left: 4px solid;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-        @keyframes biomaModalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
+.bioma-toast-show {
+    opacity: 1;
+    transform: translateX(0);
+}
 
-        @keyframes biomaBackdropFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+.bioma-toast-exit {
+    opacity: 0;
+    transform: translateX(100px) scale(0.95);
+}
 
-        /* Modal Header */
-        .bioma-dialog-header {
-            padding: 30px 30px 20px 30px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+.bioma-toast-success { border-left-color: #10B981; }
+.bioma-toast-error { border-left-color: #EF4444; }
+.bioma-toast-warning { border-left-color: #F59E0B; }
+.bioma-toast-info { border-left-color: #3B82F6; }
 
-        .bioma-dialog-icon {
-            font-size: 2.5rem;
-            line-height: 1;
-        }
+.bioma-toast-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        .bioma-dialog-icon.success { color: #10B981; }
-        .bioma-dialog-icon.error { color: #EF4444; }
-        .bioma-dialog-icon.warning { color: #F59E0B; }
-        .bioma-dialog-icon.info { color: #3B82F6; }
-        .bioma-dialog-icon.question { color: #8B5CF6; }
+.bioma-toast-success .bioma-toast-icon { color: #10B981; }
+.bioma-toast-error .bioma-toast-icon { color: #EF4444; }
+.bioma-toast-warning .bioma-toast-icon { color: #F59E0B; }
+.bioma-toast-info .bioma-toast-icon { color: #3B82F6; }
 
-        .bioma-dialog-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 0;
-            color: var(--text);
-        }
+.bioma-toast-message {
+    flex: 1;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.4;
+}
 
-        /* Modal Body */
-        .bioma-dialog-body {
-            padding: 25px 30px;
-            font-size: 1rem;
-            line-height: 1.6;
-            color: var(--text-muted);
-        }
+.bioma-toast-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        /* Modal Footer */
-        .bioma-dialog-footer {
-            padding: 20px 30px 30px 30px;
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
+.bioma-toast-close:hover {
+    background: var(--bg-secondary);
+    color: var(--text);
+}
 
-        .bioma-dialog-footer button {
-            padding: 12px 24px;
-            border-radius: 10px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.95rem;
-        }
+/* ========== MODAL OVERLAY ========== */
+.bioma-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
 
-        .bioma-dialog-footer button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
+.bioma-modal-fade-in {
+    animation: biomaFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-        .bioma-btn-confirm {
-            background: linear-gradient(135deg, #7C3AED, #8B5CF6);
-            color: white;
-        }
+.bioma-modal-fade-out {
+    animation: biomaFadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-        .bioma-btn-confirm:hover {
-            background: linear-gradient(135deg, #6D28D9, #7C3AED);
-        }
+@keyframes biomaFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
 
-        .bioma-btn-cancel {
-            background: var(--bg-secondary);
-            color: var(--text);
-        }
+@keyframes biomaFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
 
-        .bioma-btn-cancel:hover {
-            background: var(--border-color);
-        }
+/* ========== MODAL CONTENT ========== */
+.bioma-modal {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.15);
+    text-align: center;
+}
 
-        /* Toast Notifications */
-        .bioma-toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 999999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-        }
+.bioma-modal-scale-in {
+    animation: biomaScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-        .bioma-toast {
-            background: var(--bg-card);
-            color: var(--text);
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 300px;
-            max-width: 400px;
-            animation: biomaToastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: auto;
-            border-left: 4px solid;
-        }
+.bioma-modal-scale-out {
+    animation: biomaScaleOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-        .bioma-toast.success { border-left-color: #10B981; }
-        .bioma-toast.error { border-left-color: #EF4444; }
-        .bioma-toast.warning { border-left-color: #F59E0B; }
-        .bioma-toast.info { border-left-color: #3B82F6; }
+@keyframes biomaScaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
 
-        .bioma-toast-icon {
-            font-size: 1.5rem;
-            line-height: 1;
-        }
+@keyframes biomaScaleOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+}
 
-        .bioma-toast-content {
-            flex: 1;
-            font-weight: 500;
-        }
+.bioma-modal-icon {
+    margin: 0 auto 20px;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: biomaIconBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-        .bioma-toast-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
+@keyframes biomaIconBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
 
-        .bioma-toast-close:hover {
-            background: var(--bg-secondary);
-            color: var(--text);
-        }
+.bioma-modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 12px 0;
+    line-height: 1.3;
+}
 
-        @keyframes biomaToastSlideIn {
-            from {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
+.bioma-modal-text {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
 
-        .bioma-toast.removing {
-            animation: biomaToastSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
+.bioma-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+}
 
-        @keyframes biomaToastSlideOut {
-            to {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-        }
+/* ========== LOADING MODAL ========== */
+.bioma-modal-loading {
+    padding: 40px;
+    max-width: 320px;
+}
 
-        /* Loading Spinner */
-        .bioma-loading {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--border-color);
-            border-top-color: #7C3AED;
-            border-radius: 50%;
-            animation: biomaSpinning 0.8s linear infinite;
-        }
+.bioma-spinner {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 20px;
+    position: relative;
+}
 
-        @keyframes biomaSpinning {
-            to { transform: rotate(360deg); }
-        }
+.bioma-spinner-circle {
+    width: 100%;
+    height: 100%;
+    border: 4px solid var(--border-color);
+    border-top-color: #7C3AED;
+    border-radius: 50%;
+    animation: biomaSpinnerRotate 0.8s linear infinite;
+}
+
+@keyframes biomaSpinnerRotate {
+    to { transform: rotate(360deg); }
+}
+
+/* ========== SISTEMA DE BOTÕES MODERNO ========== */
+
+/* Reset de botões */
+.bioma-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    font-family: inherit;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+}
+
+.bioma-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+}
+
+.bioma-btn:active {
+    transform: scale(0.98);
+}
+
+.bioma-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ========== VARIANTES DE BOTÕES ========== */
+
+/* Primary (Roxo) */
+.bioma-btn-primary {
+    background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.bioma-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #6D28D9, #7C3AED);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Secondary (Cinza) */
+.bioma-btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text);
+    border: 2px solid var(--border-color);
+}
+
+.bioma-btn-secondary:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--text-muted);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Success (Verde) */
+.bioma-btn-success {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.bioma-btn-success:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669, #047857);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Danger (Vermelho) */
+.bioma-btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.bioma-btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #DC2626, #B91C1C);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Warning (Amarelo) */
+.bioma-btn-warning {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.bioma-btn-warning:hover:not(:disabled) {
+    background: linear-gradient(135deg, #D97706, #B45309);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Info (Azul) */
+.bioma-btn-info {
+    background: linear-gradient(135deg, #3B82F6, #2563EB);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.bioma-btn-info:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563EB, #1D4ED8);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
+}
+
+/* ========== TAMANHOS DE BOTÕES ========== */
+.bioma-btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
+.bioma-btn-lg {
+    padding: 16px 32px;
+    font-size: 16px;
+    border-radius: 14px;
+}
+
+/* ========== BOTÕES OUTLINE ========== */
+.bioma-btn-outline-primary {
+    background: transparent;
+    color: #7C3AED;
+    border: 2px solid #7C3AED;
+    box-shadow: none;
+}
+
+.bioma-btn-outline-primary:hover:not(:disabled) {
+    background: #7C3AED;
+    color: white;
+}
+
+.bioma-btn-outline-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 2px solid var(--border-color);
+    box-shadow: none;
+}
+
+.bioma-btn-outline-secondary:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: var(--text-muted);
+}
+
+/* ========== BOTÕES GHOST (transparentes) ========== */
+.bioma-btn-ghost {
+    background: transparent;
+    color: var(--text);
+    box-shadow: none;
+}
+
+.bioma-btn-ghost:hover:not(:disabled) {
+    background: var(--bg-secondary);
+}
+
+/* ========== BOTÃO COM ÍCONE ========== */
+.bioma-btn i,
+.bioma-btn svg {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.bioma-btn-sm i,
+.bioma-btn-sm svg {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+}
+
+.bioma-btn-lg i,
+.bioma-btn-lg svg {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+/* ========== BOTÃO CIRCULAR (apenas ícone) ========== */
+.bioma-btn-circle {
+    padding: 12px;
+    border-radius: 50%;
+    aspect-ratio: 1;
+}
+
+.bioma-btn-circle.bioma-btn-sm {
+    padding: 8px;
+}
+
+.bioma-btn-circle.bioma-btn-lg {
+    padding: 16px;
+}
+
+/* ========== RIPPLE EFFECT ========== */
+.bioma-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.bioma-btn:active::after {
+    width: 300px;
+    height: 300px;
+    transition: width 0s, height 0s;
+}
+
+/* ========== DARK MODE ========== */
+:root[data-theme="dark"] .bioma-toast {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dark"] .bioma-modal {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* ========== RESPONSIVIDADE ========== */
+@media (max-width: 640px) {
+    .bioma-toast-stack {
+        top: 16px;
+        right: 16px;
+        left: 16px;
+    }
+
+    .bioma-toast {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .bioma-modal {
+        padding: 24px;
+        border-radius: 16px;
+    }
+
+    .bioma-modal-actions {
+        flex-direction: column;
+    }
+
+    .bioma-modal-actions .bioma-btn {
+        width: 100%;
+    }
+}
+
 
         /* Hover em tabelas com elevação */
         table tbody tr {
@@ -3510,7 +3789,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.0.0';
+const APP_VERSION = 'v5.1.0';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -3542,237 +3821,227 @@ if (cachedBuild !== BUILD_TIMESTAMP) {
 
 // ============================================================
 // ============================================================
-// SISTEMA DE MODAIS CUSTOMIZADO BIOMA v5.0
+// BIOMA UI SYSTEM v5.1.0 - Modais Bonitos + Botões Modernos
 // ============================================================
-// 100% customizado - SEM SweetAlert2
-// Usando HTML5 <dialog> nativo
+// Modais customizados DIV (não nativos do browser)
+// Sistema de botões moderno e profissional
 // ============================================================
 
-// Container global para toasts
+// ========== ESTADO GLOBAL ==========
 let biomaToastContainer = null;
-let currentDialog = null;
-let currentLoadingDialog = null;
+let activeModals = [];
 
-// Criar container de toasts (executar uma única vez)
-function createToastContainer() {
+// ========== CRIAR CONTAINERS ==========
+function initBiomaUI() {
+    // Container para toasts
     if (!biomaToastContainer) {
         biomaToastContainer = document.createElement('div');
-        biomaToastContainer.className = 'bioma-toast-container';
+        biomaToastContainer.className = 'bioma-toast-stack';
+        biomaToastContainer.id = 'biomaToastStack';
         document.body.appendChild(biomaToastContainer);
     }
-    return biomaToastContainer;
 }
 
-// ============================================================
-// SISTEMA DE MODAIS CUSTOMIZADO BIOMA v5.0
-// ============================================================
-// 100% customizado - SEM SweetAlert2
-// Usando HTML5 <dialog> nativo
-// ============================================================
-
-// Container global para toasts
-let biomaToastContainer = null;
-let currentDialog = null;
-let currentLoadingDialog = null;
-
-// Criar container de toasts (executar uma única vez)
-function createToastContainer() {
-    if (!biomaToastContainer) {
-        biomaToastContainer = document.createElement('div');
-        biomaToastContainer.className = 'bioma-toast-container';
-        document.body.appendChild(biomaToastContainer);
-    }
-    return biomaToastContainer;
+// Auto-inicializar quando DOM carregar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBiomaUI);
+} else {
+    initBiomaUI();
 }
 
-// ========== FUNÇÃO 1: mostrarNotificacao() - Toast Notifications ==========
-/**
- * Mostra notificação toast que desaparece automaticamente
- * @param {string} icon - Tipo: 'success', 'error', 'warning', 'info'
- * @param {string} title - Mensagem a exibir
- * @param {number} timer - Tempo em ms (padrão: 2500)
- */
-function mostrarNotificacao(icon, title, timer = 2500) {
-    const container = createToastContainer();
-
+// ========== TOAST NOTIFICATIONS (Toastify-style) ==========
+function mostrarNotificacao(type, message, duration = 3000) {
     const toast = document.createElement('div');
-    toast.className = `bioma-toast ${icon}`;
+    toast.className = `bioma-toast bioma-toast-${type} bioma-toast-enter`;
 
-    const iconMap = {
-        success: '✓',
-        error: '✕',
-        warning: '⚠',
-        info: 'ℹ'
+    const icons = {
+        success: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>',
+        error: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>',
+        info: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'
     };
 
     toast.innerHTML = `
-        <div class="bioma-toast-icon">${iconMap[icon] || 'ℹ'}</div>
-        <div class="bioma-toast-content">${title}</div>
-        <button class="bioma-toast-close" aria-label="Fechar">×</button>
+        <div class="bioma-toast-icon">${icons[type] || icons.info}</div>
+        <div class="bioma-toast-message">${message}</div>
+        <button class="bioma-toast-close" onclick="this.closest('.bioma-toast').remove()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+            </svg>
+        </button>
     `;
 
-    container.appendChild(toast);
+    biomaToastContainer.appendChild(toast);
 
-    // Fechar ao clicar no X
-    const closeBtn = toast.querySelector('.bioma-toast-close');
-    closeBtn.addEventListener('click', () => {
-        removeToast(toast);
-    });
+    // Animação de entrada
+    setTimeout(() => toast.classList.add('bioma-toast-show'), 10);
 
-    // Auto-fechar após timer
-    if (timer > 0) {
+    // Auto-remover
+    if (duration > 0) {
         setTimeout(() => {
-            removeToast(toast);
-        }, timer);
+            toast.classList.remove('bioma-toast-show');
+            toast.classList.add('bioma-toast-exit');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 
     return toast;
 }
 
-function removeToast(toast) {
-    toast.classList.add('removing');
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-        }
-    }, 300);
-}
-
-// ========== FUNÇÃO 2: mostrarConfirmacao() - Dialog Confirmation ==========
-/**
- * Mostra diálogo de confirmação com botões
- * @param {object} config - Configuração do modal
- * @returns {Promise<{isConfirmed: boolean, isDenied: boolean, isDismissed: boolean}>}
- */
+// ========== MODAL CUSTOMIZADO (DIV estilizado) ==========
 function mostrarConfirmacao(config) {
     return new Promise((resolve) => {
-        const dialog = document.createElement('dialog');
-        dialog.className = 'bioma-dialog';
+        // Criar overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'bioma-modal-overlay bioma-modal-fade-in';
 
-        const iconMap = {
-            success: { icon: '✓', class: 'success' },
-            error: { icon: '✕', class: 'error' },
-            warning: { icon: '⚠', class: 'warning' },
-            info: { icon: 'ℹ', class: 'info' },
-            question: { icon: '?', class: 'question' }
+        // Criar modal
+        const modal = document.createElement('div');
+        modal.className = 'bioma-modal bioma-modal-scale-in';
+
+        const icons = {
+            success: '<svg viewBox="0 0 24 24" width="48" height="48" fill="#10B981"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+            error: '<svg viewBox="0 0 24 24" width="48" height="48" fill="#EF4444"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 9l-6 6m0-6l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+            warning: '<svg viewBox="0 0 24 24" width="48" height="48" fill="#F59E0B"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>',
+            info: '<svg viewBox="0 0 24 24" width="48" height="48" fill="#3B82F6"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 16v-4m0-4h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+            question: '<svg viewBox="0 0 24 24" width="48" height="48" fill="#8B5CF6"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3m.08 4h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
         };
 
-        const iconData = iconMap[config.icon] || iconMap.info;
+        const iconHTML = config.icon ? `<div class="bioma-modal-icon">${icons[config.icon] || icons.info}</div>` : '';
+        const textHTML = config.text ? `<p class="bioma-modal-text">${config.text}</p>` : '';
+        const htmlContent = config.html || '';
 
-        const confirmText = config.confirmButtonText || 'Confirmar';
-        const cancelText = config.cancelButtonText || 'Cancelar';
-        const showCancel = config.showCancelButton !== false;
-        const showDeny = config.showDenyButton === true;
-        const denyText = config.denyButtonText || 'Recusar';
-
-        dialog.innerHTML = `
-            <div class="bioma-dialog-header">
-                <div class="bioma-dialog-icon ${iconData.class}">${iconData.icon}</div>
-                <h2 class="bioma-dialog-title">${config.title || ''}</h2>
-            </div>
-            <div class="bioma-dialog-body">
-                ${config.html || config.text || ''}
-            </div>
-            <div class="bioma-dialog-footer">
-                ${showCancel ? `<button class="bioma-btn-cancel" data-action="cancel">${cancelText}</button>` : ''}
-                ${showDeny ? `<button class="bioma-btn-cancel" data-action="deny" style="background: #EF4444; color: white;">${denyText}</button>` : ''}
-                <button class="bioma-btn-confirm" data-action="confirm">${confirmText}</button>
+        modal.innerHTML = `
+            ${iconHTML}
+            <h3 class="bioma-modal-title">${config.title || 'Confirmação'}</h3>
+            ${textHTML}
+            ${htmlContent}
+            <div class="bioma-modal-actions">
+                ${config.showCancelButton !== false ? `<button class="bioma-btn bioma-btn-secondary" data-action="cancel">${config.cancelButtonText || 'Cancelar'}</button>` : ''}
+                <button class="bioma-btn bioma-btn-primary" data-action="confirm">${config.confirmButtonText || 'Confirmar'}</button>
             </div>
         `;
 
-        document.body.appendChild(dialog);
-        currentDialog = dialog;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        activeModals.push(overlay);
 
-        // Adicionar event listeners aos botões
-        dialog.querySelectorAll('button[data-action]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const action = e.target.getAttribute('data-action');
-                dialog.close();
-                dialog.remove();
-                currentDialog = null;
+        // Bloquear scroll do body
+        document.body.style.overflow = 'hidden';
 
+        // Event listeners
+        const buttons = modal.querySelectorAll('button[data-action]');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.getAttribute('data-action');
+                closeModal(overlay);
                 resolve({
                     isConfirmed: action === 'confirm',
-                    isDenied: action === 'deny',
                     isDismissed: action === 'cancel',
                     value: action === 'confirm'
                 });
             });
         });
 
-        // Executar didOpen callback se existir
-        if (config.didOpen) {
-            setTimeout(() => config.didOpen(dialog), 100);
+        // Fechar ao clicar no overlay
+        if (config.allowOutsideClick !== false) {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal(overlay);
+                    resolve({ isConfirmed: false, isDismissed: true });
+                }
+            });
         }
 
-        // Abrir modal
-        dialog.showModal();
-
-        // Fechar com ESC se permitido
+        // Fechar com ESC
         if (config.allowEscapeKey !== false) {
-            dialog.addEventListener('cancel', (e) => {
-                e.preventDefault();
-                dialog.close();
-                dialog.remove();
-                currentDialog = null;
-                resolve({
-                    isConfirmed: false,
-                    isDenied: false,
-                    isDismissed: true
-                });
-            });
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal(overlay);
+                    resolve({ isConfirmed: false, isDismissed: true });
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        }
+
+        // Executar didOpen se existir
+        if (config.didOpen) {
+            setTimeout(() => config.didOpen(modal), 100);
         }
     });
 }
 
-// ========== FUNÇÃO 3: mostrarLoading() - Loading Dialog ==========
-/**
- * Mostra diálogo de loading (sem botões)
- * @param {string} title - Título do loading
- */
-function mostrarLoading(title = 'Processando...') {
+// ========== MODAL DE LOADING ==========
+let currentLoadingModal = null;
+
+function mostrarLoading(message = 'Carregando...') {
     // Fechar loading anterior se existir
-    if (currentLoadingDialog) {
-        currentLoadingDialog.close();
-        currentLoadingDialog.remove();
+    if (currentLoadingModal) {
+        closeModal(currentLoadingModal);
     }
 
-    const dialog = document.createElement('dialog');
-    dialog.className = 'bioma-dialog';
+    const overlay = document.createElement('div');
+    overlay.className = 'bioma-modal-overlay bioma-modal-fade-in';
 
-    dialog.innerHTML = `
-        <div class="bioma-dialog-header" style="border-bottom: none; padding-bottom: 30px;">
-            <div class="bioma-loading"></div>
-            <h2 class="bioma-dialog-title">${title}</h2>
+    const modal = document.createElement('div');
+    modal.className = 'bioma-modal bioma-modal-loading bioma-modal-scale-in';
+
+    modal.innerHTML = `
+        <div class="bioma-spinner">
+            <div class="bioma-spinner-circle"></div>
         </div>
+        <p class="bioma-modal-title">${message}</p>
     `;
 
-    document.body.appendChild(dialog);
-    currentLoadingDialog = dialog;
-    dialog.showModal();
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
 
-    return dialog;
+    currentLoadingModal = overlay;
+    activeModals.push(overlay);
+
+    return overlay;
+}
+
+// ========== FUNÇÕES AUXILIARES ==========
+function closeModal(overlay) {
+    overlay.classList.add('bioma-modal-fade-out');
+    const modal = overlay.querySelector('.bioma-modal');
+    if (modal) modal.classList.add('bioma-modal-scale-out');
+
+    setTimeout(() => {
+        overlay.remove();
+        activeModals = activeModals.filter(m => m !== overlay);
+
+        // Restaurar scroll se não houver mais modais
+        if (activeModals.length === 0) {
+            document.body.style.overflow = '';
+        }
+
+        if (overlay === currentLoadingModal) {
+            currentLoadingModal = null;
+        }
+    }, 300);
 }
 
 // ========== COMPATIBILIDADE COM CÓDIGO ANTIGO ==========
-
-// Criar objeto Swal falso para compatibilidade
 window.Swal = {
     fire: function(...args) {
         if (typeof args[0] === 'object') {
             const config = args[0];
 
-            // Se tem timer e não tem botões, é notificação
+            // Toast notification
             if (config.timer && config.showConfirmButton === false) {
                 return Promise.resolve(mostrarNotificacao(config.icon || 'info', config.title, config.timer));
             }
 
-            // Se é loading (showLoading ou didOpen com showLoading)
+            // Loading
             if (config.didOpen && config.showConfirmButton === false && !config.timer) {
                 return Promise.resolve(mostrarLoading(config.title));
             }
 
-            // Senão é confirmação
+            // Confirmação
             return mostrarConfirmacao(config);
         } else if (args.length >= 1) {
             // Formato curto: Swal.fire(title, text, icon)
@@ -3785,47 +4054,32 @@ window.Swal = {
     },
 
     close: function() {
-        if (currentLoadingDialog) {
-            currentLoadingDialog.close();
-            currentLoadingDialog.remove();
-            currentLoadingDialog = null;
+        if (currentLoadingModal) {
+            closeModal(currentLoadingModal);
         }
-        if (currentDialog) {
-            currentDialog.close();
-            currentDialog.remove();
-            currentDialog = null;
+        // Fechar o último modal aberto
+        if (activeModals.length > 0) {
+            closeModal(activeModals[activeModals.length - 1]);
         }
     },
 
-    isVisible: function() {
-        return currentDialog !== null || currentLoadingDialog !== null;
-    },
-
-    getContainer: function() {
-        return currentDialog || currentLoadingDialog;
-    },
-
-    getPopup: function() {
-        return currentDialog || currentLoadingDialog;
-    },
-
-    showLoading: function() {
-        // Já mostrado no mostrarLoading()
-    }
+    isVisible: () => activeModals.length > 0,
+    getContainer: () => activeModals[activeModals.length - 1],
+    getPopup: () => activeModals[activeModals.length - 1]?.querySelector('.bioma-modal'),
+    showLoading: () => {}
 };
 
-// Aliases para compatibilidade
+// Aliases
 const showNotification = mostrarNotificacao;
 const showDialog = mostrarConfirmacao;
 const showLoading = mostrarLoading;
 
-// Log do sistema
-console.log('%c✅ Sistema de Modais Customizado BIOMA v5.0 Carregado', 'color: green; font-weight: bold; font-size: 14px;');
-console.log('%c  📢 mostrarNotificacao() - Toast notifications', 'color: blue;');
-console.log('%c  ❓ mostrarConfirmacao() - Diálogos de confirmação', 'color: blue;');
-console.log('%c  ⏳ mostrarLoading() - Loading sem botões', 'color: blue;');
-console.log('%c  🎨 100% Customizado - SEM SweetAlert2', 'color: magenta; font-weight: bold;');
-console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: green; font-weight: bold;');
+console.log('%c✅ BIOMA UI System v5.1.0 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
+console.log('%c  🎨 Modais customizados bonitos (DIV, não <dialog> nativo)', 'color: #3B82F6;');
+console.log('%c  🔔 Toast notifications estilo Toastify', 'color: #3B82F6;');
+console.log('%c  🎯 Sistema de botões moderno', 'color: #3B82F6;');
+console.log('%c  ✅ 100% compatível com código antigo', 'color: #10B981; font-weight: bold;');
+
 
 </script>
 
@@ -4131,7 +4385,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
             </div>
             <!-- FIM SEÇÃO DE PROFISSIONAIS -->
             
-            <div class="card"><div class="card-header"><i class="bi bi-calculator"></i> Resumo e Pagamento</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label>Desconto Global %</label><input type="number" id="descontoGlobal" value="0" min="0" max="100" onchange="calcularTotais()" class="form-control"></div><div class="col-md-4"><label>Cashback %</label><input type="number" id="cashbackPerc" value="0" min="0" max="100" onchange="calcularTotais()" class="form-control"></div><div class="col-md-4"><label>Forma de Pagamento</label><select id="pagamento" class="form-select"><option>Pix</option><option>Débito</option><option>Crédito à Vista</option><option>Crédito Parcelado</option><option>Dinheiro</option></select></div></div><div style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:40px;border-radius:22px;margin:30px 0;box-shadow:0 15px 40px rgba(124,58,237,0.4)"><div class="row align-items-center"><div class="col-md-6"><h3 id="totalFinalOrc" style="font-size:3.5rem;font-weight:900;margin:0;text-shadow:2px 2px 8px rgba(0,0,0,0.3)">R$ 0,00</h3><p style="font-size:1.3rem;margin:10px 0 0;opacity:0.95">TOTAL</p></div><div class="col-md-6" style="text-align:right"><p id="cashbackValor" style="font-size:1.5rem;margin:0;font-weight:700">🎁 Cashback: R$ 0,00</p></div></div></div><div style="text-align:center;margin-top:30px"><button class="btn btn-secondary" onclick="cancelarOrc()"><i class="bi bi-x-circle"></i> Cancelar</button> <button class="btn btn-outline" onclick="salvarOrc('Pendente')"><i class="bi bi-save"></i> Salvar Rascunho</button> <button class="btn btn-success" onclick="salvarOrc('Aprovado')"><i class="bi bi-check-circle"></i> Gerar Contrato</button></div></div></div>
+            <div class="card"><div class="card-header"><i class="bi bi-calculator"></i> Resumo e Pagamento</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label>Desconto Global %</label><input type="number" id="descontoGlobal" value="0" min="0" max="100" onchange="calcularTotais()" class="form-control"></div><div class="col-md-4"><label>Cashback %</label><input type="number" id="cashbackPerc" value="0" min="0" max="100" onchange="calcularTotais()" class="form-control"></div><div class="col-md-4"><label>Forma de Pagamento</label><select id="pagamento" class="form-select"><option>Pix</option><option>Débito</option><option>Crédito à Vista</option><option>Crédito Parcelado</option><option>Dinheiro</option></select></div></div><div style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:40px;border-radius:22px;margin:30px 0;box-shadow:0 15px 40px rgba(124,58,237,0.4)"><div class="row align-items-center"><div class="col-md-6"><h3 id="totalFinalOrc" style="font-size:3.5rem;font-weight:900;margin:0;text-shadow:2px 2px 8px rgba(0,0,0,0.3)">R$ 0,00</h3><p style="font-size:1.3rem;margin:10px 0 0;opacity:0.95">TOTAL</p></div><div class="col-md-6" style="text-align:right"><p id="cashbackValor" style="font-size:1.5rem;margin:0;font-weight:700">🎁 Cashback: R$ 0,00</p></div></div></div><div style="text-align:center;margin-top:30px"><button class="bioma-btn bioma-btn-secondary" onclick="cancelarOrc()"><i class="bi bi-x-circle"></i> Cancelar</button> <button class="btn btn-outline" onclick="salvarOrc('Pendente')"><i class="bi bi-save"></i> Salvar Rascunho</button> <button class="bioma-btn bioma-btn-success" onclick="salvarOrc('Aprovado')"><i class="bi bi-check-circle"></i> Gerar Contrato</button></div></div></div>
             </div><!-- Fim sub-tab novo -->
             
             <!-- Sub-tab: Pendentes -->
@@ -4373,7 +4627,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
             <div class="page-header">
                 <h1><i class="bi bi-bar-chart-line"></i> Relatórios e Análises</h1>
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-success" onclick="exportarRelatorio()"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
+                    <button class="bioma-btn bioma-btn-success" onclick="exportarRelatorio()"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
                 </div>
             </div>
 
@@ -4412,7 +4666,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
                 <div class="card mb-4">
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <span><i class="bi bi-calendar-heat"></i> Mapa de Calor - Dias Mais Movimentados</span>
-                        <button class="btn btn-sm btn-primary" onclick="carregarMapaCalor()" title="Atualizar Mapa de Calor">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="carregarMapaCalor()" title="Atualizar Mapa de Calor">
                             <i class="bi bi-arrow-clockwise"></i> Atualizar
                         </button>
                     </div>
@@ -4581,10 +4835,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                             <!-- Botões -->
                             <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoAgendamento()">
+                                <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovoAgendamento()">
                                     <i class="bi bi-x-circle"></i> Limpar
                                 </button>
-                                <button type="button" class="btn btn-success" onclick="salvarNovoAgendamento()">
+                                <button type="button" class="bioma-btn bioma-btn-success" onclick="salvarNovoAgendamento()">
                                     <i class="bi bi-check-circle"></i> Criar Agendamento
                                 </button>
                             </div>
@@ -4769,7 +5023,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
         <div id="section-fila" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-people-fill"></i> Fila de Atendimento</h1>
-                <button class="btn btn-primary" onclick="showModalFila()"><i class="bi bi-plus-circle"></i> Adicionar à Fila</button>
+                <button class="bioma-btn bioma-btn-primary" onclick="showModalFila()"><i class="bi bi-plus-circle"></i> Adicionar à Fila</button>
             </div>
             <div class="card">
                 <div class="card-header">
@@ -4915,10 +5169,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                             <!-- Botões de Ação -->
                             <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoCliente()">
+                                <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovoCliente()">
                                     <i class="bi bi-x-circle"></i> Limpar
                                 </button>
-                                <button type="button" class="btn btn-primary" onclick="salvarNovoCliente()">
+                                <button type="button" class="bioma-btn bioma-btn-primary" onclick="salvarNovoCliente()">
                                     <i class="bi bi-check-circle"></i> Salvar Cliente
                                 </button>
                             </div>
@@ -4967,7 +5221,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
                     <div class="card mb-4">
                         <div class="card-header">
                             <i class="bi bi-person-badge"></i> Cliente: <span id="anamnesesClienteNome"></span>
-                            <button class="btn btn-sm btn-success float-end" onclick="novaAnamneseModal()">
+                            <button class="bioma-btn bioma-btn-sm bioma-btn-success float-end" onclick="novaAnamneseModal()">
                                 <i class="bi bi-plus-circle"></i> Nova Anamnese
                             </button>
                         </div>
@@ -5030,7 +5284,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
                     <div class="card mb-4">
                         <div class="card-header">
                             <i class="bi bi-person-badge"></i> Cliente: <span id="prontuariosClienteNome"></span>
-                            <button class="btn btn-sm btn-success float-end" onclick="novoProntuarioModal()">
+                            <button class="bioma-btn bioma-btn-sm bioma-btn-success float-end" onclick="novoProntuarioModal()">
                                 <i class="bi bi-plus-circle"></i> Novo Prontuário
                             </button>
                         </div>
@@ -5203,10 +5457,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                         <!-- Botões de Ação -->
                         <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                            <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoProfissional()">
+                            <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovoProfissional()">
                                 <i class="bi bi-x-circle"></i> Limpar
                             </button>
-                            <button type="button" class="btn btn-primary" onclick="salvarNovoProfissional()">
+                            <button type="button" class="bioma-btn bioma-btn-primary" onclick="salvarNovoProfissional()">
                                 <i class="bi bi-check-circle"></i> Salvar Profissional
                             </button>
                         </div>
@@ -5348,13 +5602,13 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
                             </div>
                         </div>
                         <div class="mt-3">
-                            <button class="btn btn-primary" onclick="carregarComissoesProfissional()">
+                            <button class="bioma-btn bioma-btn-primary" onclick="carregarComissoesProfissional()">
                                 <i class="bi bi-search"></i> Filtrar
                             </button>
                             <button class="btn btn-outline" onclick="limparFiltrosComissoes()">
                                 <i class="bi bi-x-circle"></i> Limpar
                             </button>
-                            <button class="btn btn-success" onclick="exportarComissoesExcel()">
+                            <button class="bioma-btn bioma-btn-success" onclick="exportarComissoesExcel()">
                                 <i class="bi bi-file-earmark-excel"></i> Exportar Excel
                             </button>
                         </div>
@@ -5627,10 +5881,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                             <!-- Botões de Ação -->
                             <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoServico()">
+                                <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovoServico()">
                                     <i class="bi bi-x-circle"></i> Limpar
                                 </button>
-                                <button type="button" class="btn btn-primary" onclick="salvarNovoServico()">
+                                <button type="button" class="bioma-btn bioma-btn-primary" onclick="salvarNovoServico()">
                                     <i class="bi bi-check-circle"></i> Salvar Serviço
                                 </button>
                             </div>
@@ -5850,10 +6104,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                             <!-- Botões de Ação -->
                             <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                                <button type="button" class="btn btn-secondary" onclick="limparFormularioNovoProduto()">
+                                <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovoProduto()">
                                     <i class="bi bi-x-circle"></i> Limpar
                                 </button>
-                                <button type="button" class="btn btn-primary" onclick="salvarNovoProduto()">
+                                <button type="button" class="bioma-btn bioma-btn-primary" onclick="salvarNovoProduto()">
                                     <i class="bi bi-check-circle"></i> Salvar Produto
                                 </button>
                             </div>
@@ -5963,7 +6217,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 <div id="section-perfil" class="content-section">
     <div class="page-header">
         <h1><i class="bi bi-person-circle"></i> Meu Perfil</h1>
-        <button class="btn btn-primary" onclick="salvarAlteracoesPerfil()">
+        <button class="bioma-btn bioma-btn-primary" onclick="salvarAlteracoesPerfil()">
             <i class="bi bi-save"></i> Salvar Alterações
         </button>
     </div>
@@ -6122,10 +6376,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                     <!-- Botões -->
                     <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaComissao()">
+                        <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovaComissao()">
                             <i class="bi bi-x-circle"></i> Limpar
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="salvarNovaComissao()">
+                        <button type="button" class="bioma-btn bioma-btn-danger" onclick="salvarNovaComissao()">
                             <i class="bi bi-check-circle"></i> Salvar Regra
                         </button>
                     </div>
@@ -6221,7 +6475,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
     <div class="page-header">
         <h1><i class="bi bi-wallet2"></i> Gestão Financeira</h1>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" onclick="carregarDadosFinanceiro()">
+            <button class="bioma-btn bioma-btn-primary" onclick="carregarDadosFinanceiro()">
                 <i class="bi bi-arrow-clockwise"></i> Atualizar
             </button>
         </div>
@@ -6362,10 +6616,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                     <!-- Botões -->
                     <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaDespesa()">
+                        <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovaDespesa()">
                             <i class="bi bi-x-circle"></i> Limpar
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="salvarNovaDespesa()">
+                        <button type="button" class="bioma-btn bioma-btn-danger" onclick="salvarNovaDespesa()">
                             <i class="bi bi-check-circle"></i> Registrar Despesa
                         </button>
                     </div>
@@ -6512,7 +6766,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
     <div class="page-header">
         <h1><i class="bi bi-box-seam"></i> Gestão de Estoque</h1>
         <div class="estoque-actions">
-            <button class="btn btn-primary" onclick="loadEstoque()">
+            <button class="bioma-btn bioma-btn-primary" onclick="loadEstoque()">
                 <i class="bi bi-arrow-repeat"></i> Atualizar
             </button>
         </div>
@@ -6596,10 +6850,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                     <!-- Botões -->
                     <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaEntrada()">
+                        <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovaEntrada()">
                             <i class="bi bi-x-circle"></i> Limpar
                         </button>
-                        <button type="button" class="btn btn-success" onclick="salvarNovaEntrada()">
+                        <button type="button" class="bioma-btn bioma-btn-success" onclick="salvarNovaEntrada()">
                             <i class="bi bi-check-circle"></i> Registrar Entrada
                         </button>
                     </div>
@@ -6666,10 +6920,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                     <!-- Botões -->
                     <div class="mt-4" style="display: flex; gap: 10px; justify-content: flex-end;">
-                        <button type="button" class="btn btn-secondary" onclick="limparFormularioNovaSaida()">
+                        <button type="button" class="bioma-btn bioma-btn-secondary" onclick="limparFormularioNovaSaida()">
                             <i class="bi bi-x-circle"></i> Limpar
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="salvarNovaSaida()">
+                        <button type="button" class="bioma-btn bioma-btn-danger" onclick="salvarNovaSaida()">
                             <i class="bi bi-check-circle"></i> Registrar Saída
                         </button>
                     </div>
@@ -6874,13 +7128,13 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
                     </div>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-primary" onclick="gerarRelatorioEstoque()">
+                    <button class="bioma-btn bioma-btn-primary" onclick="gerarRelatorioEstoque()">
                         <i class="bi bi-bar-chart"></i> Gerar Relatório
                     </button>
-                    <button class="btn btn-success" onclick="exportarRelatorioExcel()">
+                    <button class="bioma-btn bioma-btn-success" onclick="exportarRelatorioExcel()">
                         <i class="bi bi-file-earmark-excel"></i> Exportar Excel
                     </button>
-                    <button class="btn btn-danger" onclick="exportarRelatorioPDF()">
+                    <button class="bioma-btn bioma-btn-danger" onclick="exportarRelatorioPDF()">
                         <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
                     </button>
                 </div>
@@ -7048,7 +7302,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
             <div class="page-header"><h1><i class="bi bi-activity"></i> Status do Sistema</h1></div>
             <div class="row g-4 mb-4">
                 <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-database"></i> MongoDB</div><div class="card-body text-center"><div id="mongoStatus" class="badge warning">Verificando...</div><p class="mt-3" id="mongoMessage">...</p></div></div></div>
-                <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-envelope"></i> MailerSend</div><div class="card-body text-center"><div id="emailStatus" class="badge warning">Verificando...</div><p class="mt-3" id="emailMessage">...</p><button class="btn btn-sm btn-success mt-2" onclick="testarEnvioEmail()" style="width: 100%;"><i class="bi bi-send"></i> Enviar E-mail de Teste</button></div></div></div>
+                <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-envelope"></i> MailerSend</div><div class="card-body text-center"><div id="emailStatus" class="badge warning">Verificando...</div><p class="mt-3" id="emailMessage">...</p><button class="bioma-btn bioma-btn-sm bioma-btn-success mt-2" onclick="testarEnvioEmail()" style="width: 100%;"><i class="bi bi-send"></i> Enviar E-mail de Teste</button></div></div></div>
                 <div class="col-md-4"><div class="card"><div class="card-header"><i class="bi bi-info-circle"></i> Versão</div><div class="card-body text-center"><h3>v4.0</h3><p>BIOMA Uberaba</p></div></div></div>
             </div>
 
@@ -7133,7 +7387,7 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
         <div id="section-auditoria" class="content-section">
             <div class="page-header">
                 <h1><i class="bi bi-shield-check"></i> Auditoria do Sistema</h1>
-                <button class="btn btn-primary" onclick="loadAuditoria()">
+                <button class="bioma-btn bioma-btn-primary" onclick="loadAuditoria()">
                     <i class="bi bi-arrow-clockwise"></i> Atualizar
                 </button>
             </div>
@@ -7237,11 +7491,11 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
                     <!-- Paginação Auditoria -->
                     <div id="paginacaoAuditoria" class="d-flex justify-content-center align-items-center gap-3 mt-4" style="display:none !important;">
-                        <button class="btn btn-sm btn-outline" onclick="mudarPaginaAuditoria(-1)">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="mudarPaginaAuditoria(-1)">
                             <i class="bi bi-chevron-left"></i> Anterior
                         </button>
                         <span id="infoPaginaAuditoria" class="text-muted fw-bold">Página 1 de 1</span>
-                        <button class="btn btn-sm btn-outline" onclick="mudarPaginaAuditoria(1)">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="mudarPaginaAuditoria(1)">
                             Próxima <i class="bi bi-chevron-right"></i>
                         </button>
                     </div>
@@ -7251,10 +7505,10 @@ console.log('%c  ✅ HTML5 <dialog> nativo - SEM problemas de z-index', 'color: 
 
         <div id="section-configuracoes" class="content-section">
             <div class="page-header"><h1><i class="bi bi-gear"></i> Configurações</h1></div>
-            <div class="card"><div class="card-header"><i class="bi bi-building"></i> Dados da Franquia BIOMA</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Nome da Empresa *</label><input type="text" id="cfgNome" value="BIOMA UBERABA" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">CNPJ *</label><input type="text" id="cfgCNPJ" value="49.470.937/0001-10" class="form-control"></div></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Endereço Completo *</label><input type="text" id="cfgEndereco" value="Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG - CEP 38050-400" class="form-control"></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Telefone *</label><input type="text" id="cfgTelefone" value="(34) 99235-5890" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">E-mail *</label><input type="email" id="cfgEmail" value="biomauberaba@gmail.com" class="form-control"></div></div><button class="btn btn-primary" onclick="salvarConfig()"><i class="bi bi-save"></i> Salvar Dados da Franquia</button></div></div>
-            <div class="card mt-4"><div class="card-header"><i class="bi bi-image"></i> Personalização Visual</div><div class="card-body"><div class="row g-4"><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoPrincipalPreview"><span class="text-muted">Logo do sistema</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('principal')"><i class="bi bi-upload"></i> Enviar logo principal</button><button class="btn btn-sm btn-link text-danger mt-2" type="button" onclick="removerLogo('principal')">Remover</button></div></div><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoLoginPreview"><span class="text-muted">Logo da tela de login</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('login')"><i class="bi bi-upload"></i> Enviar logo de login</button><button class="btn btn-sm btn-link text-danger mt-2" type="button" onclick="removerLogo('login')">Remover</button></div></div></div></div></div>
-            <div class="card mt-4"><div class="card-header"><i class="bi bi-sliders"></i> Configurações Operacionais</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Abertura</label><input type="time" id="cfgHorarioAbertura" value="08:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Fechamento</label><input type="time" id="cfgHorarioFechamento" value="19:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Duração Padrão (min)</label><input type="number" id="cfgDuracaoPadrao" value="60" class="form-control"></div></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Cashback Padrão (%)</label><input type="number" id="cfgCashbackPadrao" value="5" min="0" max="100" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Comissão Padrão (%)</label><input type="number" id="cfgComissaoPadrao" value="10" min="0" max="100" class="form-control"></div></div><button class="btn btn-success" onclick="salvarConfigOp()"><i class="bi bi-check-circle"></i> Salvar Configurações Operacionais</button></div></div>
-            <div class="card mt-4"><div class="card-header"><i class="bi bi-envelope"></i> Configurações de E-mail</div><div class="card-body"><p class="text-muted mb-3">Configure as credenciais SMTP para envio de e-mails automáticos (orçamentos, notificações, etc.)</p><div class="alert alert-info"><i class="bi bi-info-circle"></i> <strong>Importante:</strong> As configurações de SMTP devem ser definidas no arquivo <code>.env</code> do servidor:<br><code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, <code>EMAIL_USER</code>, <code>EMAIL_PASSWORD</code>, <code>EMAIL_FROM</code></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Testar Configuração de E-mail</label><div class="input-group"><input type="email" id="emailTesteDestino" placeholder="Digite um e-mail para teste" class="form-control"><button class="btn btn-primary" onclick="testarEmailConfig()"><i class="bi bi-send"></i> Enviar E-mail de Teste</button></div><small class="text-muted">Um e-mail de teste será enviado para verificar se as configurações estão corretas.</small></div></div></div>
+            <div class="card"><div class="card-header"><i class="bi bi-building"></i> Dados da Franquia BIOMA</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Nome da Empresa *</label><input type="text" id="cfgNome" value="BIOMA UBERABA" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">CNPJ *</label><input type="text" id="cfgCNPJ" value="49.470.937/0001-10" class="form-control"></div></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Endereço Completo *</label><input type="text" id="cfgEndereco" value="Av. Santos Dumont 3110 - Santa Maria - Uberaba/MG - CEP 38050-400" class="form-control"></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Telefone *</label><input type="text" id="cfgTelefone" value="(34) 99235-5890" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">E-mail *</label><input type="email" id="cfgEmail" value="biomauberaba@gmail.com" class="form-control"></div></div><button class="bioma-btn bioma-btn-primary" onclick="salvarConfig()"><i class="bi bi-save"></i> Salvar Dados da Franquia</button></div></div>
+            <div class="card mt-4"><div class="card-header"><i class="bi bi-image"></i> Personalização Visual</div><div class="card-body"><div class="row g-4"><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoPrincipalPreview"><span class="text-muted">Logo do sistema</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('principal')"><i class="bi bi-upload"></i> Enviar logo principal</button><button class="bioma-btn bioma-btn-sm bioma-btn-link text-danger mt-2" type="button" onclick="removerLogo('principal')">Remover</button></div></div><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoLoginPreview"><span class="text-muted">Logo da tela de login</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('login')"><i class="bi bi-upload"></i> Enviar logo de login</button><button class="bioma-btn bioma-btn-sm bioma-btn-link text-danger mt-2" type="button" onclick="removerLogo('login')">Remover</button></div></div></div></div></div>
+            <div class="card mt-4"><div class="card-header"><i class="bi bi-sliders"></i> Configurações Operacionais</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Abertura</label><input type="time" id="cfgHorarioAbertura" value="08:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Fechamento</label><input type="time" id="cfgHorarioFechamento" value="19:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Duração Padrão (min)</label><input type="number" id="cfgDuracaoPadrao" value="60" class="form-control"></div></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Cashback Padrão (%)</label><input type="number" id="cfgCashbackPadrao" value="5" min="0" max="100" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Comissão Padrão (%)</label><input type="number" id="cfgComissaoPadrao" value="10" min="0" max="100" class="form-control"></div></div><button class="bioma-btn bioma-btn-success" onclick="salvarConfigOp()"><i class="bi bi-check-circle"></i> Salvar Configurações Operacionais</button></div></div>
+            <div class="card mt-4"><div class="card-header"><i class="bi bi-envelope"></i> Configurações de E-mail</div><div class="card-body"><p class="text-muted mb-3">Configure as credenciais SMTP para envio de e-mails automáticos (orçamentos, notificações, etc.)</p><div class="alert alert-info"><i class="bi bi-info-circle"></i> <strong>Importante:</strong> As configurações de SMTP devem ser definidas no arquivo <code>.env</code> do servidor:<br><code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, <code>EMAIL_USER</code>, <code>EMAIL_PASSWORD</code>, <code>EMAIL_FROM</code></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Testar Configuração de E-mail</label><div class="input-group"><input type="email" id="emailTesteDestino" placeholder="Digite um e-mail para teste" class="form-control"><button class="bioma-btn bioma-btn-primary" onclick="testarEmailConfig()"><i class="bi bi-send"></i> Enviar E-mail de Teste</button></div><small class="text-muted">Um e-mail de teste será enviado para verificar se as configurações estão corretas.</small></div></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-shield-check"></i> Licença e Desenvolvedor</div><div class="card-body"><table style="width:100%"><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Plano Contratado:</td><td style="padding:15px"><span class="badge success">PROFISSIONAL PREMIUM</span></td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Franquia:</td><td style="padding:15px">BIOMA Uberaba - Oficial</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Desenvolvedor:</td><td style="padding:15px">@juanmarco1999 (Juan Marco Bernardos Souza e Silva)</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Email Suporte:</td><td style="padding:15px">180147064@aluno.unb.br</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Versão:</td><td style="padding:15px">v4.0 (Build 2025.10.05)</td></tr><tr><td style="padding:15px;font-weight:700">Última Atualização:</td><td style="padding:15px">05 de Outubro de 2025 às 22:34 UTC</td></tr></table></div></div>
         </div>
 
@@ -8175,10 +8429,10 @@ async function loadEstoquePendentes(){
                     <td>${item.motivo || '-'}</td>
                     <td>${item.usuario || '-'}</td>
                     <td>
-                        <button class="btn btn-sm btn-success" onclick="aprovarEntradaProduto('${item._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="aprovarEntradaProduto('${item._id}')">
                             <i class="bi bi-check2-circle"></i> Aprovar
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejeitarEntradaProduto('${item._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="rejeitarEntradaProduto('${item._id}')">
                             <i class="bi bi-x-circle"></i> Rejeitar
                         </button>
                     </td>
@@ -8198,10 +8452,10 @@ async function loadEstoquePendentes(){
                             <p class="text-muted">Solicitado por: ${item.usuario || '-'}</p>
                         </div>
                         <div class="approval-actions">
-                            <button class="btn btn-success" onclick="aprovarEntradaProduto('${item._id}')">
+                            <button class="bioma-btn bioma-btn-success" onclick="aprovarEntradaProduto('${item._id}')">
                                 <i class="bi bi-check2-circle"></i> Aprovar
                             </button>
-                            <button class="btn btn-danger" onclick="rejeitarEntradaProduto('${item._id}')">
+                            <button class="bioma-btn bioma-btn-danger" onclick="rejeitarEntradaProduto('${item._id}')">
                                 <i class="bi bi-x-circle"></i> Rejeitar
                             </button>
                         </div>
@@ -9425,11 +9679,11 @@ async function loadClientes(){
                     <td><strong>R$ ${(c.total_gasto||0).toFixed(2)}</strong></td>
                     <td>${c.total_visitas||0}</td>
                     <td class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-sm btn-info" onclick="visualizarCliente('${c._id}')"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-primary" onclick="editarCliente('${c._id}')"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="abrirAnamneseCliente('${c._id}')"><i class="bi bi-file-earmark-medical"></i></button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="abrirProntuarioCliente('${c._id}')"><i class="bi bi-journal-medical"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteCliente('${c._id}')"><i class="bi bi-trash"></i></button>
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-info" onclick="visualizarCliente('${c._id}')"><i class="bi bi-eye"></i></button>
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarCliente('${c._id}')"><i class="bi bi-pencil"></i></button>
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline-secondary" onclick="abrirAnamneseCliente('${c._id}')"><i class="bi bi-file-earmark-medical"></i></button>
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline-secondary" onclick="abrirProntuarioCliente('${c._id}')"><i class="bi bi-journal-medical"></i></button>
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteCliente('${c._id}')"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>`;
             }).join('');
@@ -9824,16 +10078,16 @@ async function loadProfissionais(){
                     <td>${assistentes}</td>
                     <td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="uploadFotoProfissional('${p._id}')" title="Upload Foto">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="uploadFotoProfissional('${p._id}')" title="Upload Foto">
                             <i class="bi bi-camera"></i>
                         </button>
-                        <button class="btn btn-sm btn-info" onclick="visualizarProfissional('${p._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-info" onclick="visualizarProfissional('${p._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="editarProfissional('${p._id}')" style="margin-right:5px">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProfissional('${p._id}')" style="margin-right:5px">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteProfissional('${p._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProfissional('${p._id}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -9874,7 +10128,7 @@ async function loadAssistentes() {
                     <td>10%</td>
                     <td><span class="badge ${a.ativo ? 'success' : 'danger'}">${a.ativo ? 'Ativo' : 'Inativo'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-danger" onclick="deleteAssistente('${a._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteAssistente('${a._id}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -11161,21 +11415,21 @@ async function loadServicosLista(){
 
             // Todos os serviços
             if(tbodies[0]){
-                const htmlTodos=data.servicos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><span class="badge ${s.ativo?'success':'danger'}">${s.ativo?'Ativo':'Inativo'}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                const htmlTodos=data.servicos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><span class="badge ${s.ativo?'success':'danger'}">${s.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
                 tbodies[0].innerHTML=htmlTodos;
             }
 
             // Serviços ativos
             if(tbodies[1]){
                 const ativos = data.servicos.filter(s => s.ativo);
-                const htmlAtivos = ativos.length > 0 ? ativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço ativo</td></tr>';
+                const htmlAtivos = ativos.length > 0 ? ativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço ativo</td></tr>';
                 tbodies[1].innerHTML=htmlAtivos;
             }
 
             // Serviços inativos
             if(tbodies[2]){
                 const inativos = data.servicos.filter(s => !s.ativo);
-                const htmlInativos = inativos.length > 0 ? inativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-success" onclick="ativarServico('${s._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço inativo</td></tr>';
+                const htmlInativos = inativos.length > 0 ? inativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="ativarServico('${s._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço inativo</td></tr>';
                 tbodies[2].innerHTML=htmlInativos;
             }
         }else{
@@ -11409,21 +11663,21 @@ async function loadProdutosLista(){
 
             // Todos os produtos
             if(tbodies[0]){
-                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
                 tbodies[0].innerHTML=htmlTodos;
             }
 
             // Produtos ativos
             if(tbodies[1]){
                 const ativos = data.produtos.filter(p => p.ativo);
-                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
+                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
                 tbodies[1].innerHTML=htmlAtivos;
             }
 
             // Produtos inativos
             if(tbodies[2]){
                 const inativos = data.produtos.filter(p => !p.ativo);
-                const htmlInativos = inativos.length > 0 ? inativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge danger">${p.estoque||0}</span></td><td><button class="btn btn-sm btn-success" onclick="ativarProduto('${p._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
+                const htmlInativos = inativos.length > 0 ? inativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge danger">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="ativarProduto('${p._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
                 tbodies[2].innerHTML=htmlInativos;
             }
         }else{
@@ -11648,7 +11902,7 @@ function filtrarOrcamentos(){
     if(filtrados.length > 0){
         const html = filtrados.map(o => {
             const statusClass = o.status === 'Aprovado' ? 'success' : (o.status === 'Cancelado' ? 'danger' : 'warning');
-            return `<tr><td><strong>#${o.numero}</strong></td><td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td><td>${o.cliente_nome}</td><td><strong>R$ ${o.total_final.toFixed(2)}</strong></td><td><span class="badge ${statusClass}">${o.status}</span></td><td><button class="btn btn-sm btn-info" onclick="visualizarOrcamento('${o._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-primary" onclick="editarOrcamento('${o._id}')" style="margin-right:5px"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="deleteOrcamento('${o._id}')"><i class="bi bi-trash"></i></button></td></tr>`;
+            return `<tr><td><strong>#${o.numero}</strong></td><td>${new Date(o.created_at).toLocaleDateString('pt-BR')}</td><td>${o.cliente_nome}</td><td><strong>R$ ${o.total_final.toFixed(2)}</strong></td><td><span class="badge ${statusClass}">${o.status}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-info" onclick="visualizarOrcamento('${o._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px"><i class="bi bi-eye"></i></button><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarOrcamento('${o._id}')" style="margin-right:5px"><i class="bi bi-pencil"></i></button><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteOrcamento('${o._id}')"><i class="bi bi-trash"></i></button></td></tr>`;
         }).join('');
         tbody.innerHTML = html;
     }else{
@@ -11706,7 +11960,7 @@ async function loadContratos(){
                         <button class="btn btn-sm" onclick="visualizarOrcamento('${c._id}')" style="background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;margin-right:5px" title="Visualizar Detalhes">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <a href="/api/orcamento/${c._id}/pdf" target="_blank" class="btn btn-sm btn-danger" style="margin-right:5px" title="Gerar PDF">
+                        <a href="/api/orcamento/${c._id}/pdf" target="_blank" class="bioma-btn bioma-btn-sm bioma-btn-danger" style="margin-right:5px" title="Gerar PDF">
                             <i class="bi bi-file-pdf"></i>
                         </a>
                         <button class="btn btn-sm" onclick="enviarContratoEmail('${c._id}')" style="background:linear-gradient(135deg,#10B981,#059669);color:#fff;margin-right:5px" title="Enviar por Email">
@@ -11915,7 +12169,7 @@ async function loadComissoes(){
                     <td colspan="7" class="text-center" style="padding: 40px; color: var(--danger);">
                         <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
                         <p style="margin-top: 10px;">Erro ao carregar comissões</p>
-                        <button class="btn btn-sm btn-outline" onclick="loadComissoes()" style="margin-top: 10px;">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="loadComissoes()" style="margin-top: 10px;">
                             <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
                         </button>
                     </td>
@@ -12144,10 +12398,10 @@ async function loadFila(){
                         </div>
                     </div>
                     <div>
-                        <button class="btn btn-sm btn-success" onclick="chamarProximo('${f._id}')" style="margin-right:8px;" title="Chamar para atendimento">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="chamarProximo('${f._id}')" style="margin-right:8px;" title="Chamar para atendimento">
                             <i class="bi bi-check-circle"></i> Chamar
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="removeFila('${f._id}')" title="Remover da fila">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="removeFila('${f._id}')" title="Remover da fila">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -12370,7 +12624,7 @@ async function loadAgendamentos(){
                     <td>${a.profissional_nome||'<span class="text-muted">Não atribuído</span>'}</td>
                     <td><span class="badge ${statusBadge}">${a.status||'Pendente'}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-danger" onclick="cancelarAgendamento('${a._id}')" title="Cancelar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="cancelarAgendamento('${a._id}')" title="Cancelar">
                             <i class="bi bi-x-circle"></i>
                         </button>
                     </td>
@@ -12866,7 +13120,7 @@ function addServico(){
 function atualizarTabelaServicos(){
     const tbody=document.getElementById('servicosBody');
     if(orcamento.servicos.length===0){tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted">Nenhum serviço</td></tr>';return;}
-    const html=orcamento.servicos.map((s,idx)=>`<tr><td><strong>${s.nome}</strong></td><td>${s.tamanho}</td><td>${s.qtd}</td><td>R$ ${s.preco_unit.toFixed(2)}</td><td>${s.desconto}%</td><td><strong>R$ ${s.total.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-danger" onclick="removerServico(${idx})"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+    const html=orcamento.servicos.map((s,idx)=>`<tr><td><strong>${s.nome}</strong></td><td>${s.tamanho}</td><td>${s.qtd}</td><td>R$ ${s.preco_unit.toFixed(2)}</td><td>${s.desconto}%</td><td><strong>R$ ${s.total.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="removerServico(${idx})"><i class="bi bi-trash"></i></button></td></tr>`).join('');
     tbody.innerHTML=html;
 }
 
@@ -12927,7 +13181,7 @@ function addProduto(){
 function atualizarTabelaProdutos(){
     const tbody=document.getElementById('produtosBody');
     if(orcamento.produtos.length===0){tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted">Nenhum produto</td></tr>';return;}
-    const html=orcamento.produtos.map((p,idx)=>`<tr><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td>${p.qtd}</td><td>R$ ${p.preco_unit.toFixed(2)}</td><td>${p.desconto}%</td><td><strong>R$ ${p.total.toFixed(2)}</strong></td><td><button class="btn btn-sm btn-danger" onclick="removerProduto(${idx})"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+    const html=orcamento.produtos.map((p,idx)=>`<tr><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td>${p.qtd}</td><td>R$ ${p.preco_unit.toFixed(2)}</td><td>${p.desconto}%</td><td><strong>R$ ${p.total.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="removerProduto(${idx})"><i class="bi bi-trash"></i></button></td></tr>`).join('');
     tbody.innerHTML=html;
 }
 
@@ -13603,7 +13857,7 @@ async function loadAuditoria() {
                     <td><code style="font-size:0.8em">${r.entidade_id.substring(0, 8)}...</code></td>
                     <td><small>${r.ip || '-'}</small></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="verDetalhesAuditoria('${r._id}')" title="Ver detalhes">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="verDetalhesAuditoria('${r._id}')" title="Ver detalhes">
                             <i class="bi bi-eye"></i>
                         </button>
                     </td>
@@ -14570,7 +14824,7 @@ function atualizarTabelaProfissionaisVinculados() {
                 <td>${prof.comissao_perc}%</td>
                 <td><strong style="color:var(--success);">R$ ${valorComissao.toFixed(2)}</strong></td>
                 <td>
-                    <button class="btn btn-sm btn-danger" onclick="removerProfissionalVinculado(${idx})" title="Remover">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="removerProfissionalVinculado(${idx})" title="Remover">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -16277,10 +16531,10 @@ function renderizarHistoricoAnamneses(anamneses) {
                 <td>${data}</td>
                 <td>${anamnese.cadastrado_por || 'N/A'}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline" onclick="visualizarAnamnese('${anamnese._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarAnamnese('${anamnese._id}')">
                         <i class="bi bi-eye"></i> Visualizar
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deletarAnamnese('${anamnese._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deletarAnamnese('${anamnese._id}')">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -16460,13 +16714,13 @@ function renderizarHistoricoProntuarios(prontuarios) {
                 <td>${pront.procedimento || 'N/A'}</td>
                 <td>${proxima}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline" onclick="visualizarProntuario('${pront._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarProntuario('${pront._id}')">
                         <i class="bi bi-eye"></i> Visualizar
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="editarProntuario('${pront._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProntuario('${pront._id}')">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deletarProntuario('${pront._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deletarProntuario('${pront._id}')">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -16764,13 +17018,13 @@ async function carregarOrcamentosPendentes() {
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${profs}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="aprovarOrcamento('${orcId}')" title="Aprovar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="aprovarOrcamento('${orcId}')" title="Aprovar">
                             <i class="bi bi-check"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="rejeitarOrcamento('${orcId}')" title="Rejeitar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="rejeitarOrcamento('${orcId}')" title="Rejeitar">
                             <i class="bi bi-x"></i>
                         </button>
                     </td>
@@ -16822,10 +17076,10 @@ async function carregarOrcamentosAprovados() {
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${(typeof orc.pagamento === 'object' ? orc.pagamento.tipo : orc.pagamento) || orc.forma_pagamento || 'N/A'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="imprimirContrato('${orcId}')" title="Imprimir Contrato">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="imprimirContrato('${orcId}')" title="Imprimir Contrato">
                             <i class="bi bi-printer"></i>
                         </button>
                     </td>
@@ -16877,10 +17131,10 @@ async function carregarOrcamentosRejeitados() {
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td>${orc.motivo_rejeicao || 'N/A'}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarOrcamento('${orcId}')" title="Visualizar">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deletarOrcamento('${orcId}')" title="Deletar">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deletarOrcamento('${orcId}')" title="Deletar">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -16932,7 +17186,7 @@ async function carregarHistoricoOrcamentos() {
                     <td>R$ ${parseFloat(orc.total_final || 0).toFixed(2)}</td>
                     <td><span class="badge ${statusClass}">${orc.status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarOrcamento('${orc._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarOrcamento('${orc._id}')">
                             <i class="bi bi-eye"></i>
                         </button>
                     </td>
@@ -17067,10 +17321,10 @@ async function carregarAgendamentosHoje() {
                     <td>${profissional}</td>
                     <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="editarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarAgendamento('${ag._id}')">
                             <i class="bi bi-pencil"></i>
                         </button>
                     </td>
@@ -17132,10 +17386,10 @@ async function carregarAgendamentosSemana() {
                     <td>${profissional}</td>
                     <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="editarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarAgendamento('${ag._id}')">
                             <i class="bi bi-pencil"></i>
                         </button>
                     </td>
@@ -17194,10 +17448,10 @@ async function carregarAgendamentosMes() {
                     <td>${profissional}</td>
                     <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="editarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarAgendamento('${ag._id}')">
                             <i class="bi bi-pencil"></i>
                         </button>
                     </td>
@@ -17256,10 +17510,10 @@ async function carregarTodosAgendamentos() {
                     <td>${ag.profissional}</td>
                     <td><span class="badge ${statusClass}">${ag.status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline" onclick="visualizarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="visualizarAgendamento('${ag._id}')">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-primary" onclick="editarAgendamento('${ag._id}')">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarAgendamento('${ag._id}')">
                             <i class="bi bi-pencil"></i>
                         </button>
                     </td>
@@ -17386,10 +17640,10 @@ function renderizarTabelaProdutos(produtos, tbody, incluirStatus) {
                 <td><span class="badge ${estoqueClass}">${p.estoque_atual || 0}</span></td>
                 ${statusBadge}
                 <td>
-                    <button class="btn btn-sm btn-outline" onclick="editarProduto('${p._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="editarProduto('${p._id}')">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-${p.status === 'Ativo' ? 'warning' : 'success'}" onclick="toggleStatusProduto('${p._id}', '${p.status}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-${p.status === 'Ativo' ? 'warning' : 'success'}" onclick="toggleStatusProduto('${p._id}', '${p.status}')">
                         <i class="bi bi-${p.status === 'Ativo' ? 'x' : 'check'}-circle"></i>
                     </button>
                 </td>
@@ -17581,10 +17835,10 @@ function renderizarTabelaServicos(servicos, tbody, incluirStatus) {
                 <td>R$ ${parseFloat(s.preco || 0).toFixed(2)}</td>
                 ${statusBadge}
                 <td>
-                    <button class="btn btn-sm btn-outline" onclick="editarServico('${s._id}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-outline" onclick="editarServico('${s._id}')">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-${s.status === 'Ativo' ? 'warning' : 'success'}" onclick="toggleStatusServico('${s._id}', '${s.status}')">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-${s.status === 'Ativo' ? 'warning' : 'success'}" onclick="toggleStatusServico('${s._id}', '${s.status}')">
                         <i class="bi bi-${s.status === 'Ativo' ? 'x' : 'check'}-circle"></i>
                     </button>
                 </td>
@@ -18669,7 +18923,7 @@ async function carregarReceitas(){
                 <td colspan="5" class="text-center" style="padding: 40px; color: var(--danger);">
                     <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
                     <p style="margin-top: 10px;">Erro ao carregar receitas</p>
-                    <button class="btn btn-sm btn-primary" onclick="carregarReceitas()" style="margin-top: 10px;">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="carregarReceitas()" style="margin-top: 10px;">
                         <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
                     </button>
                 </td>
@@ -18845,7 +19099,7 @@ async function carregarDespesas(){
                     <td><span class="badge warning">${desp.categoria || 'Geral'}</span></td>
                     <td><strong style="color: var(--danger);">R$ ${parseFloat(desp.valor || 0).toFixed(2)}</strong></td>
                     <td>
-                        <button class="btn btn-sm btn-danger" onclick="excluirDespesa('${desp._id}')" title="Excluir">
+                        <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="excluirDespesa('${desp._id}')" title="Excluir">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
@@ -18870,7 +19124,7 @@ async function carregarDespesas(){
                 <td colspan="5" class="text-center" style="padding: 40px; color: var(--danger);">
                     <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
                     <p style="margin-top: 10px;">Erro ao carregar despesas</p>
-                    <button class="btn btn-sm btn-primary" onclick="carregarDespesas()" style="margin-top: 10px;">
+                    <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="carregarDespesas()" style="margin-top: 10px;">
                         <i class="bi bi-arrow-clockwise"></i> Tentar Novamente
                     </button>
                 </td>
@@ -18904,13 +19158,13 @@ async function carregarDespesas(){
     <div style="background:var(--bg-card); border-radius:20px; padding:40px; max-width:700px; width:90%; max-height:90vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
             <h2><i class="bi bi-camera"></i> Gerenciar Fotos do Serviço</h2>
-            <button class="btn btn-sm btn-danger" onclick="fecharModalFotoServico()" style="border-radius:50%; width:40px; height:40px;">×</button>
+            <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="fecharModalFotoServico()" style="border-radius:50%; width:40px; height:40px;">×</button>
         </div>
 
         <div class="mb-4">
             <label style="display:block; font-weight:700; margin-bottom:10px;">Adicionar Nova Foto</label>
             <input type="file" id="fotoServicoInput-modal" accept="image/*" class="form-control" style="margin-bottom:15px;">
-            <button class="btn btn-primary" onclick="uploadFotoServicoModal()">
+            <button class="bioma-btn bioma-btn-primary" onclick="uploadFotoServicoModal()">
                 <i class="bi bi-upload"></i> Fazer Upload
             </button>
         </div>
@@ -19039,7 +19293,7 @@ function renderFotosServicoModal(fotos, principalIndex) {
             <img src="${foto.url}" alt="Foto ${index + 1}">
             ${index === principalIndex ? '<span class="badge badge-primary">Principal</span>' : ''}
             <div class="foto-acoes">
-                <button class="btn btn-sm btn-danger" onclick="deletarFotoServico('${servicoIdAtual}', ${index})">
+                <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deletarFotoServico('${servicoIdAtual}', ${index})">
                     <i class="bi bi-trash"></i> Excluir
                 </button>
             </div>
