@@ -453,7 +453,7 @@
         .global-search-field .bi-search{font-size:1.4rem;color:var(--primary)}
         .global-search-input{flex:1;border:2px solid var(--border-color);border-radius:14px;padding:12px 18px;font-size:1rem;background:var(--bg-main);color:var(--text-primary)}
         .global-search-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,0.15)}
-        .global-search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border-radius:16px;box-shadow:var(--shadow);margin-top:12px;max-height:320px;overflow-y:auto;display:none;z-index:50;padding:12px}
+        .global-search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border-radius:16px;box-shadow:var(--shadow);margin-top:12px;max-height:320px;overflow-y:auto;display:none;z-index:9999;padding:12px}
         .global-search-results.active{display:block}
         .global-search-section{margin-bottom:14px}
         .global-search-section h6{font-size:0.75rem;text-transform:uppercase;font-weight:700;color:var(--text-muted);margin:8px 0}
@@ -2439,7 +2439,8 @@
     max-width: 500px;
     width: 100%;
     max-height: 90vh;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     box-shadow:
         0 25px 80px rgba(0, 0, 0, 0.5),
         0 10px 30px rgba(0, 0, 0, 0.3);
@@ -2553,6 +2554,7 @@
 
 .bioma-modal-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     justify-content: center;
     margin-top: 24px;
@@ -2909,7 +2911,7 @@
     box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.15),
         0 2px 8px rgba(0, 0, 0, 0.08);
-    z-index: 1000;
+    z-index: 9999;
     opacity: 0;
     transform: translateY(-10px);
     pointer-events: none;
@@ -15698,10 +15700,10 @@ async function buscarGlobal(q){
     if(res && (res.success || res.suggestions)){
       const list = res.suggestions || res.resultados || [];
       const groups = {};
-      list.forEach(s=>{ (groups[s.tipo]=groups[s.tipo]||[]).push(s); });
+      list.forEach(s=>{ (groups[s.type]=groups[s.type]||[]).push(s); });
       for(const tipo of Object.keys(groups)){
         const sec = document.createElement('div'); sec.className='global-search-section';
-        sec.innerHTML = `<h6>${tipo.toUpperCase()}</h6>` + groups[tipo].map(s=>`<div class="global-search-item" data-tipo="${s.tipo}" data-id="${s.id}" onclick="abrirResultado('${s.tipo}','${s.id}')"><strong>${s.label||s.nome||s.titulo||''}</strong><span>${s.tipo}</span></div>`).join('');
+        sec.innerHTML = `<h6>${tipo.toUpperCase()}</h6>` + groups[tipo].map(s=>`<div class="global-search-item" data-tipo="${s.type}" data-id="${s.id||''}" onclick="abrirResultado('${s.type}','${s.id||''}')"><strong>${s.text||s.nome||''}</strong><span>${s.type}</span></div>`).join('');
         box.appendChild(sec);
       }
       box.classList.add('active');

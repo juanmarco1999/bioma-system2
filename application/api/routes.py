@@ -822,19 +822,24 @@ def search_suggest():
         # Buscar em clientes
         clientes = list(db.clientes.find({'nome': regex}, {'nome': 1}).limit(5))
         for c in clientes:
-            suggestions.append({'text': c['nome'], 'type': 'cliente'})
+            suggestions.append({'text': c['nome'], 'type': 'cliente', 'id': str(c['_id'])})
 
         # Buscar em produtos
         produtos = list(db.produtos.find({'nome': regex}, {'nome': 1}).limit(5))
         for p in produtos:
-            suggestions.append({'text': p['nome'], 'type': 'produto'})
+            suggestions.append({'text': p['nome'], 'type': 'produto', 'id': str(p['_id'])})
 
         # Buscar em profissionais
         profissionais = list(db.profissionais.find({'nome': regex}, {'nome': 1}).limit(3))
         for prof in profissionais:
-            suggestions.append({'text': prof['nome'], 'type': 'profissional'})
+            suggestions.append({'text': prof['nome'], 'type': 'profissional', 'id': str(prof['_id'])})
 
-        return jsonify({'success': True, 'suggestions': suggestions[:10]})
+        # Buscar em serviços
+        servicos = list(db.servicos.find({'nome': regex}, {'nome': 1}).limit(5))
+        for s in servicos:
+            suggestions.append({'text': s['nome'], 'type': 'servico', 'id': str(s['_id'])})
+
+        return jsonify({'success': True, 'suggestions': suggestions[:15]})
 
     except Exception as e:
         logger.error(f"❌ Erro ao buscar sugestões: {e}")
@@ -6912,6 +6917,57 @@ def atualizar_produto(id):
 
 
 # ==================== ENDPOINTS PARA SUB-TABS - SERVIÇOS ====================
+
+@bp.route('/api/servicos/buscar', methods=['GET'])
+@login_required
+def buscar_servicos():
+    db = get_db()
+    """Busca serviços por termo (nome, categoria, tipo)"""
+    try:
+        termo = request.args.get('termo', '').strip()
+
+        if not termo or len(termo) < 2:
+            return jsonify({'success': True, 'servicos': []})
+
+        regex = {'$regex': termo, '$options': 'i'}
+
+        servicos = list(db.servicos.find({
+            '$or': [
+                {'nome': regex},
+                {'categoria': regex},
+                {'tipo': regex},
+                {'descricao': regex}
+            ]
+        }).sort('nome', ASCENDING).limit(20))
+
+        resultado = []
+        for s in servicos:
+            ativo_val = s.get('ativo', None)
+            if ativo_val is None:
+                status_val = s.get('status', 'Ativo')
+                ativo_val = (status_val == 'Ativo' or status_val == 'ativo')
+
+            resultado.append({
+                '_id': str(s['_id']),
+                'id': str(s['_id']),
+                'nome': s.get('nome', 'Sem nome'),
+                'categoria': s.get('categoria', 'Geral'),
+                'preco': float(s.get('preco', 0)),
+                'duracao': s.get('duracao', 0),
+                'ativo': ativo_val,
+                'tipo': s.get('tipo', ''),
+                'descricao': s.get('descricao', ''),
+                'comissao_profissional': s.get('comissao_profissional', 0),
+                'comissao_assistente': s.get('comissao_assistente', 0)
+            })
+
+        logger.info(f"🔍 Busca de serviços: '{termo}' - {len(resultado)} resultados")
+        return jsonify({'success': True, 'servicos': resultado})
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar serviços: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 
 @bp.route('/api/servicos', methods=['GET'])
 @login_required
