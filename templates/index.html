@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v5.3.1 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- UI SYSTEM: Overlay Transparente + Light Mode Login Corrigido -->
-    <!-- Overlay 65% + Blur leve + Login light mode + clear_cache fix -->
+    <!-- BIOMA v5.3.4 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- UI SYSTEM: Overlay + editarProduto + Fila Fix + Timeout Fix -->
+    <!-- CACHE BUSTER: Force reload para carregar editarProduto -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -4022,7 +4022,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.3.1';
+const APP_VERSION = 'v5.3.4';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -4328,7 +4328,7 @@ const showNotification = mostrarNotificacao;
 const showDialog = mostrarConfirmacao;
 const showLoading = mostrarLoading;
 
-console.log('%c✅ BIOMA UI System v5.3.1 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
+console.log('%c✅ BIOMA UI System v5.3.4 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
 console.log('%c  🎨 Modais modernos e detalhados (DIV com gradientes)', 'color: #3B82F6;');
 console.log('%c  🔔 Toast notifications estilo Toastify', 'color: #3B82F6;');
 console.log('%c  ✨ Botões com efeito glamour shine', 'color: #3B82F6;');
@@ -15924,7 +15924,7 @@ async function carregarMapaCalor(){
 
         const res = await fetch('/api/relatorios/mapa-calor', {
             credentials: 'include',
-            signal: AbortSignal.timeout(15000) // Timeout de 15 segundos
+            signal: AbortSignal.timeout(30000) // Timeout de 30 segundos (queries grandes)
         });
 
         const data = await res.json();

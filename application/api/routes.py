@@ -2085,10 +2085,21 @@ def fila():
 
     if request.method == 'GET':
         try:
-            fila_list = list(db.fila_atendimento.find({'status': {'$in': ['aguardando', 'atendendo']}}).sort('created_at', ASCENDING))
+            # Ensure collection exists and has proper structure
+            if 'fila_atendimento' not in db.list_collection_names():
+                logger.info("📋 Criando collection fila_atendimento")
+                db.create_collection('fila_atendimento')
+
+            fila_list = list(db.fila_atendimento.find(
+                {'status': {'$in': ['aguardando', 'atendendo']}}
+            ).sort('created_at', ASCENDING))
+
+            logger.info(f"✅ Fila carregada: {len(fila_list)} pessoas aguardando")
             return jsonify({'success': True, 'fila': convert_objectid(fila_list)})
         except Exception as e:
             logger.error(f"❌ Erro ao buscar fila de atendimento: {e}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
             return jsonify({'success': False, 'message': str(e)}), 500
 
     # POST
