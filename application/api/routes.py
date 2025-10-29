@@ -2080,32 +2080,51 @@ def agendamentos_mes():
 def fila():
     db = get_db()
     if db is None:
-        return jsonify({'success': False}), 500
+        logger.error("❌ Erro: db is None em /api/fila")
+        return jsonify({'success': False, 'message': 'Database not available'}), 500
+
     if request.method == 'GET':
         try:
             fila_list = list(db.fila_atendimento.find({'status': {'$in': ['aguardando', 'atendendo']}}).sort('created_at', ASCENDING))
             return jsonify({'success': True, 'fila': convert_objectid(fila_list)})
-        except:
-            return jsonify({'success': False}), 500
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar fila de atendimento: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    # POST
     data = request.json
     try:
         total = db.fila_atendimento.count_documents({'status': {'$in': ['aguardando', 'atendendo']}})
-        db.fila_atendimento.insert_one({'cliente_nome': data['cliente_nome'], 'cliente_telefone': data['cliente_telefone'], 'servico': data.get('servico', ''), 'profissional': data.get('profissional', ''), 'posicao': total + 1, 'status': 'aguardando', 'created_at': datetime.now()})
+        db.fila_atendimento.insert_one({
+            'cliente_nome': data['cliente_nome'],
+            'cliente_telefone': data['cliente_telefone'],
+            'servico': data.get('servico', ''),
+            'profissional': data.get('profissional', ''),
+            'posicao': total + 1,
+            'status': 'aguardando',
+            'created_at': datetime.now()
+        })
+        logger.info(f"✅ Cliente adicionado à fila: {data['cliente_nome']}")
         return jsonify({'success': True, 'posicao': total + 1})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"❌ Erro ao adicionar à fila: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/fila/<id>', methods=['DELETE'])
 @login_required
 def delete_fila(id):
     db = get_db()
     if db is None:
-        return jsonify({'success': False}), 500
+        logger.error("❌ Erro: db is None em DELETE /api/fila/<id>")
+        return jsonify({'success': False, 'message': 'Database not available'}), 500
     try:
         result = db.fila_atendimento.delete_one({'_id': ObjectId(id)})
+        if result.deleted_count > 0:
+            logger.info(f"✅ Removido da fila: {id}")
         return jsonify({'success': result.deleted_count > 0})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"❌ Erro ao remover da fila {id}: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ==================== NOTIFICAÇÕES INTELIGENTES PARA FILA (Diretriz #10) ====================
@@ -4067,7 +4086,8 @@ def mapa_calor():
 
         return jsonify({
             'success': True,
-            'dados': dados,
+            'data': dados,  # Frontend espera 'data', não 'dados'
+            'dados': dados,  # Manter 'dados' por compatibilidade
             'periodo': {
                 'inicio': data_inicio.strftime('%Y-%m-%d'),
                 'fim': data_fim.strftime('%Y-%m-%d'),
@@ -6871,10 +6891,27 @@ def produtos_baixo_estoque():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@bp.route('/api/produtos/<id>', methods=['PUT'])
+@bp.route('/api/produtos/<id>', methods=['GET', 'PUT'])
 @login_required
-def atualizar_produto(id):
+def produto_detalhes(id):
     db = get_db()
+
+    # GET - Buscar detalhes do produto
+    if request.method == 'GET':
+        """Busca detalhes de um produto específico"""
+        try:
+            produto = db.produtos.find_one({'_id': ObjectId(id)})
+
+            if not produto:
+                return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+            return jsonify({'success': True, 'produto': convert_objectid(produto)})
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar produto {id}: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    # PUT - Atualizar produto
     """Atualiza produto (incluindo toggle de status)"""
     try:
         data = request.get_json()

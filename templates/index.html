@@ -11220,6 +11220,147 @@ async function salvarNovoServico() {
 // ========== NOVO PRODUTO - FUNÇÕES COMPLETAS ====================
 
 /**
+ * Editar produto existente
+ */
+async function editarProduto(id) {
+    try {
+        // Buscar dados do produto
+        const res = await fetch(`/api/produtos/${id}`, { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.produto) {
+            throw new Error('Produto não encontrado');
+        }
+
+        const p = data.produto;
+
+        // Criar formulário de edição
+        const html = `
+            <div class="text-start">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" id="swal-nome" class="form-control" value="${p.nome || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Marca</label>
+                        <input type="text" id="swal-marca" class="form-control" value="${p.marca || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">SKU</label>
+                        <input type="text" id="swal-sku" class="form-control" value="${p.sku || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Categoria</label>
+                        <input type="text" id="swal-categoria" class="form-control" value="${p.categoria || ''}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Preço *</label>
+                        <input type="number" id="swal-preco" class="form-control" step="0.01" value="${p.preco || 0}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Estoque Atual</label>
+                        <input type="number" id="swal-estoque" class="form-control" value="${p.estoque || p.estoque_atual || 0}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Estoque Mínimo</label>
+                        <input type="number" id="swal-estoque-minimo" class="form-control" value="${p.estoque_minimo || 0}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Status</label>
+                        <select id="swal-status" class="form-select">
+                            <option value="Ativo" ${p.status === 'Ativo' ? 'selected' : ''}>Ativo</option>
+                            <option value="Inativo" ${p.status === 'Inativo' ? 'selected' : ''}>Inativo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Mostrar modal de edição
+        const { value } = await Swal.fire({
+            title: 'Editar Produto',
+            html: html,
+            width: 720,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar',
+            allowEscapeKey: true,
+            allowOutsideClick: true,
+            showCloseButton: true,
+            focusConfirm: false,
+            preConfirm: () => {
+                const nome = document.getElementById('swal-nome').value.trim();
+                const preco = document.getElementById('swal-preco').value;
+
+                if (!nome) {
+                    Swal.showValidationMessage('Nome é obrigatório');
+                    return false;
+                }
+
+                if (!preco || parseFloat(preco) <= 0) {
+                    Swal.showValidationMessage('Preço inválido');
+                    return false;
+                }
+
+                return {
+                    nome: nome,
+                    marca: document.getElementById('swal-marca').value.trim(),
+                    sku: document.getElementById('swal-sku').value.trim(),
+                    categoria: document.getElementById('swal-categoria').value.trim(),
+                    preco: parseFloat(preco),
+                    estoque: parseInt(document.getElementById('swal-estoque').value) || 0,
+                    estoque_minimo: parseInt(document.getElementById('swal-estoque-minimo').value) || 0,
+                    status: document.getElementById('swal-status').value
+                };
+            }
+        });
+
+        // Se confirmado, enviar atualização
+        if (value) {
+            try {
+                const updateRes = await fetch(`/api/produtos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(value)
+                });
+
+                const updateData = await updateRes.json();
+
+                if (updateData.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sucesso!',
+                        text: 'Produto atualizado com sucesso',
+                        timer: 2000
+                    });
+                    // Recarregar lista de produtos
+                    loadProdutosLista();
+                } else {
+                    throw new Error(updateData.message || 'Erro ao atualizar produto');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao atualizar produto:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: error.message || 'Não foi possível atualizar o produto'
+                });
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao carregar produto para edição:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: error.message || 'Não foi possível carregar os detalhes do produto'
+        });
+    }
+}
+
+/**
  * Limpar formulário de novo produto
  */
 function limparFormularioNovoProduto() {
@@ -12861,7 +13002,7 @@ function showModalComissao() {
     });
 }
 
-async function loadFila(){
+async function loadFila(silent = false){
     const key = 'loadFila';
     if (isLoading(key)) {
         console.warn(`⚠️ Já carregando: ${key}`);
@@ -12919,7 +13060,9 @@ async function loadFila(){
         }
     }catch(e){
         console.error('❌ Erro ao carregar fila:',e);
-        Swal.fire('Erro','Não foi possível carregar a fila','error');
+        if (!silent) {
+            Swal.fire('Erro','Não foi possível carregar a fila','error');
+        }
     } finally {
         setTimeout(() => setLoading(key, false), 1000);
     }
@@ -16388,16 +16531,20 @@ async function initApp(user=null){
 
   // Carregar TODAS as seções em paralelo para inicialização rápida
   Promise.allSettled([
-    loadDashboard(),
-    loadClientes(),
-    loadProfissionais(),
-    loadServicosLista(),
-    loadEstoque(), // Incluído: carregar estoque no início
-    loadContratos(),
-    carregarMapaCalor(),
-    loadFila(),
-    loadSystem()
-  ]).then(() => {
+    loadDashboard().catch(e => console.error('❌ Erro loadDashboard:', e)),
+    loadClientes().catch(e => console.error('❌ Erro loadClientes:', e)),
+    loadProfissionais().catch(e => console.error('❌ Erro loadProfissionais:', e)),
+    loadServicosLista().catch(e => console.error('❌ Erro loadServicosLista:', e)),
+    loadEstoque().catch(e => console.error('❌ Erro loadEstoque:', e)), // Incluído: carregar estoque no início
+    loadContratos().catch(e => console.error('❌ Erro loadContratos:', e)),
+    carregarMapaCalor().catch(e => console.error('❌ Erro carregarMapaCalor:', e)),
+    loadFila(true).catch(e => console.error('❌ Erro loadFila:', e)), // silent=true
+    loadSystem().catch(e => console.error('❌ Erro loadSystem:', e))
+  ]).then((results) => {
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      console.warn(`⚠️ ${failed.length} função(ões) falharam no carregamento inicial`);
+    }
     console.log('✅ Carregamento inicial completo');
     console.log('💡 Use os botões de refresh para atualizar dados manualmente');
   });
