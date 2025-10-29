@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
-    <!-- BIOMA v5.2.1 - Build: {{ cache_buster|default('LOCAL', true) }} -->
-    <!-- UI SYSTEM: Modais Modernos + Botões Glamour Shine + Autocomplete -->
-    <!-- Modais corrigidos + Botões funcionais + Busca de produtos otimizada -->
+    <!-- BIOMA v5.3.0 - Build: {{ cache_buster|default('LOCAL', true) }} -->
+    <!-- UI SYSTEM: Modais TOTALMENTE Repaginados + Sistema de Busca Completo -->
+    <!-- Modais sólidos brancos + Busca global + Autocomplete + Sem spinners -->
 
     <!-- TEMA PERSISTENTE - Script de bloqueio no <head> para prevenir FOUC -->
     <script>
@@ -2385,9 +2385,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
     z-index: 99999;
     display: flex;
     align-items: center;
@@ -2415,21 +2415,19 @@
 
 /* ========== MODAL CONTENT ========== */
 .bioma-modal {
-    background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
-    border-radius: 24px;
-    padding: 40px;
-    max-width: 520px;
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 0;
+    max-width: 500px;
     width: 100%;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
     box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.3),
-        0 8px 16px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        0 25px 80px rgba(0, 0, 0, 0.5),
+        0 10px 30px rgba(0, 0, 0, 0.3);
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
     position: relative;
-    overflow: visible;
 }
 
 .bioma-modal::before {
@@ -2438,9 +2436,17 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
+    height: 6px;
     background: linear-gradient(90deg, #7C3AED, #3B82F6, #10B981, #F59E0B, #EF4444);
-    border-radius: 24px 24px 0 0;
+    border-radius: 20px 20px 0 0;
+}
+
+/* Dark mode modal */
+:root[data-theme="dark"] .bioma-modal {
+    background: #1E293B;
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.8),
+        0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .bioma-modal-scale-in {
@@ -2473,52 +2479,58 @@
     }
 }
 
+.bioma-modal-header {
+    padding: 40px 40px 0;
+}
+
+.bioma-modal-body {
+    padding: 20px 40px 40px;
+}
+
 .bioma-modal-icon {
-    margin: 0 auto 24px;
-    width: 80px;
-    height: 80px;
+    margin: 0 auto 20px;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.1));
-    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.2);
-    animation: biomaIconBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative;
+    background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+    animation: biomaIconPulse 2s ease-in-out infinite;
 }
 
-.bioma-modal-icon::after {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(59, 130, 246, 0.05));
-    z-index: -1;
+.bioma-modal-icon svg {
+    font-size: 32px;
+    color: white;
 }
 
-@keyframes biomaIconBounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+@keyframes biomaIconPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 15px 40px rgba(124, 58, 237, 0.4); }
 }
 
 .bioma-modal-title {
-    font-size: 28px;
-    font-weight: 800;
-    background: linear-gradient(135deg, var(--text), var(--text-muted));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin: 0 0 16px 0;
-    line-height: 1.2;
-    letter-spacing: -0.5px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0 0 12px 0;
+    line-height: 1.3;
+}
+
+:root[data-theme="dark"] .bioma-modal-title {
+    color: #F1F5F9;
 }
 
 .bioma-modal-text {
-    font-size: 16px;
-    color: var(--text-muted);
-    margin: 0 0 32px 0;
-    line-height: 1.7;
-    font-weight: 400;
+    font-size: 15px;
+    color: #64748B;
+    margin: 0;
+    line-height: 1.6;
+}
+
+:root[data-theme="dark"] .bioma-modal-text {
+    color: #94A3B8;
 }
 
 .bioma-modal-actions {
@@ -3990,7 +4002,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.2.1';
+const APP_VERSION = 'v5.3.0';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -4113,13 +4125,17 @@ function mostrarConfirmacao(config) {
         const htmlContent = config.html || '';
 
         modal.innerHTML = `
-            ${iconHTML}
-            <h3 class="bioma-modal-title">${config.title || 'Confirmação'}</h3>
-            ${textHTML}
-            ${htmlContent}
-            <div class="bioma-modal-actions">
-                ${config.showCancelButton !== false ? `<button class="bioma-btn bioma-btn-secondary" data-action="cancel">${config.cancelButtonText || 'Cancelar'}</button>` : ''}
-                <button class="bioma-btn bioma-btn-primary" data-action="confirm">${config.confirmButtonText || 'Confirmar'}</button>
+            <div class="bioma-modal-header">
+                ${iconHTML}
+                <h3 class="bioma-modal-title">${config.title || 'Confirmação'}</h3>
+                ${textHTML}
+            </div>
+            <div class="bioma-modal-body">
+                ${htmlContent}
+                <div class="bioma-modal-actions">
+                    ${config.showCancelButton !== false ? `<button class="bioma-btn bioma-btn-secondary" data-action="cancel">${config.cancelButtonText || 'Cancelar'}</button>` : ''}
+                    <button class="bioma-btn bioma-btn-primary" data-action="confirm">${config.confirmButtonText || 'Confirmar'}</button>
+                </div>
             </div>
         `;
 
@@ -4267,7 +4283,24 @@ window.Swal = {
     isVisible: () => activeModals.length > 0,
     getContainer: () => activeModals[activeModals.length - 1],
     getPopup: () => activeModals[activeModals.length - 1]?.querySelector('.bioma-modal'),
-    showLoading: () => {}
+    showLoading: () => {},
+
+    mixin: function(defaultConfig) {
+        return {
+            fire: function(config) {
+                const mergedConfig = { ...defaultConfig, ...config };
+                // Se for toast
+                if (mergedConfig.toast) {
+                    return Promise.resolve(mostrarNotificacao(
+                        mergedConfig.icon || 'info',
+                        mergedConfig.title || '',
+                        mergedConfig.timer || 3000
+                    ));
+                }
+                return window.Swal.fire(mergedConfig);
+            }
+        };
+    }
 };
 
 // Aliases
@@ -4275,7 +4308,7 @@ const showNotification = mostrarNotificacao;
 const showDialog = mostrarConfirmacao;
 const showLoading = mostrarLoading;
 
-console.log('%c✅ BIOMA UI System v5.2.1 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
+console.log('%c✅ BIOMA UI System v5.3.0 Carregado', 'color: #10B981; font-weight: bold; font-size: 14px;');
 console.log('%c  🎨 Modais modernos e detalhados (DIV com gradientes)', 'color: #3B82F6;');
 console.log('%c  🔔 Toast notifications estilo Toastify', 'color: #3B82F6;');
 console.log('%c  ✨ Botões com efeito glamour shine', 'color: #3B82F6;');
@@ -5032,7 +5065,7 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                 </tr>
                             </thead>
                             <tbody id="contratosBody">
-                                <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
+                                <tr><td colspan="6" class="text-center text-muted">Carregando contratos...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -10116,13 +10149,41 @@ async function loadClientes(){
     }
 }
 
+async function carregarFaturamentoCliente() {
+    try {
+        const clienteCPF = document.getElementById('clienteCPF')?.value;
+        if (!clienteCPF) {
+            mostrarNotificacao('warning', 'Selecione um cliente primeiro');
+            return;
+        }
+
+        const res = await fetch(`/api/clientes/${clienteCPF}/faturamento`, {credentials: 'include'});
+        const data = await res.json();
+
+        if (data.success) {
+            const faturamento = data.faturamento || 0;
+            const element = document.getElementById('faturamentoClienteDisplay');
+            if (element) {
+                element.textContent = `R$ ${faturamento.toFixed(2)}`;
+            }
+            mostrarNotificacao('success', 'Faturamento carregado com sucesso');
+        } else {
+            mostrarNotificacao('error', 'Erro ao carregar faturamento');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar faturamento:', error);
+        mostrarNotificacao('error', 'Erro ao carregar faturamento');
+    }
+}
+
 async function deleteCliente(id){
-    const result = await mostrarConfirmacao({
+    const result = await window.Swal.fire({
         title: 'Deletar Cliente?',
         text: 'Esta ação não pode ser desfeita',
         icon: 'warning',
         confirmButtonText: 'Sim, Deletar',
-        cancelButtonText: 'Cancelar'
+        cancelButtonText: 'Cancelar',
+        showCancelButton: true
     });
 
     if(result.isConfirmed){

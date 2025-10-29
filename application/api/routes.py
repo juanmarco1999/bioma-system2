@@ -802,6 +802,45 @@ def buscar_clientes():
         logger.error(f"Erro ao buscar clientes: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@bp.route('/api/search/suggest', methods=['GET'])
+@login_required
+def search_suggest():
+    db = get_db()
+    """Sugestões de busca para autocomplete"""
+    if db is None:
+        return jsonify({'success': False, 'suggestions': []}), 500
+
+    query = request.args.get('q', '').strip()
+
+    if not query or len(query) < 2:
+        return jsonify({'success': True, 'suggestions': []})
+
+    try:
+        regex = {'$regex': query, '$options': 'i'}
+        suggestions = []
+
+        # Buscar em clientes
+        clientes = list(db.clientes.find({'nome': regex}, {'nome': 1}).limit(5))
+        for c in clientes:
+            suggestions.append({'text': c['nome'], 'type': 'cliente'})
+
+        # Buscar em produtos
+        produtos = list(db.produtos.find({'nome': regex}, {'nome': 1}).limit(5))
+        for p in produtos:
+            suggestions.append({'text': p['nome'], 'type': 'produto'})
+
+        # Buscar em profissionais
+        profissionais = list(db.profissionais.find({'nome': regex}, {'nome': 1}).limit(3))
+        for prof in profissionais:
+            suggestions.append({'text': prof['nome'], 'type': 'profissional'})
+
+        return jsonify({'success': True, 'suggestions': suggestions[:10]})
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar sugestões: {e}")
+        return jsonify({'success': False, 'suggestions': []}), 500
+
+
 @bp.route('/api/busca/global', methods=['GET'])
 @login_required
 def busca_global():
