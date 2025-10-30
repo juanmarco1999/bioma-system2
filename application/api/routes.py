@@ -1465,9 +1465,10 @@ def assistentes():
             # Listar todos os assistentes
             assistentes_list = list(db.assistentes.find({}).sort('nome', ASCENDING))
             return jsonify({'success': True, 'assistentes': convert_objectid(assistentes_list)})
-        except:
-            return jsonify({'success': False}), 500
-    
+        except Exception as e:
+            logger.error(f"Erro ao listar assistentes: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
     data = request.json
     try:
         assistente_data = {
@@ -1484,8 +1485,9 @@ def assistentes():
         inserted_id = str(result.inserted_id)
         logger.info(f"✅ Assistente cadastrado: {assistente_data['nome']} (ID: {inserted_id})")
         return jsonify({'success': True, 'message': 'Assistente cadastrado com sucesso', 'id': inserted_id})
-    except:
-        return jsonify({'success': False}), 500
+    except Exception as e:
+        logger.error(f"Erro ao cadastrar assistente: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/assistentes/<id>', methods=['DELETE'])
 @login_required
@@ -2973,19 +2975,21 @@ def importar():
                     count_error += 1
         elif tipo == 'servicos':
             # Importação de serviços
+            logger.info(f"Importando {len(rows)} linhas de serviços...")
             for idx, row in enumerate(rows, 1):
                 try:
                     r = {k.lower().strip(): v for k, v in row.items() if k and v is not None}
                     if not r or all(not v for v in r.values()):
                         continue
-                    
+
                     # Nome do serviço
                     nome = None
-                    for col in ['nome', 'servico', 'name']:
+                    for col in ['nome', 'servico', 'name', 'serviço']:
                         if col in r and r[col]:
                             nome = str(r[col]).strip()
                             break
                     if not nome or len(nome) < 2:
+                        logger.warning(f"Linha {idx}: nome do serviço inválido ou ausente")
                         count_error += 1
                         continue
                     
@@ -3022,9 +3026,43 @@ def importar():
                         if preco > 0:
                             tamanhos_precos[tamanho_key] = preco
                     
-                    # Se não há nenhum preço válido, erro
+                    # Se não há nenhum preço válido, tentar preço único
                     if not tamanhos_precos:
-                        count_error += 1
+                        # Tentar importar com preço único
+                        preco_unico = 0.0
+                        for col in ['preco', 'preço', 'price', 'valor']:
+                            if col in r and r[col]:
+                                try:
+                                    val = str(r[col]).replace('R$', '').strip()
+                                    if ',' in val:
+                                        val = val.replace(',', '.')
+                                    preco_unico = float(val)
+                                    break
+                                except:
+                                    continue
+
+                        if preco_unico > 0:
+                            # Criar serviço com preço único
+                            sku = f"{nome.upper().replace(' ', '-')}"
+                            db.servicos.insert_one({
+                                'nome': nome,
+                                'sku': sku,
+                                'preco': preco_unico,
+                                'preco_kids': preco_unico,
+                                'preco_masculino': preco_unico,
+                                'preco_curto': preco_unico,
+                                'preco_medio': preco_unico,
+                                'preco_longo': preco_unico,
+                                'preco_extra_longo': preco_unico,
+                                'categoria': categoria,
+                                'duracao': 60,
+                                'ativo': True,
+                                'created_at': datetime.now()
+                            })
+                            count_success += 1
+                        else:
+                            logger.warning(f"Linha {idx}: nenhum preço válido encontrado")
+                            count_error += 1
                         continue
                     
                     # Criar um serviço para cada tamanho com preço definido

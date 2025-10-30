@@ -4022,7 +4022,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.3.6';
+const APP_VERSION = 'v5.3.7';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -4262,6 +4262,18 @@ function closeModal(overlay) {
     }, 300);
 }
 
+// Helper function para obter ícone do modal
+function getModalIcon(icon) {
+    const icons = {
+        'success': '<i class="bi bi-check-circle-fill" style="color: #10B981;"></i>',
+        'error': '<i class="bi bi-x-circle-fill" style="color: #EF4444;"></i>',
+        'warning': '<i class="bi bi-exclamation-triangle-fill" style="color: #F59E0B;"></i>',
+        'info': '<i class="bi bi-info-circle-fill" style="color: #3B82F6;"></i>',
+        'question': '<i class="bi bi-question-circle-fill" style="color: #8B5CF6;"></i>'
+    };
+    return icons[icon] || '';
+}
+
 // ========== COMPATIBILIDADE COM CÓDIGO ANTIGO ==========
 window.Swal = {
     fire: function(...args) {
@@ -4303,7 +4315,16 @@ window.Swal = {
     isVisible: () => activeModals.length > 0,
     getContainer: () => activeModals[activeModals.length - 1],
     getPopup: () => activeModals[activeModals.length - 1]?.querySelector('.bioma-modal'),
+    getCancelButton: () => activeModals[activeModals.length - 1]?.querySelector('.bioma-btn-cancel'),
+    getConfirmButton: () => activeModals[activeModals.length - 1]?.querySelector('.bioma-btn-primary'),
     showLoading: () => {},
+    DismissReason: {
+        cancel: 'cancel',
+        backdrop: 'backdrop',
+        close: 'close',
+        esc: 'esc',
+        timer: 'timer'
+    },
 
     mixin: function(defaultConfig) {
         return {
@@ -4320,6 +4341,54 @@ window.Swal = {
                 return window.Swal.fire(mergedConfig);
             }
         };
+    },
+
+    update: function(config) {
+        // Atualizar o modal atual com novo conteúdo
+        if (activeModals.length > 0) {
+            const currentModal = activeModals[activeModals.length - 1];
+            const modalBody = currentModal.querySelector('.bioma-modal-body');
+            const modalTitle = currentModal.querySelector('.bioma-modal-title');
+            const modalIcon = currentModal.querySelector('.bioma-modal-icon');
+
+            if (config.title && modalTitle) {
+                modalTitle.textContent = config.title;
+            }
+            if (config.html && modalBody) {
+                modalBody.innerHTML = config.html;
+            }
+            if (config.text && modalBody) {
+                modalBody.textContent = config.text;
+            }
+            if (config.icon && modalIcon) {
+                // Atualizar ícone
+                const iconHTML = getModalIcon(config.icon);
+                if (iconHTML) {
+                    modalIcon.innerHTML = iconHTML;
+                }
+            }
+        }
+    },
+
+    showValidationMessage: function(message) {
+        // Mostrar mensagem de validação no modal atual
+        if (activeModals.length > 0) {
+            const currentModal = activeModals[activeModals.length - 1];
+            let validationMsg = currentModal.querySelector('.bioma-validation-message');
+
+            if (!validationMsg) {
+                validationMsg = document.createElement('div');
+                validationMsg.className = 'bioma-validation-message';
+                validationMsg.style.cssText = 'color: #EF4444; margin-top: 10px; font-size: 0.9rem;';
+                const modalBody = currentModal.querySelector('.bioma-modal-body');
+                if (modalBody) {
+                    modalBody.appendChild(validationMsg);
+                }
+            }
+
+            validationMsg.textContent = message;
+            validationMsg.style.display = 'block';
+        }
     }
 };
 
@@ -8610,10 +8679,7 @@ async function marcarComissaoPaga(comissaoId) {
 }
 
 // ========== FUNÇÃO: CARREGAR ASSISTENTES ==========
-async function loadAssistentes() {
-    console.log('📋 Carregando assistentes...');
-    // Implementação futura se necessário
-}
+// Função movida para evitar duplicação - ver linha 10666
 
 function filtrarTabelaPorTermo(tbodySelector, termo){
     const normalized = (termo || '').toLowerCase();
@@ -10705,21 +10771,60 @@ function showModalProfissional(){
 // Função para cadastrar assistente independente
 function cadastrarAssistenteIndependente(){
     Swal.fire({
-        title:'Cadastrar Assistente Independente',
+        title:'👥 Cadastrar Assistente',
         html:`
-            <input type="text" id="swal-nome-assist" class="form-control mb-3" placeholder="Nome">
-            <input type="text" id="swal-cpf-assist" class="form-control mb-3" placeholder="CPF">
-            <input type="email" id="swal-email-assist" class="form-control mb-3" placeholder="Email (opcional)">
-            <input type="text" id="swal-tel-assist" class="form-control mb-3" placeholder="Telefone (opcional)">
-            <input type="number" id="swal-comissao-assist" class="form-control" placeholder="Comissão %" value="10">
+            <div style="text-align: left;">
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-person"></i> Nome Completo *</label>
+                    <input type="text" id="swal-nome-assist" class="form-control" placeholder="Ex: Maria Silva">
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-card-text"></i> CPF *</label>
+                        <input type="text" id="swal-cpf-assist" class="form-control" placeholder="000.000.000-00">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-telephone"></i> Telefone</label>
+                        <input type="text" id="swal-tel-assist" class="form-control" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+
+                <div class="mb-3 mt-3">
+                    <label class="form-label"><i class="bi bi-envelope"></i> E-mail</label>
+                    <input type="email" id="swal-email-assist" class="form-control" placeholder="assistente@email.com">
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-percent"></i> Comissão (%)</label>
+                        <input type="number" id="swal-comissao-assist" class="form-control" placeholder="10" value="10" min="0" max="100">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-briefcase"></i> Tipo</label>
+                        <select id="swal-tipo-assist" class="form-select">
+                            <option value="assistente">Assistente</option>
+                            <option value="auxiliar">Auxiliar</option>
+                            <option value="recepcionista">Recepcionista</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label"><i class="bi bi-chat-text"></i> Observações</label>
+                    <textarea id="swal-obs-assist" class="form-control" rows="2" placeholder="Informações adicionais (opcional)"></textarea>
+                </div>
+            </div>
         `,
         showCancelButton:true,
-        confirmButtonText: 'Cadastrar',
-        cancelButtonText: 'Cancelar',
+        confirmButtonText: '<i class="bi bi-check-circle"></i> Cadastrar',
+        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
+        confirmButtonColor: '#10B981',
+        cancelButtonColor: '#6c757d',
         allowEscapeKey: true,
         allowOutsideClick: true,
         showCloseButton: true,
-        width: '500px',
+        width: '650px',
         preConfirm:()=>{
             const nome=document.getElementById('swal-nome-assist').value;
             const cpf=document.getElementById('swal-cpf-assist').value;
@@ -13574,7 +13679,10 @@ async function handleUpload(input,tipo){
     formData.append('file',file);
     formData.append('tipo',tipo);
     
-    Swal.fire({
+    let abortController = new AbortController();
+    let uploadCanceled = false;
+
+    const result = await Swal.fire({
         title: `Importando ${tipo}...`,
         html: `
             <div style="padding: 20px;">
@@ -13585,14 +13693,53 @@ async function handleUpload(input,tipo){
         `,
         allowOutsideClick: false,
         allowEscapeKey: false,
-        showConfirmButton: false
+        showCancelButton: true,
+        showConfirmButton: false,
+        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
+        cancelButtonColor: '#EF4444',
+        didOpen: () => {
+            // Fazer o botão cancelar pulsar
+            const cancelBtn = Swal.getCancelButton();
+            if (cancelBtn) {
+                cancelBtn.style.animation = 'pulse 1.5s infinite';
+            }
+        },
+        preConfirm: () => false, // Evita fechamento ao clicar em confirmar
+        showLoaderOnConfirm: false,
+        preDeny: () => {
+            uploadCanceled = true;
+            abortController.abort();
+            return false;
+        }
+    }).then((result) => {
+        if (result.dismiss === Swal.DismissReason.cancel) {
+            // Confirmar cancelamento
+            return Swal.fire({
+                title: 'Cancelar Importação?',
+                text: 'Deseja realmente cancelar a importação em andamento?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, Cancelar',
+                cancelButtonText: 'Não, Continuar',
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#6c757d'
+            });
+        }
+        return result;
     });
-    
+
+    if (result.isConfirmed || uploadCanceled) {
+        input.value = '';
+        mostrarNotificacao('warning', 'Importação cancelada pelo usuário');
+        return;
+    }
+
     try{
         const res=await fetch('/api/importar',{
             method:'POST',
             credentials:'include',
-            body:formData
+            body:formData,
+            signal: abortController.signal
         });
 
         if(!res.ok){
