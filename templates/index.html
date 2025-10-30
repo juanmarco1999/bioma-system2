@@ -4022,7 +4022,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.3.4';
+const APP_VERSION = 'v5.3.6';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -13594,9 +13594,13 @@ async function handleUpload(input,tipo){
             credentials:'include',
             body:formData
         });
-        
+
+        if(!res.ok){
+            throw new Error(`Erro HTTP: ${res.status}`);
+        }
+
         const data=await res.json();
-        
+
         if(data.success){
             const totalRegistros = data.count_success + (data.count_error || 0);
             const porcentagemSucesso = ((data.count_success / totalRegistros) * 100).toFixed(1);

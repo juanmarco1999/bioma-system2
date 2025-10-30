@@ -35,7 +35,7 @@ from reportlab.lib.colors import HexColor, black, white
 from reportlab.lib.units import cm
 
 # OpenPyXL para Excel
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from application.api import bp
@@ -2857,19 +2857,26 @@ def relatorio_estoque():
 def importar():
     db = get_db()
     if db is None:
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': 'Erro ao conectar ao banco de dados'}), 500
     if 'file' not in request.files:
-        return jsonify({'success': False}), 400
+        return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
     file = request.files['file']
     tipo = request.form.get('tipo', 'produtos')
     if not file.filename:
-        return jsonify({'success': False}), 400
+        return jsonify({'success': False, 'message': 'Nome do arquivo inválido'}), 400
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
     if ext not in ['csv', 'xlsx', 'xls']:
-        return jsonify({'success': False}), 400
+        return jsonify({'success': False, 'message': 'Formato de arquivo inválido'}), 400
+
+    # Criar diretório de upload se não existir
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', '/tmp')
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder, exist_ok=True)
+
+    filepath = None
     try:
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        filepath = os.path.join(upload_folder, f"{int(time())}_{filename}")
         file.save(filepath)
         count_success = 0
         count_error = 0
@@ -2884,7 +2891,6 @@ def importar():
                 except:
                     continue
         else:
-            from openpyxl import load_workbook
             wb = load_workbook(filepath, read_only=True, data_only=True)
             ws = wb.active
             headers = [str(c.value).strip().lower() if c.value else '' for c in next(ws.iter_rows(min_row=1, max_row=1))]
@@ -3050,13 +3056,14 @@ def importar():
                 except Exception as e:
                     logger.error(f"Erro ao importar serviço: {e}")
                     count_error += 1
-        if os.path.exists(filepath):
+        if filepath and os.path.exists(filepath):
             os.remove(filepath)
         return jsonify({'success': True, 'message': f'{count_success} importados!', 'count_success': count_success, 'count_error': count_error})
     except Exception as e:
-        if os.path.exists(filepath):
+        logger.error(f"Erro na importação: {e}")
+        if filepath and os.path.exists(filepath):
             os.remove(filepath)
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': 'Erro ao processar arquivo'}), 500
 
 
 @bp.route('/api/estoque/importar', methods=['POST'])
