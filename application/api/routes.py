@@ -7769,5 +7769,101 @@ def heatmap_agendamentos_alias():
     return mapa_calor_agendamentos()
 
 
+# ==================== FILA DE ATENDIMENTO ====================
+@bp.route('/api/fila', methods=['GET'])
+@login_required
+def get_fila():
+    """Obter fila de atendimento"""
+    try:
+        fila = list(db.fila.find({}).sort([('ordem', 1), ('created_at', 1)]))
+        for f in fila:
+            f['_id'] = str(f['_id'])
+            if 'created_at' not in f:
+                f['created_at'] = datetime.now().isoformat()
+        return jsonify({'success': True, 'fila': fila})
+    except Exception as e:
+        logger.error(f"Erro ao obter fila: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao carregar fila'}), 500
+
+@bp.route('/api/fila', methods=['POST'])
+@login_required
+def add_to_fila():
+    """Adicionar cliente à fila"""
+    try:
+        data = request.get_json()
+
+        if not data.get('cliente_nome'):
+            return jsonify({'success': False, 'message': 'Nome do cliente é obrigatório'}), 400
+
+        # Obter próxima ordem
+        last_item = db.fila.find_one({}, sort=[('ordem', -1)])
+        next_ordem = (last_item.get('ordem', 0) + 1) if last_item else 1
+
+        novo_item = {
+            'cliente_nome': data['cliente_nome'],
+            'cliente_telefone': data.get('cliente_telefone', 'Não informado'),
+            'ordem': next_ordem,
+            'status': 'aguardando',
+            'created_at': datetime.now().isoformat(),
+            'user_id': str(current_user.id)
+        }
+
+        result = db.fila.insert_one(novo_item)
+        novo_item['_id'] = str(result.inserted_id)
+
+        return jsonify({'success': True, 'item': novo_item})
+    except Exception as e:
+        logger.error(f"Erro ao adicionar à fila: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao adicionar à fila'}), 500
+
+@bp.route('/api/fila/<item_id>', methods=['DELETE'])
+@login_required
+def remove_from_fila(item_id):
+    """Remover cliente da fila"""
+    try:
+        from bson import ObjectId
+
+        result = db.fila.delete_one({'_id': ObjectId(item_id)})
+
+        if result.deleted_count > 0:
+            return jsonify({'success': True, 'message': 'Removido da fila'})
+        else:
+            return jsonify({'success': False, 'message': 'Item não encontrado'}), 404
+    except Exception as e:
+        logger.error(f"Erro ao remover da fila: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao remover da fila'}), 500
+
+@bp.route('/api/fila/chamar/<item_id>', methods=['POST'])
+@login_required
+def chamar_cliente(item_id):
+    """Chamar cliente para atendimento"""
+    try:
+        from bson import ObjectId
+
+        result = db.fila.update_one(
+            {'_id': ObjectId(item_id)},
+            {'$set': {'status': 'chamado', 'chamado_at': datetime.now().isoformat()}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({'success': True, 'message': 'Cliente chamado'})
+        else:
+            return jsonify({'success': False, 'message': 'Item não encontrado'}), 404
+    except Exception as e:
+        logger.error(f"Erro ao chamar cliente: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao chamar cliente'}), 500
+
+@bp.route('/api/fila/limpar', methods=['DELETE'])
+@login_required
+def limpar_fila():
+    """Limpar toda a fila"""
+    try:
+        result = db.fila.delete_many({})
+        return jsonify({'success': True, 'message': f'{result.deleted_count} itens removidos'})
+    except Exception as e:
+        logger.error(f"Erro ao limpar fila: {e}")
+        return jsonify({'success': False, 'message': 'Erro ao limpar fila'}), 500
+
+
 # ==================== FIM ROTAS ADICIONAIS ====================
 
