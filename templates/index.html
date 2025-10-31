@@ -6393,6 +6393,9 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                     <button class="btn btn-danger btn-sm" onclick="desativarTodosServicos()" title="Desativar todos os serviços">
                         <i class="bi bi-x-circle-fill"></i> Desativar Todos
                     </button>
+                    <button class="btn btn-danger btn-sm" onclick="deletarTodosServicos()" title="DELETAR TODOS os serviços">
+                        <i class="bi bi-trash-fill"></i> Deletar Todos
+                    </button>
                     <button class="btn btn-success btn-sm" onclick="exportarServicos('excel')" title="Exportar para Excel">
                         <i class="bi bi-file-earmark-excel"></i> Excel
                     </button>
@@ -6614,6 +6617,9 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                     </button>
                     <button class="btn btn-danger btn-sm" onclick="desativarTodosProdutos()" title="Desativar todos os produtos">
                         <i class="bi bi-x-circle-fill"></i> Desativar Todos
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deletarTodosProdutos()" title="DELETAR TODOS os produtos">
+                        <i class="bi bi-trash-fill"></i> Deletar Todos
                     </button>
                     <button class="btn btn-success btn-sm" onclick="exportarProdutos('excel')" title="Exportar para Excel">
                         <i class="bi bi-file-earmark-excel"></i> Excel
@@ -13067,6 +13073,182 @@ async function desativarTodosProdutos() {
         console.log('❌ Operação cancelada pelo usuário');
     }
 
+}
+
+// Função para deletar TODOS os produtos
+async function deletarTodosProdutos() {
+    console.log('🗑️ deletarTodosProdutos() chamada');
+
+    const result = await window.Swal.fire({
+        title: '⚠️ DELETAR TODOS OS PRODUTOS?',
+        html: `
+            <div style="color: #EF4444; font-weight: bold; margin-bottom: 15px;">
+                <i class="bi bi-exclamation-triangle-fill"></i> ATENÇÃO: ESTA AÇÃO É IRREVERSÍVEL!
+            </div>
+            <p>Esta ação irá <strong>DELETAR PERMANENTEMENTE</strong> todos os produtos do sistema.</p>
+            <p style="color: #6B7280;">Digite <strong>CONFIRMAR</strong> para prosseguir:</p>
+            <input type="text" id="confirmacao-deletar-produtos" class="swal2-input" placeholder="Digite CONFIRMAR">
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-trash-fill"></i> Sim, Deletar Todos',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const confirmacao = document.getElementById('confirmacao-deletar-produtos').value;
+            if (confirmacao !== 'CONFIRMAR') {
+                Swal.showValidationMessage('Digite "CONFIRMAR" para prosseguir');
+                return false;
+            }
+            return true;
+        }
+    });
+
+    if (result.isConfirmed) {
+        console.log('✅ Confirmação recebida, deletando todos os produtos...');
+        try {
+            // Buscar todos os produtos primeiro
+            const listRes = await fetch('/api/produtos', { credentials: 'include' });
+            const listData = await listRes.json();
+
+            if (listData.success && listData.produtos) {
+                const produtos = listData.produtos;
+                let deletados = 0;
+                let erros = 0;
+
+                // Mostrar progresso
+                Swal.fire({
+                    title: 'Deletando produtos...',
+                    html: `<div>Progresso: <span id="progresso-delete">0</span>/${produtos.length}</div>`,
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Deletar cada produto
+                for (let i = 0; i < produtos.length; i++) {
+                    try {
+                        const res = await fetch(`/api/produtos/${produtos[i]._id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        if (res.ok) deletados++;
+                        else erros++;
+                    } catch (e) {
+                        erros++;
+                    }
+                    document.getElementById('progresso-delete').textContent = i + 1;
+                }
+
+                // Resultado final
+                Swal.fire({
+                    title: 'Operação Concluída!',
+                    html: `
+                        <p>✅ ${deletados} produtos deletados</p>
+                        ${erros > 0 ? `<p>❌ ${erros} erros</p>` : ''}
+                    `,
+                    icon: deletados > 0 ? 'success' : 'warning'
+                });
+
+                await loadProdutosLista();
+            }
+        } catch (e) {
+            console.error('❌ Erro ao deletar produtos:', e);
+            Swal.fire('Erro', 'Falha ao deletar produtos', 'error');
+        }
+    } else {
+        console.log('❌ Operação cancelada pelo usuário');
+    }
+}
+
+// Função para deletar TODOS os serviços
+async function deletarTodosServicos() {
+    console.log('🗑️ deletarTodosServicos() chamada');
+
+    const result = await window.Swal.fire({
+        title: '⚠️ DELETAR TODOS OS SERVIÇOS?',
+        html: `
+            <div style="color: #EF4444; font-weight: bold; margin-bottom: 15px;">
+                <i class="bi bi-exclamation-triangle-fill"></i> ATENÇÃO: ESTA AÇÃO É IRREVERSÍVEL!
+            </div>
+            <p>Esta ação irá <strong>DELETAR PERMANENTEMENTE</strong> todos os serviços do sistema.</p>
+            <p style="color: #6B7280;">Digite <strong>CONFIRMAR</strong> para prosseguir:</p>
+            <input type="text" id="confirmacao-deletar-servicos" class="swal2-input" placeholder="Digite CONFIRMAR">
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="bi bi-trash-fill"></i> Sim, Deletar Todos',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const confirmacao = document.getElementById('confirmacao-deletar-servicos').value;
+            if (confirmacao !== 'CONFIRMAR') {
+                Swal.showValidationMessage('Digite "CONFIRMAR" para prosseguir');
+                return false;
+            }
+            return true;
+        }
+    });
+
+    if (result.isConfirmed) {
+        console.log('✅ Confirmação recebida, deletando todos os serviços...');
+        try {
+            // Buscar todos os serviços primeiro
+            const listRes = await fetch('/api/servicos', { credentials: 'include' });
+            const listData = await listRes.json();
+
+            if (listData.success && listData.servicos) {
+                const servicos = listData.servicos;
+                let deletados = 0;
+                let erros = 0;
+
+                // Mostrar progresso
+                Swal.fire({
+                    title: 'Deletando serviços...',
+                    html: `<div>Progresso: <span id="progresso-delete-servicos">0</span>/${servicos.length}</div>`,
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                // Deletar cada serviço
+                for (let i = 0; i < servicos.length; i++) {
+                    try {
+                        const res = await fetch(`/api/servicos/${servicos[i]._id}`, {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        });
+                        if (res.ok) deletados++;
+                        else erros++;
+                    } catch (e) {
+                        erros++;
+                    }
+                    document.getElementById('progresso-delete-servicos').textContent = i + 1;
+                }
+
+                // Resultado final
+                Swal.fire({
+                    title: 'Operação Concluída!',
+                    html: `
+                        <p>✅ ${deletados} serviços deletados</p>
+                        ${erros > 0 ? `<p>❌ ${erros} erros</p>` : ''}
+                    `,
+                    icon: deletados > 0 ? 'success' : 'warning'
+                });
+
+                await loadServicosLista();
+            }
+        } catch (e) {
+            console.error('❌ Erro ao deletar serviços:', e);
+            Swal.fire('Erro', 'Falha ao deletar serviços', 'error');
+        }
+    } else {
+        console.log('❌ Operação cancelada pelo usuário');
+    }
 }
 
 // Global variable to store all budgets for filtering

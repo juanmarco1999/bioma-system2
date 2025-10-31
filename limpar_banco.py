@@ -20,9 +20,35 @@ import sys
 from datetime import datetime
 from pymongo import MongoClient
 from getpass import getpass
+from urllib.parse import quote_plus
+
+# Carregar variáveis do .env
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("✅ Arquivo .env carregado com sucesso")
+except ImportError:
+    print("⚠️ Biblioteca python-dotenv não encontrada. Instale com: pip install python-dotenv")
+except Exception as e:
+    print(f"⚠️ Erro ao carregar .env: {e}")
 
 # Configurações do MongoDB
-MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/')
+# Prioridade: MONGODB_URI > construir do .env > solicitar ao usuário
+MONGODB_URI = os.environ.get('MONGODB_URI')
+
+# Se não tiver MONGODB_URI pronta, construir a partir das variáveis do .env
+if not MONGODB_URI:
+    mongo_username = os.environ.get('MONGO_USERNAME')
+    mongo_password = os.environ.get('MONGO_PASSWORD')
+    mongo_cluster = os.environ.get('MONGO_CLUSTER')
+
+    if mongo_username and mongo_password and mongo_cluster:
+        # Escapar username e password para RFC 3986 (caracteres especiais como @, :, /)
+        username_escaped = quote_plus(mongo_username)
+        password_escaped = quote_plus(mongo_password)
+        MONGODB_URI = f"mongodb+srv://{username_escaped}:{password_escaped}@{mongo_cluster}/"
+        print(f"✅ URI MongoDB construída a partir do .env")
+
 DB_NAME = os.environ.get('DB_NAME', 'bioma')
 
 # Código de segurança
@@ -141,12 +167,30 @@ def registrar_auditoria(db, usuario='Script'):
 
 def main():
     """Função principal do script."""
-    print("=" * 60)
+    global MONGODB_URI
+
+    print("\n" + "=" * 60)
     print("🧹 SCRIPT DE LIMPEZA DO BANCO DE DADOS BIOMA v6.0")
     print("=" * 60)
     print("\n⚠️  ATENÇÃO: Esta operação irá DELETAR TODOS OS DADOS!")
     print("⚠️  Os índices e estrutura das coleções serão MANTIDOS")
     print("⚠️  As coleções 'users' e 'auditoria' NÃO serão afetadas\n")
+
+    # Se MONGODB_URI não está definida, solicitar ao usuário
+    if not MONGODB_URI:
+        print("❌ URI do MongoDB não encontrada no .env")
+        print("🔗 Por favor, configure no arquivo .env:")
+        print("   MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/")
+        print("   OU configure:")
+        print("   MONGO_USERNAME=seu_usuario")
+        print("   MONGO_PASSWORD=sua_senha")
+        print("   MONGO_CLUSTER=seu_cluster.mongodb.net")
+        sys.exit(1)
+
+    # Mostrar informações de conexão (sem expor senha)
+    server_info = MONGODB_URI.split('@')[-1].split('/')[0] if '@' in MONGODB_URI else 'localhost'
+    print(f"📍 Banco de dados: {DB_NAME}")
+    print(f"🌐 Servidor: {server_info}\n")
 
     # Solicitar confirmação 1
     resposta = input("Você tem certeza que deseja continuar? (sim/não): ").strip().lower()
