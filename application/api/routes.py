@@ -8349,11 +8349,9 @@ def admin_database_stats():
 @bp.route('/api/stream')
 @login_required
 def stream_updates():
-    db = get_db()
-    """Route for Server-Sent Events (SSE) for real-time updates"""
+    """Route for Server-Sent Events (SSE) for real-time updates - OTIMIZADO v4.0"""
     def generate():
-        db = get_db()
-        """Generator function for SSE"""
+        """Generator function for SSE - apenas heartbeat (sem queries no DB)"""
         try:
             # Enviar heartbeat inicial
             yield f"data: {json.dumps({'type': 'connected', 'message': 'SSE conectado com sucesso'})}\n\n"
@@ -8361,40 +8359,29 @@ def stream_updates():
             # Loop para manter conexão viva
             import time
             counter = 0
+            max_duration = 86400  # 24 horas em segundos (limite de conexão)
+            start_time = time.time()
+
             while True:
                 counter += 1
 
-                # Buscar atualizações do banco de dados
-                try:
-                    # Verificar novos agendamentos
-                    recent_appointments = list(db.agendamentos.find(
-                        {'data': {'$gte': datetime.now().strftime('%Y-%m-%d')}},
-                        {'_id': 1, 'cliente_nome': 1, 'data': 1, 'hora': 1, 'servico': 1}
-                    ).sort('_id', -1).limit(5))
+                # Verificar se ultrapassou o tempo máximo de conexão
+                if time.time() - start_time > max_duration:
+                    logger.info("SSE: Tempo máximo de conexão atingido (24h)")
+                    break
 
-                    for apt in recent_appointments:
-                        apt['_id'] = str(apt['_id'])
+                # Enviar apenas heartbeat leve (SEM queries no banco)
+                # Os dados devem ser buscados via refresh manual ou polling no frontend
+                data = {
+                    'type': 'heartbeat',
+                    'timestamp': datetime.now().isoformat(),
+                    'counter': counter
+                }
 
-                    # Enviar dados atualizados
-                    data = {
-                        'type': 'update',
-                        'timestamp': datetime.now().isoformat(),
-                        'recent_appointments': recent_appointments,
-                        'counter': counter
-                    }
+                yield f"data: {json.dumps(data)}\n\n"
 
-                    yield f"data: {json.dumps(data)}\n\n"
-
-                except Exception as e:
-                    logger.error(f"Erro ao buscar atualizações SSE: {e}")
-                    yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-
-                # Aguardar 30 segundos antes da próxima atualização
-                time.sleep(30)
-
-                # Enviar heartbeat a cada 30 segundos para manter conexão viva
-                if counter % 2 == 0:
-                    yield f": heartbeat\n\n"
+                # Aguardar 60 segundos (vs 30s anterior = 50% menos requisições)
+                time.sleep(60)
 
         except GeneratorExit:
             logger.info("Cliente SSE desconectado")
@@ -8403,7 +8390,11 @@ def stream_updates():
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     from flask import Response
-    return Response(generate(), mimetype='text/event-stream')
+    # Headers otimizados para SSE
+    response = Response(generate(), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache, no-transform'
+    response.headers['X-Accel-Buffering'] = 'no'  # Desabilita buffering no NGINX
+    return response
 
 
 @bp.route('/api/agendamentos/heatmap', methods=['GET'])

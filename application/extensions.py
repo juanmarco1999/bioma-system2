@@ -89,7 +89,20 @@ def create_strategic_indexes():
         logger.info("📊 Criando índices estratégicos...")
 
         # Índices para CLIENTES (busca rápida + ordenação)
-        db.clientes.create_index([("cpf", 1)], unique=True, background=True)
+        # Índice único de CPF com nome específico e sparse=True para evitar conflitos
+        # sparse=True permite documentos sem CPF (útil para clientes sem CPF cadastrado)
+        try:
+            db.clientes.create_index(
+                [("cpf", 1)],
+                unique=True,
+                background=True,
+                sparse=True,
+                name="cpf_unique_idx"
+            )
+        except Exception as idx_error:
+            # Se índice já existe, não é erro crítico
+            logger.warning(f"⚠️ Índice CPF já existe ou erro: {idx_error}")
+
         db.clientes.create_index([("nome", 1)], background=True)
         db.clientes.create_index([("email", 1)], background=True)
         db.clientes.create_index([("telefone", 1)], background=True)
