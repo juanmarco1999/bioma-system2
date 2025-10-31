@@ -9993,13 +9993,11 @@ async function importarPlanilhaEstoque(input){
         didOpen: () => {
             const confirmBtn = Swal.getConfirmButton();
             const cancelBtn = Swal.getCancelButton();
-            const closeBtn = Swal.getCloseButton();
 
             // Esconder botão OK inicialmente (será mostrado após conclusão)
             if (confirmBtn) {
                 confirmBtn.style.display = 'none';
             }
-            if (closeBtn) closeBtn.style.display = 'none';
 
             if (cancelBtn) {
                 cancelBtn.onclick = () => {
@@ -14543,7 +14541,8 @@ async function deletarTodosProdutos() {
 
                     if (res.ok) {
                         deletados++;
-                        document.getElementById('deletados-produtos').textContent = deletados;
+                        const deletadosEl = document.getElementById('deletados-produtos');
+                        if (deletadosEl) deletadosEl.textContent = deletados;
                     } else {
                         const errorData = await res.json().catch(() => ({}));
                         const motivo = errorData.message || `Erro HTTP ${res.status}`;
@@ -14552,7 +14551,8 @@ async function deletarTodosProdutos() {
                             produto: produto.nome || 'Sem nome',
                             motivo: motivo
                         });
-                        document.getElementById('erros-produtos').textContent = erros;
+                        const errosEl = document.getElementById('erros-produtos');
+                        if (errosEl) errosEl.textContent = erros;
                     }
                 } catch (e) {
                     erros++;
@@ -14560,13 +14560,15 @@ async function deletarTodosProdutos() {
                         produto: produto.nome || 'Sem nome',
                         motivo: e.message || 'Erro de conexão'
                     });
-                    document.getElementById('erros-produtos').textContent = erros;
+                    const errosEl = document.getElementById('erros-produtos');
+                    if (errosEl) errosEl.textContent = erros;
                 }
 
                 // Atualizar progresso
                 const processados = i + 1;
                 const percentual = Math.round((processados / total) * 100);
-                document.getElementById('progresso-delete-produtos').textContent = processados;
+                const progressoEl = document.getElementById('progresso-delete-produtos');
+                if (progressoEl) progressoEl.textContent = processados;
                 const barra = document.getElementById('barra-progresso-delete-produtos');
                 if (barra) {
                     barra.style.width = `${percentual}%`;
@@ -14751,7 +14753,8 @@ async function deletarTodosServicos() {
 
                     if (res.ok) {
                         deletados++;
-                        document.getElementById('deletados-servicos').textContent = deletados;
+                        const deletadosEl = document.getElementById('deletados-servicos');
+                        if (deletadosEl) deletadosEl.textContent = deletados;
                     } else {
                         const errorData = await res.json().catch(() => ({}));
                         const motivo = errorData.message || `Erro HTTP ${res.status}`;
@@ -14760,7 +14763,8 @@ async function deletarTodosServicos() {
                             servico: servico.nome || 'Sem nome',
                             motivo: motivo
                         });
-                        document.getElementById('erros-servicos').textContent = erros;
+                        const errosEl = document.getElementById('erros-servicos');
+                        if (errosEl) errosEl.textContent = erros;
                     }
                 } catch (e) {
                     erros++;
@@ -14768,13 +14772,15 @@ async function deletarTodosServicos() {
                         servico: servico.nome || 'Sem nome',
                         motivo: e.message || 'Erro de conexão'
                     });
-                    document.getElementById('erros-servicos').textContent = erros;
+                    const errosEl = document.getElementById('erros-servicos');
+                    if (errosEl) errosEl.textContent = erros;
                 }
 
                 // Atualizar progresso
                 const processados = i + 1;
                 const percentual = Math.round((processados / total) * 100);
-                document.getElementById('progresso-delete-servicos').textContent = processados;
+                const progressoEl = document.getElementById('progresso-delete-servicos');
+                if (progressoEl) progressoEl.textContent = processados;
                 const barra = document.getElementById('barra-progresso-delete-servicos');
                 if (barra) {
                     barra.style.width = `${percentual}%`;
@@ -16004,13 +16010,11 @@ async function handleUpload(input,tipo){
         didOpen: () => {
             const confirmBtn = Swal.getConfirmButton();
             const cancelBtn = Swal.getCancelButton();
-            const closeBtn = Swal.getCloseButton();
 
             // Esconder botão OK inicialmente (será mostrado após conclusão)
             if (confirmBtn) {
                 confirmBtn.style.display = 'none';
             }
-            if (closeBtn) closeBtn.style.display = 'none';
 
             if (cancelBtn) {
                 cancelBtn.onclick = () => {
