@@ -1458,8 +1458,8 @@ def assistentes():
     db = get_db()
     """Gerenciar assistentes (que podem não ser profissionais ativos)"""
     if db is None:
-        return jsonify({'success': False}), 500
-    
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
     if request.method == 'GET':
         try:
             # Listar todos os assistentes
@@ -1469,22 +1469,47 @@ def assistentes():
             logger.error(f"Erro ao listar assistentes: {e}")
             return jsonify({'success': False, 'message': str(e)}), 500
 
-    data = request.json
+    # POST - Cadastrar novo assistente
     try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+
+        if 'nome' not in data or not data['nome']:
+            return jsonify({'success': False, 'message': 'Nome é obrigatório'}), 400
+
         assistente_data = {
-            'nome': data['nome'],
-            'cpf': data.get('cpf', ''),
-            'email': data.get('email', ''),
-            'telefone': data.get('telefone', ''),
+            'nome': data['nome'].strip(),
+            'cpf': data.get('cpf', '').strip(),
+            'email': data.get('email', '').strip(),
+            'telefone': data.get('telefone', '').strip(),
             'comissao_perc': float(data.get('comissao_perc', 0)),
             'tipo': data.get('tipo', 'assistente'),
             'ativo': True,
             'created_at': datetime.now()
         }
+
         result = db.assistentes.insert_one(assistente_data)
-        inserted_id = str(result.inserted_id)
-        logger.info(f"✅ Assistente cadastrado: {assistente_data['nome']} (ID: {inserted_id})")
-        return jsonify({'success': True, 'message': 'Assistente cadastrado com sucesso', 'id': inserted_id})
+
+        if result and result.inserted_id:
+            inserted_id = str(result.inserted_id)
+            logger.info(f"✅ Assistente cadastrado: {assistente_data['nome']} (ID: {inserted_id})")
+            return jsonify({
+                'success': True,
+                'message': 'Assistente cadastrado com sucesso',
+                'id': inserted_id,
+                'assistente': {
+                    **assistente_data,
+                    '_id': inserted_id
+                }
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao inserir assistente no banco'}), 500
+
+    except KeyError as e:
+        logger.error(f"Campo obrigatório faltando: {e}")
+        return jsonify({'success': False, 'message': f'Campo obrigatório faltando: {e}'}), 400
     except Exception as e:
         logger.error(f"Erro ao cadastrar assistente: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -2969,7 +2994,13 @@ def importar():
                         if col in r and r[col]:
                             categoria = str(r[col]).strip().title()
                             break
-                    db.produtos.insert_one({'nome': nome, 'marca': marca, 'sku': sku, 'preco': preco, 'custo': custo, 'estoque': estoque, 'estoque_minimo': 5, 'categoria': categoria, 'ativo': True, 'created_at': datetime.now()})
+                    # Código de barras
+                    codigo_barras = 'Sem código de barras no momento'
+                    for col in ['codigo_barras', 'código_barras', 'codigo barras', 'barcode', 'codigo de barras', 'código de barras']:
+                        if col in r and r[col]:
+                            codigo_barras = str(r[col]).strip()
+                            break
+                    db.produtos.insert_one({'nome': nome, 'marca': marca, 'sku': sku, 'preco': preco, 'custo': custo, 'estoque': estoque, 'estoque_minimo': 5, 'categoria': categoria, 'codigo_barras': codigo_barras, 'ativo': True, 'created_at': datetime.now()})
                     count_success += 1
                 except:
                     count_error += 1
@@ -3103,6 +3134,63 @@ def importar():
             os.remove(filepath)
         return jsonify({'success': False, 'message': 'Erro ao processar arquivo'}), 500
 
+@bp.route('/api/importar/desfazer', methods=['POST'])
+@login_required
+def desfazer_importacao():
+    """Desfaz a última importação removendo os registros mais recentes."""
+    db = get_db()
+    if db is None:
+        return jsonify({'success': False, 'message': 'Erro ao conectar ao banco de dados'}), 500
+
+    try:
+        data = request.get_json()
+        tipo = data.get('tipo')
+        timestamp = data.get('timestamp')
+        count = data.get('count', 0)
+
+        if not tipo or not timestamp:
+            return jsonify({'success': False, 'message': 'Dados inválidos'}), 400
+
+        # Converter timestamp para datetime
+        import_date = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+
+        # Determinar a coleção correta
+        collection_map = {
+            'produtos': db.produtos,
+            'servicos': db.servicos,
+            'clientes': db.clientes,
+            'profissionais': db.profissionais
+        }
+
+        collection = collection_map.get(tipo)
+        if not collection:
+            return jsonify({'success': False, 'message': 'Tipo inválido'}), 400
+
+        # Deletar registros criados após (ou próximo a) o timestamp da importação
+        # Consideramos uma margem de 5 minutos para garantir que pegamos apenas os registros da importação
+        time_margin = timedelta(minutes=5)
+        query = {
+            'created_at': {
+                '$gte': import_date - time_margin,
+                '$lte': import_date + time_margin
+            }
+        }
+
+        # Deletar os registros
+        result = collection.delete_many(query)
+        deleted_count = result.deleted_count
+
+        logger.info(f"Desfazer importação: {deleted_count} registros de {tipo} removidos")
+
+        return jsonify({
+            'success': True,
+            'message': f'{deleted_count} registros de {tipo} foram removidos',
+            'deleted': deleted_count
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao desfazer importação: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/estoque/importar', methods=['POST'])
 @login_required
@@ -3496,6 +3584,78 @@ def consultar_auditoria():
         
     except Exception as e:
         logger.error(f"Erro ao consultar auditoria: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/api/sistema/limpar-banco', methods=['POST'])
+@login_required
+@permission_required('Admin')
+def limpar_banco_dados():
+    """
+    ATENÇÃO: Esta função limpa TODOS os dados do banco de dados!
+    Requer permissão de Admin e código de confirmação.
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    try:
+        data = request.get_json()
+        codigo_confirmacao = data.get('codigo_confirmacao', '')
+
+        # Código de segurança: LIMPAR_TUDO_2025
+        if codigo_confirmacao != 'LIMPAR_TUDO_2025':
+            return jsonify({
+                'success': False,
+                'message': 'Código de confirmação inválido'
+            }), 403
+
+        # Registrar ação de auditoria ANTES de limpar
+        usuario = session.get('user', {})
+        db.auditoria.insert_one({
+            'username': usuario.get('username', 'Desconhecido'),
+            'acao': 'LIMPAR_BANCO_DADOS',
+            'entidade': 'SISTEMA',
+            'timestamp': datetime.now(),
+            'detalhes': 'Limpeza completa do banco de dados'
+        })
+
+        # Coleções a serem limpas (exceto users e auditoria para manter histórico)
+        colecoes_para_limpar = [
+            'clientes',
+            'profissionais',
+            'servicos',
+            'produtos',
+            'orcamentos',
+            'contratos',
+            'agendamentos',
+            'estoque_movimentacoes',
+            'comissoes',
+            'despesas',
+            'assistentes',
+            'fila'
+        ]
+
+        stats = {}
+        for colecao_nome in colecoes_para_limpar:
+            colecao = getattr(db, colecao_nome)
+            count_antes = colecao.count_documents({})
+            resultado = colecao.delete_many({})
+            stats[colecao_nome] = {
+                'antes': count_antes,
+                'deletados': resultado.deleted_count
+            }
+            logger.warning(f"🗑️ Coleção '{colecao_nome}': {resultado.deleted_count} documentos deletados")
+
+        logger.warning(f"⚠️ BANCO DE DADOS LIMPO por {usuario.get('username', 'Desconhecido')}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Banco de dados limpo com sucesso!',
+            'stats': stats
+        })
+
+    except Exception as e:
+        logger.error(f"Erro ao limpar banco de dados: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 def init_db():
@@ -4651,6 +4811,8 @@ def editar_produto(id):
             update_data['estoque_minimo'] = int(data['estoque_minimo'])
         if 'sku' in data:
             update_data['sku'] = data['sku']
+        if 'codigo_barras' in data:
+            update_data['codigo_barras'] = data['codigo_barras']
         
         if not update_data:
             return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
@@ -4688,63 +4850,115 @@ def faturamento_cliente(id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 16. Anamnese do Cliente (GET/PUT)
-@bp.route('/api/clientes/<id>/anamnese', methods=['GET', 'PUT'])
+@bp.route('/api/clientes/<id>/anamnese', methods=['GET', 'PUT', 'POST'])
 @login_required
 def anamnese_cliente(id):
     db = get_db()
     """Gerencia anamnese do cliente"""
     try:
-        if request.method == 'GET':
+        # Tentar buscar por ObjectId primeiro, se falhar buscar por CPF
+        try:
             cliente = db.clientes.find_one({'_id': ObjectId(id)})
-            if not cliente:
-                return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
-            
-            anamnese = cliente.get('anamnese', {})
-            return jsonify({'success': True, 'anamnese': anamnese})
-        
-        elif request.method == 'PUT':
+        except:
+            # Se não for um ObjectId válido, buscar por CPF
+            cliente = db.clientes.find_one({'cpf': id})
+
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        if request.method == 'GET':
+            # Buscar todas as anamneses do cliente (histórico)
+            anamneses = cliente.get('anamneses', [])
+            anamnese_atual = cliente.get('anamnese', {})
+
+            return jsonify({
+                'success': True,
+                'anamnese': anamnese_atual,  # Última anamnese
+                'anamneses': anamneses,  # Histórico de anamneses
+                'cliente': {
+                    'nome': cliente.get('nome'),
+                    'cpf': cliente.get('cpf')
+                }
+            })
+
+        elif request.method in ['PUT', 'POST']:
             data = request.get_json()
-            
+
+            # Adicionar timestamp à anamnese
+            nova_anamnese = {
+                **data,
+                'data': datetime.now().isoformat(),
+                'profissional': session.get('user', {}).get('nome', 'Sistema')
+            }
+
+            # Atualizar anamnese atual e adicionar ao histórico
             db.clientes.update_one(
-                {'_id': ObjectId(id)},
-                {'$set': {'anamnese': data}}
+                {'_id': cliente['_id']},
+                {
+                    '$set': {'anamnese': nova_anamnese},
+                    '$push': {'anamneses': nova_anamnese}
+                }
             )
-            
-            return jsonify({'success': True, 'message': 'Anamnese salva com sucesso'})
+
+            return jsonify({'success': True, 'message': 'Anamnese salva com sucesso', 'anamnese': nova_anamnese})
     except Exception as e:
         logger.error(f"Erro na anamnese: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# 17. Prontuário do Cliente (GET/PUT)
-@bp.route('/api/clientes/<id>/prontuario', methods=['GET', 'PUT'])
+# 17. Prontuário do Cliente (GET/PUT/POST)
+@bp.route('/api/clientes/<id>/prontuario', methods=['GET', 'PUT', 'POST'])
 @login_required
 def prontuario_cliente(id):
     db = get_db()
     """Gerencia prontuário do cliente"""
     try:
-        if request.method == 'GET':
+        # Tentar buscar por ObjectId primeiro, se falhar buscar por CPF
+        try:
             cliente = db.clientes.find_one({'_id': ObjectId(id)})
-            if not cliente:
-                return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
-            
+        except:
+            # Se não for um ObjectId válido, buscar por CPF
+            cliente = db.clientes.find_one({'cpf': id})
+
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        if request.method == 'GET':
             prontuario = cliente.get('prontuario', [])
-            return jsonify({'success': True, 'prontuario': prontuario})
-        
-        elif request.method == 'PUT':
+            # Ordenar por data (mais recente primeiro)
+            prontuario_ordenado = sorted(prontuario, key=lambda x: x.get('data', ''), reverse=True)
+
+            return jsonify({
+                'success': True,
+                'prontuario': prontuario_ordenado,
+                'cliente': {
+                    'nome': cliente.get('nome'),
+                    'cpf': cliente.get('cpf')
+                }
+            })
+
+        elif request.method in ['PUT', 'POST']:
             data = request.get_json()
-            
+
+            # Criar novo registro de prontuário
+            novo_registro = {
+                'data': datetime.now().isoformat(),
+                'procedimento': data.get('procedimento', ''),
+                'observacoes': data.get('observacoes', ''),
+                'profissional': data.get('profissional', session.get('user', {}).get('nome', 'Sistema')),
+                'documento_url': data.get('documento_url', None)  # URL do documento escaneado se houver
+            }
+
             # Adicionar novo registro ao prontuário
             db.clientes.update_one(
-                {'_id': ObjectId(id)},
-                {'$push': {'prontuario': {
-                    'data': datetime.now(),
-                    'procedimento': data.get('procedimento'),
-                    'observacoes': data.get('observacoes'),
-                    'profissional': data.get('profissional')
-                }}}
+                {'_id': cliente['_id']},
+                {'$push': {'prontuario': novo_registro}}
             )
-            
-            return jsonify({'success': True, 'message': 'Registro adicionado ao prontuário'})
+
+            return jsonify({
+                'success': True,
+                'message': 'Registro adicionado ao prontuário',
+                'registro': novo_registro
+            })
     except Exception as e:
         logger.error(f"Erro no prontuário: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -6946,6 +7160,35 @@ def buscar_produtos():
         logger.error(f"❌ Erro ao buscar produtos: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@bp.route('/api/produto/barcode/<sku>', methods=['GET'])
+@login_required
+def get_produto_por_barcode(sku):
+    """
+    Busca um único produto pelo seu SKU (código de barras).
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({'success': False, 'message': 'Database offline'}), 500
+
+    try:
+        # Tenta buscar por SKU ou um campo futuro 'codigo_barras'
+        # Usamos 'sku' como o campo principal para o código de barras
+        produto = db.produtos.find_one({
+            '$or': [
+                {'sku': sku},
+                {'codigo_barras': sku}
+            ]
+        })
+
+        if not produto:
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+        # Se encontrou, retorna o produto completo
+        return jsonify({'success': True, 'produto': convert_objectid(produto)})
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar produto por barcode {sku}: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/produtos/baixo-estoque', methods=['GET'])
 @login_required
@@ -7004,10 +7247,26 @@ def produtos_baixo_estoque():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@bp.route('/api/produtos/<id>', methods=['GET', 'PUT'])
+@bp.route('/api/produtos/<id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def produto_detalhes(id):
     db = get_db()
+
+    # DELETE - Deletar produto
+    if request.method == 'DELETE':
+        """Deleta um produto"""
+        try:
+            result = db.produtos.delete_one({'_id': ObjectId(id)})
+
+            if result.deleted_count > 0:
+                logger.info(f"✅ Produto {id} deletado com sucesso")
+                return jsonify({'success': True, 'message': 'Produto deletado com sucesso'})
+
+            return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao deletar produto: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
 
     # GET - Buscar detalhes do produto
     if request.method == 'GET':
@@ -7163,10 +7422,43 @@ def listar_servicos():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@bp.route('/api/servicos/<id>', methods=['PUT'])
+@bp.route('/api/servicos/<id>', methods=['GET', 'PUT', 'DELETE'])
 @login_required
 def atualizar_servico(id):
     db = get_db()
+
+    # DELETE - Deletar serviço
+    if request.method == 'DELETE':
+        """Deleta um serviço"""
+        try:
+            result = db.servicos.delete_one({'_id': ObjectId(id)})
+
+            if result.deleted_count > 0:
+                logger.info(f"✅ Serviço {id} deletado com sucesso")
+                return jsonify({'success': True, 'message': 'Serviço deletado com sucesso'})
+
+            return jsonify({'success': False, 'message': 'Serviço não encontrado'}), 404
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao deletar serviço: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    # GET - Buscar detalhes do serviço
+    if request.method == 'GET':
+        """Busca detalhes de um serviço específico"""
+        try:
+            servico = db.servicos.find_one({'_id': ObjectId(id)})
+
+            if not servico:
+                return jsonify({'success': False, 'message': 'Serviço não encontrado'}), 404
+
+            return jsonify({'success': True, 'servico': convert_objectid(servico)})
+
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar serviço {id}: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+    # PUT - Atualizar serviço
     """Atualiza serviço (incluindo toggle de status)"""
     try:
         data = request.get_json()

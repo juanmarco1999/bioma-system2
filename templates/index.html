@@ -3445,6 +3445,45 @@
             position: fixed !important;
         }
 
+        /* Botão vermelho pulsante para desfazer importação */
+        .btn-undo-import {
+            background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+            color: white !important;
+            border: none !important;
+            padding: 12px 24px !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+            animation: pulse-red 2s infinite !important;
+            transition: all 0.3s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .btn-undo-import:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6) !important;
+        }
+
+        .btn-undo-import:disabled {
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+            animation: none !important;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            }
+            50% {
+                box-shadow: 0 4px 25px rgba(239, 68, 68, 0.8);
+            }
+            100% {
+                box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            }
+        }
+
 </style>
 
 <!-- ========== MELHORIAS DE UX E ANIMAÇÕES V4.1 ========== -->
@@ -5133,6 +5172,9 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
             <div class="page-header">
                 <h1><i class="bi bi-bar-chart-line"></i> Relatórios e Análises</h1>
                 <div style="display: flex; gap: 10px;">
+                    <button class="bioma-btn bioma-btn-primary" onclick="atualizarRelatorios()">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
                     <button class="bioma-btn bioma-btn-success" onclick="exportarRelatorio()"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
                 </div>
             </div>
@@ -7733,9 +7775,18 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                 <h1><i class="bi bi-cloud-upload"></i> Importar Dados em Massa</h1>
             </div>
             <div class="alert alert-info">
-                <strong><i class="bi bi-info-circle"></i> Informação:</strong> 
-                Faça upload de arquivos CSV ou Excel (.xlsx, .xls) para importar dados em massa. 
+                <strong><i class="bi bi-info-circle"></i> Informação:</strong>
+                Faça upload de arquivos CSV ou Excel (.xlsx, .xls) para importar dados em massa.
                 Baixe os templates para garantir o formato correto.
+            </div>
+            <div class="text-center mb-4">
+                <button id="btnDesfazerImportacao" class="btn-undo-import" onclick="desfazerUltimaImportacao()" disabled>
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    Desfazer Última Importação (CTRL+Z)
+                </button>
+                <p class="text-muted mt-2" style="font-size: 0.9rem;">
+                    <i class="bi bi-info-circle"></i> O botão será ativado após realizar uma importação
+                </p>
             </div>
             <div class="row g-4">
                 <div class="col-md-6">
@@ -7883,6 +7934,33 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                             </button>
                             <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;">
                                 Os dados são sincronizados automaticamente quando a internet é restabelecida
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card de Limpar Banco de Dados -->
+                <div class="col-md-12 mt-4">
+                    <div class="card" style="border: 2px solid #EF4444; transition: all 0.3s ease;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #EF4444, #DC2626); color: white;">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Zona de Perigo - Gerenciamento de Dados
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger" style="margin-bottom: 20px;">
+                                <strong><i class="bi bi-shield-exclamation"></i> ATENÇÃO!</strong>
+                                <p style="margin-top: 10px; margin-bottom: 0;">
+                                    Esta ação irá <strong>APAGAR TODOS OS DADOS</strong> do sistema, incluindo:
+                                    clientes, profissionais, serviços, produtos, orçamentos, contratos, agendamentos, movimentações de estoque, comissões, despesas e assistentes.
+                                </p>
+                                <p style="margin-top: 10px; margin-bottom: 0; font-weight: 600;">
+                                    ⚠️ Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
+                                </p>
+                            </div>
+                            <button class="btn btn-danger btn-lg" onclick="limparBancoDados()" style="width: 100%; padding: 15px; font-weight: 700;">
+                                <i class="bi bi-trash3-fill"></i> LIMPAR BANCO DE DADOS COMPLETO
+                            </button>
+                            <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+                                <i class="bi bi-info-circle"></i> Apenas administradores podem executar esta ação
                             </p>
                         </div>
                     </div>
@@ -11545,6 +11623,10 @@ async function editarProduto(id) {
                         <input type="text" id="swal-sku" class="form-control" value="${p.sku || ''}">
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label">Código de Barras</label>
+                        <input type="text" id="swal-codigo-barras" class="form-control" value="${p.codigo_barras || 'Sem código de barras no momento'}" placeholder="Código de barras do produto">
+                    </div>
+                    <div class="col-md-12">
                         <label class="form-label">Categoria</label>
                         <input type="text" id="swal-categoria" class="form-control" value="${p.categoria || ''}">
                     </div>
@@ -11601,6 +11683,7 @@ async function editarProduto(id) {
                     nome: nome,
                     marca: document.getElementById('swal-marca').value.trim(),
                     sku: document.getElementById('swal-sku').value.trim(),
+                    codigo_barras: document.getElementById('swal-codigo-barras').value.trim(),
                     categoria: document.getElementById('swal-categoria').value.trim(),
                     preco: parseFloat(preco),
                     estoque: parseInt(document.getElementById('swal-estoque').value) || 0,
@@ -14128,7 +14211,20 @@ async function handleUpload(input,tipo){
             else if(tipo==='servicos') loadServicosLista();
             else if(tipo==='clientes') loadClientes();
             else if(tipo==='profissionais') loadProfissionais();
-            
+
+            // Salvar informações da última importação para permitir desfazer
+            window.ultimaImportacao = {
+                tipo: tipo,
+                timestamp: new Date().toISOString(),
+                count: data.count_success
+            };
+
+            // Ativar botão de desfazer
+            const btnDesfazer = document.getElementById('btnDesfazerImportacao');
+            if(btnDesfazer) {
+                btnDesfazer.disabled = false;
+            }
+
         }else{
             // Análise detalhada do erro
             let errorDetails = '';
@@ -14254,6 +14350,121 @@ async function handleUpload(input,tipo){
     // Limpar o input para permitir upload do mesmo arquivo novamente
     input.value='';
 }
+
+// Função para desfazer última importação
+async function desfazerUltimaImportacao() {
+    if(!window.ultimaImportacao) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Nenhuma Importação Recente',
+            text: 'Não há importações recentes para desfazer.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+
+    const { tipo, timestamp, count } = window.ultimaImportacao;
+    const dataImportacao = new Date(timestamp).toLocaleString('pt-BR');
+
+    const result = await Swal.fire({
+        icon: 'warning',
+        title: '⚠️ Confirmar Desfazer Importação?',
+        html: `
+            <div style="padding: 20px; text-align: left;">
+                <p><strong>Tipo:</strong> ${tipo}</p>
+                <p><strong>Data:</strong> ${dataImportacao}</p>
+                <p><strong>Registros importados:</strong> ${count}</p>
+                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                    <strong>⚠️ Atenção:</strong> Esta ação irá remover os <strong>${count}</strong> registros de <strong>${tipo}</strong> que foram importados.
+                    Esta ação não pode ser desfeita!
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Sim, Desfazer',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EF4444',
+        allowOutsideClick: false
+    });
+
+    if(!result.isConfirmed) {
+        return;
+    }
+
+    // Mostrar loading
+    Swal.fire({
+        title: 'Desfazendo Importação...',
+        html: 'Por favor, aguarde...',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    try {
+        const res = await fetch('/api/importar/desfazer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                tipo: tipo,
+                timestamp: timestamp,
+                count: count
+            })
+        });
+
+        const data = await res.json();
+
+        Swal.close();
+
+        if(data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '✅ Importação Desfeita!',
+                html: `<p>${data.message || `${data.deleted || count} registros foram removidos com sucesso.`}</p>`,
+                confirmButtonText: 'OK'
+            });
+
+            // Limpar última importação
+            window.ultimaImportacao = null;
+
+            // Desativar botão
+            const btnDesfazer = document.getElementById('btnDesfazerImportacao');
+            if(btnDesfazer) {
+                btnDesfazer.disabled = true;
+            }
+
+            // Recarregar lista
+            if(tipo==='produtos') loadProdutosLista();
+            else if(tipo==='servicos') loadServicosLista();
+            else if(tipo==='clientes') loadClientes();
+            else if(tipo==='profissionais') loadProfissionais();
+        } else {
+            throw new Error(data.message || 'Erro ao desfazer importação');
+        }
+    } catch(e) {
+        console.error('Erro ao desfazer importação:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: e.message || 'Não foi possível desfazer a importação.',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
+// Adicionar atalho CTRL+Z para desfazer importação
+document.addEventListener('keydown', (e) => {
+    if(e.ctrlKey && e.key === 'z') {
+        const activeSection = document.querySelector('.content-section.active')?.id;
+        if(activeSection === 'section-importar' && window.ultimaImportacao) {
+            e.preventDefault();
+            desfazerUltimaImportacao();
+        }
+    }
+});
 
 async function buscarClientePorCPF(){
     const cpf=document.getElementById('orcCPF').value.trim();
@@ -14951,6 +15162,14 @@ let chartServicos=null,chartFaturamento=null;
 let assistentesCache=[];
 let anamneseDef=null;
 let prontuarioDef=null;
+// Função para atualizar relatórios
+async function atualizarRelatorios() {
+    toast('Atualizando relatórios...', 'info');
+    await loadRelatorios();
+    await carregarMapaCalor();
+    mostrarNotificacao('success', 'Relatórios atualizados!', 2000);
+}
+
 async function loadRelatorios(){
     const key = 'loadRelatorios';
     if (isLoading(key)) {
@@ -14981,6 +15200,13 @@ async function loadRelatorios(){
         if(chartServicos)chartServicos.destroy();
         if(topServicos.length>0){
             chartServicos=new Chart(ctxServicos,{type:'bar',data:{labels:topServicos.map(s=>s[0]),datasets:[{label:'Faturamento (R$)',data:topServicos.map(s=>s[1].total),backgroundColor:'rgba(124,58,237,0.8)',borderColor:'rgba(124,58,237,1)',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        } else {
+            // Mostrar mensagem quando não houver dados
+            const canvas = document.getElementById('chartServicos');
+            if(canvas) {
+                const parent = canvas.parentElement;
+                parent.innerHTML = '<div style="padding: 60px 20px; text-align: center; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i><p style="margin-top: 15px; font-size: 1.1rem;">Ainda não há dados para exibir</p><p style="font-size: 0.9rem;">Os serviços aparecerão aqui após a aprovação de orçamentos</p></div><canvas id="chartServicos" style="max-height:300px; display:none;"></canvas>';
+            }
         }
         const meses=[];
         const faturamentoMensal=[];
@@ -14995,13 +15221,25 @@ async function loadRelatorios(){
         }
         const ctxFaturamento=document.getElementById('chartFaturamento');
         if(chartFaturamento)chartFaturamento.destroy();
-        chartFaturamento=new Chart(ctxFaturamento,{type:'line',data:{labels:meses,datasets:[{label:'Faturamento (R$)',data:faturamentoMensal,backgroundColor:'rgba(16,185,129,0.2)',borderColor:'rgba(16,185,129,1)',borderWidth:3,fill:true,tension:0.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        const temDados = faturamentoMensal.some(val => val > 0);
+        if(temDados){
+            chartFaturamento=new Chart(ctxFaturamento,{type:'line',data:{labels:meses,datasets:[{label:'Faturamento (R$)',data:faturamentoMensal,backgroundColor:'rgba(16,185,129,0.2)',borderColor:'rgba(16,185,129,1)',borderWidth:3,fill:true,tension:0.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        } else {
+            // Mostrar mensagem quando não houver dados
+            const canvas = document.getElementById('chartFaturamento');
+            if(canvas) {
+                const parent = canvas.parentElement;
+                parent.innerHTML = '<div style="padding: 60px 20px; text-align: center; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i><p style="margin-top: 15px; font-size: 1.1rem;">Ainda não há dados para exibir</p><p style="font-size: 0.9rem;">O faturamento mensal aparecerá aqui após a aprovação de orçamentos</p></div><canvas id="chartFaturamento" style="max-height:300px; display:none;"></canvas>';
+            }
+        }
         const resClientes=await fetch('/api/clientes',{credentials:'include'});
         const dataClientes=await resClientes.json();
         if(dataClientes.success&&dataClientes.clientes){
             const topClientes=dataClientes.clientes.sort((a,b)=>(b.total_gasto||0)-(a.total_gasto||0)).slice(0,10);
-            const htmlClientes=topClientes.map((c,idx)=>`<tr><td><strong style="font-size:1.5rem;color:${idx===0?'#FFD700':idx===1?'#C0C0C0':idx===2?'#CD7F32':'var(--text-primary)'}">${idx+1}º</strong></td><td><strong>${c.nome}</strong></td><td><strong style="color:var(--success)">R$ ${(c.total_gasto||0).toFixed(2)}</strong></td><td>${c.total_visitas||0}</td><td>${c.ultima_visita?new Date(c.ultima_visita).toLocaleDateString('pt-BR'):'-'}</td></tr>`).join('');
-            document.getElementById('topClientesBody').innerHTML=htmlClientes||'<tr><td colspan="5" class="text-center text-muted">Nenhum</td></tr>';
+            const htmlClientes=topClientes.length > 0 ? topClientes.map((c,idx)=>`<tr><td><strong style="font-size:1.5rem;color:${idx===0?'#FFD700':idx===1?'#C0C0C0':idx===2?'#CD7F32':'var(--text-primary)'}">${idx+1}º</strong></td><td><strong>${c.nome}</strong></td><td><strong style="color:var(--success)">R$ ${(c.total_gasto||0).toFixed(2)}</strong></td><td>${c.total_visitas||0}</td><td>${c.ultima_visita?new Date(c.ultima_visita).toLocaleDateString('pt-BR'):'-'}</td></tr>`).join('') : '<tr><td colspan="5" class="text-center" style="padding: 40px; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 10px;"></i>Ainda não há dados para exibir</td></tr>';
+            document.getElementById('topClientesBody').innerHTML=htmlClientes;
+        } else {
+            document.getElementById('topClientesBody').innerHTML='<tr><td colspan="5" class="text-center" style="padding: 40px; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 10px;"></i>Ainda não há dados para exibir</td></tr>';
         }
         const produtosCount={};
         orcamentos.forEach(o=>{(o.produtos||[]).forEach(p=>{const key=p.nome;if(!produtosCount[key])produtosCount[key]={total:0,qtd:0};produtosCount[key].total+=p.total||0;produtosCount[key].qtd+=p.qtd||1;});});
@@ -15010,7 +15248,7 @@ async function loadRelatorios(){
             const htmlProdutos=topProdutos.map(p=>`<tr><td><strong>${p[0]}</strong></td><td>${p[1].qtd}</td><td><strong>R$ ${p[1].total.toFixed(2)}</strong></td></tr>`).join('');
             document.getElementById('topProdutosBody').innerHTML=htmlProdutos;
         }else{
-            document.getElementById('topProdutosBody').innerHTML='<tr><td colspan="3" class="text-center text-muted">Nenhum</td></tr>';
+            document.getElementById('topProdutosBody').innerHTML='<tr><td colspan="3" class="text-center" style="padding: 40px; color: var(--text-muted);"><i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 10px;"></i>Ainda não há dados para exibir</td></tr>';
         }
     }catch(e){
         console.error('❌ Relatórios error:',e);
@@ -17465,6 +17703,143 @@ async function loadSystem(){
       setTimeout(() => setLoading(key, false), 1000);
   }
 }
+
+// Função para limpar banco de dados
+async function limparBancoDados() {
+    // Primeira confirmação
+    const result1 = await Swal.fire({
+        icon: 'warning',
+        title: '⚠️ ATENÇÃO CRÍTICA!',
+        html: `
+            <div style="text-align: left; padding: 20px;">
+                <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 15px;">
+                    Você está prestes a <span style="color: #EF4444;">APAGAR TODOS OS DADOS</span> do sistema!
+                </p>
+                <p style="margin-bottom: 10px;">Isso incluirá a exclusão permanente de:</p>
+                <ul style="margin-left: 20px; color: var(--text-secondary);">
+                    <li>Todos os clientes cadastrados</li>
+                    <li>Todos os profissionais e assistentes</li>
+                    <li>Todos os serviços e produtos</li>
+                    <li>Todos os orçamentos e contratos</li>
+                    <li>Todos os agendamentos</li>
+                    <li>Todo o histórico de movimentações de estoque</li>
+                    <li>Todas as comissões e despesas</li>
+                    <li>Toda a fila de atendimento</li>
+                </ul>
+                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-left: 4px solid #EF4444; border-radius: 4px;">
+                    <strong style="color: #EF4444;">⚠️ ESTA AÇÃO NÃO PODE SER DESFEITA!</strong>
+                    <p style="margin-top: 10px; margin-bottom: 0;">Os dados de usuários e auditoria serão mantidos para fins de segurança.</p>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Continuar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EF4444',
+        allowOutsideClick: false
+    });
+
+    if (!result1.isConfirmed) {
+        return;
+    }
+
+    // Segunda confirmação com código
+    const result2 = await Swal.fire({
+        icon: 'error',
+        title: '🔐 Confirmação de Segurança',
+        html: `
+            <div style="text-align: left; padding: 20px;">
+                <p style="font-size: 1.1rem; margin-bottom: 15px;">
+                    Para prosseguir, digite o código de confirmação:
+                </p>
+                <div style="text-align: center; margin: 20px 0;">
+                    <code style="background: #f0f0f0; padding: 10px 20px; font-size: 1.3rem; border-radius: 8px; font-weight: 700; color: #EF4444;">
+                        LIMPAR_TUDO_2025
+                    </code>
+                </div>
+                <input type="text" id="codigo-confirmacao" class="swal2-input" placeholder="Digite o código aqui" style="margin-top: 20px;">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'LIMPAR BANCO DE DADOS',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EF4444',
+        allowOutsideClick: false,
+        preConfirm: () => {
+            const codigo = document.getElementById('codigo-confirmacao').value;
+            if (codigo !== 'LIMPAR_TUDO_2025') {
+                Swal.showValidationMessage('Código de confirmação incorreto!');
+                return false;
+            }
+            return codigo;
+        }
+    });
+
+    if (!result2.isConfirmed) {
+        return;
+    }
+
+    // Mostrar loading
+    Swal.fire({
+        title: 'Limpando Banco de Dados...',
+        html: 'Por favor, aguarde. Esta operação pode levar alguns segundos.',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    try {
+        const res = await fetch('/api/sistema/limpar-banco', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                codigo_confirmacao: result2.value
+            })
+        });
+
+        const data = await res.json();
+
+        Swal.close();
+
+        if (data.success) {
+            // Mostrar estatísticas de limpeza
+            let statsHTML = '<div style="text-align: left; padding: 15px;">';
+            statsHTML += '<p style="margin-bottom: 15px;">Registros removidos por coleção:</p>';
+            statsHTML += '<ul style="margin-left: 20px;">';
+
+            for (const [colecao, info] of Object.entries(data.stats || {})) {
+                statsHTML += `<li><strong>${colecao}:</strong> ${info.deletados} registros</li>`;
+            }
+
+            statsHTML += '</ul></div>';
+
+            await Swal.fire({
+                icon: 'success',
+                title: '✅ Banco de Dados Limpo!',
+                html: statsHTML,
+                confirmButtonText: 'OK'
+            });
+
+            // Recarregar a página para atualizar todas as seções
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Erro ao limpar banco de dados');
+        }
+    } catch (e) {
+        console.error('Erro ao limpar banco:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: e.message || 'Não foi possível limpar o banco de dados.',
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
 async function uploadLogo(inputSel='#logoArquivo'){
   const f = document.querySelector(inputSel)?.files?.[0]; if(!f) return toast('Selecione um arquivo','warning');
   const fd = new FormData(); fd.append('file', f);
@@ -17507,6 +17882,9 @@ async function initApp(user=null){
   
   // CARREGAR LOGO IMEDIATAMENTE (antes de tudo)
   await loadConfiguracoes(true); // force=true para garantir carregamento
+
+  // INICIAR SCANNER DE CÓDIGO DE BARRAS
+  iniciarScannerBarcode();
 
   // ========== REFRESH GERAL INICIAL (antes do auto-refresh) ==========
   console.log('🔄 Executando REFRESH GERAL de todos os dados...');
@@ -21664,6 +22042,163 @@ async function carregarDespesas(){
 }
 
 // ========== FIM STUB FUNCTIONS ==========
+
+// ==========================================================
+// ========== SISTEMA DE SCANNER DE CÓDIGO DE BARRAS ==========
+// ==========================================================
+let barcodeBuffer = '';
+let lastKeyTime = 0;
+let barcodeScannerAtivo = false;
+
+/**
+ * Inicia o "ouvinte" global para o scanner de código de barras.
+ * Ele detecta digitação rápida terminada com "Enter".
+ */
+function iniciarScannerBarcode() {
+    if (barcodeScannerAtivo) return; // Prevenir múltiplos listeners
+
+    console.log('🔫 Scanner de código de barras ATIVADO');
+    barcodeScannerAtivo = true;
+
+    document.addEventListener('keydown', async (e) => {
+        // Não capturar se o usuário estiver em um modal (Swal) ou em um input/textarea
+        const inModal = document.body.classList.contains('swal2-shown') || document.querySelector('.bioma-modal-overlay');
+        const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+
+        if (inInput || inModal) {
+            barcodeBuffer = ''; // Resetar buffer se estiver digitando em um campo
+            return;
+        }
+
+        const now = Date.now();
+
+        // Resetar buffer se a digitação for lenta (humano)
+        // Um scanner "digita" muito rápido (menos de 50ms entre teclas)
+        if (now - lastKeyTime > 100) {
+            barcodeBuffer = '';
+        }
+
+        if (e.key === 'Enter') {
+            // Um código de barras válido deve ter > 8 dígitos e ser numérico
+            if (barcodeBuffer.length > 8 && /^\d+$/.test(barcodeBuffer)) {
+                console.log('Código de barras detectado:', barcodeBuffer);
+                e.preventDefault(); // Prevenir que o "Enter" envie um formulário
+                await handleBarcodeScan(barcodeBuffer);
+            }
+            barcodeBuffer = '';
+        } else if (e.key.length === 1) {
+            // Adicionar apenas teclas "imprimíveis"
+            barcodeBuffer += e.key;
+        }
+
+        lastKeyTime = now;
+    });
+}
+
+/**
+ * Processa o código de barras capturado.
+ * Chama a API e decide onde preencher os dados do produto.
+ * @param {string} barcode - O código de barras lido.
+ */
+async function handleBarcodeScan(barcode) {
+    try {
+        // Mostrar um feedback visual de "lendo"
+        mostrarNotificacao('info', `Buscando código: ${barcode}`, 1500);
+
+        const data = await API.get(`/api/produto/barcode/${barcode}`);
+
+        if (data.success && data.produto) {
+            const produto = data.produto;
+            const activeSection = document.querySelector('.content-section.active')?.id;
+
+            // Decidir onde preencher os dados
+            if (activeSection === 'section-orcamento') {
+                preencherCamposProdutoOrcamento(produto);
+                mostrarNotificacao('success', `Produto ${produto.nome} adicionado`, 2000);
+
+            } else if (activeSection === 'section-estoque') {
+                preencherCamposProdutoEstoque(produto);
+                mostrarNotificacao('success', `Produto ${produto.nome} selecionado`, 2000);
+
+            } else {
+                // Apenas notificar se não estiver na tela certa
+                mostrarNotificacao('success', `Produto encontrado: ${produto.nome}`, 3000);
+            }
+        } else {
+            mostrarNotificacao('error', 'Produto não encontrado para este código', 3000);
+        }
+    } catch (err) {
+        console.error('Erro no scan:', err);
+        mostrarNotificacao('error', 'Erro ao buscar produto', 3000);
+    }
+}
+
+/**
+ * Preenche os campos de produto na tela de "Novo Orçamento".
+ * @param {object} produto - O objeto do produto retornado pela API.
+ */
+function preencherCamposProdutoOrcamento(produto) {
+    // Ir para a seção de orçamento se não estiver nela
+    if (document.querySelector('.content-section.active')?.id !== 'section-orcamento') {
+        goTo('orcamento');
+    }
+
+    // Simular a seleção do produto
+    document.getElementById('buscaProduto').value = `${produto.nome} ${produto.marca || ''}`;
+    document.getElementById('produtoPreco').value = (produto.preco || 0).toFixed(2);
+
+    // Define a variável global que a função addProduto() usa
+    window.produtoSelecionado = {
+        id: produto._id,
+        nome: produto.nome,
+        marca: produto.marca || '',
+        sku: produto.sku || '',
+        preco: parseFloat(produto.preco || 0)
+    };
+
+    // Focar no campo de quantidade para agilidade
+    document.getElementById('produtoQtd').focus();
+    document.getElementById('produtoQtd').select();
+}
+
+/**
+ * Preenche os campos de produto na tela de "Estoque" (Entrada/Saída).
+ * @param {object} produto - O objeto do produto retornado pela API.
+ */
+function preencherCamposProdutoEstoque(produto) {
+    // Ir para a seção de estoque se não estiver nela
+    if (document.querySelector('.content-section.active')?.id !== 'section-estoque') {
+        goTo('estoque');
+    }
+
+    // Esperar a navegação (se houver)
+    setTimeout(() => {
+        const activeSubTab = document.querySelector('#section-estoque .sub-tab-content.active')?.id;
+
+        if (activeSubTab === 'estoque-subtab-nova-entrada') {
+            const select = document.getElementById('novaEntradaProduto');
+            select.value = produto._id; // O <select> deve ser populado com IDs
+
+            document.getElementById('novaEntradaQuantidade').focus();
+            document.getElementById('novaEntradaQuantidade').select();
+
+        } else if (activeSubTab === 'estoque-subtab-nova-saida') {
+            const select = document.getElementById('novaSaidaProduto');
+            select.value = produto._id;
+
+            document.getElementById('novaSaidaQuantidade').focus();
+            document.getElementById('novaSaidaQuantidade').select();
+
+        } else {
+            // Se não estiver na aba certa, ir para "Nova Entrada" como padrão
+            switchSubTab('estoque', 'nova-entrada');
+            // Tentar preencher novamente após a troca de aba
+            setTimeout(() => preencherCamposProdutoEstoque(produto), 200);
+        }
+    }, 300); // Atraso para esperar a troca de aba
+}
+
+// ========== FIM SISTEMA DE SCANNER ==========
 
 (async function boot(){
   try{
