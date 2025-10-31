@@ -9984,7 +9984,8 @@ async function importarPlanilhaEstoque(input){
             </div>
         `,
         allowOutsideClick: false,
-        showConfirmButton: false,
+        showConfirmButton: true,
+        confirmButtonText: 'OK',
         showCancelButton: true,
         showCloseButton: true,
         cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Importação',
@@ -9994,7 +9995,10 @@ async function importarPlanilhaEstoque(input){
             const cancelBtn = Swal.getCancelButton();
             const closeBtn = Swal.getCloseButton();
 
-            if (confirmBtn) confirmBtn.style.display = 'none';
+            // Esconder botão OK inicialmente (será mostrado após conclusão)
+            if (confirmBtn) {
+                confirmBtn.style.display = 'none';
+            }
             if (closeBtn) closeBtn.style.display = 'none';
 
             if (cancelBtn) {
@@ -15991,7 +15995,8 @@ async function handleUpload(input,tipo){
             </div>
         `,
         allowOutsideClick: false,
-        showConfirmButton: false,
+        showConfirmButton: true,
+        confirmButtonText: 'OK',
         showCancelButton: true,
         showCloseButton: true,
         cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Importação',
@@ -16001,7 +16006,10 @@ async function handleUpload(input,tipo){
             const cancelBtn = Swal.getCancelButton();
             const closeBtn = Swal.getCloseButton();
 
-            if (confirmBtn) confirmBtn.style.display = 'none';
+            // Esconder botão OK inicialmente (será mostrado após conclusão)
+            if (confirmBtn) {
+                confirmBtn.style.display = 'none';
+            }
             if (closeBtn) closeBtn.style.display = 'none';
 
             if (cancelBtn) {
