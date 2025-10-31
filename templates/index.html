@@ -5810,127 +5810,84 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
 
             <!-- Sub-tab: Anamnese -->
             <div id="clientes-anamnese" class="sub-tab-content">
-                <div class="card mb-4">
-                    <div class="card-header"><i class="bi bi-funnel"></i> Buscar Cliente</div>
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-file-earmark-medical"></i> Anamnese - Histórico de Clientes
+                        <button class="btn btn-primary btn-sm float-end" onclick="refreshData(this, carregarListaAnamnese, 'Anamnese atualizada')">
+                            <i class="bi bi-arrow-clockwise"></i> Atualizar
+                        </button>
+                    </div>
                     <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-8">
-                                <label class="form-label">CPF do Cliente</label>
-                                <input type="text" id="anamneseCPF" class="form-control" placeholder="000.000.000-00" maxlength="14">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">&nbsp;</label>
-                                <button class="btn btn-primary w-100" onclick="buscarAnamnesesCliente()">
-                                    <i class="bi bi-search"></i> Buscar
-                                </button>
-                            </div>
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Gerenciamento de Anamnese:</strong> Visualize todos os clientes com anamnese cadastrada. Clique nos botões para visualizar documentos digitais ou físicos (escaneados).
                         </div>
-                    </div>
-                </div>
 
-                <div id="anamnesesResultado" style="display:none;">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-person-badge"></i> Cliente: <span id="anamnesesClienteNome"></span>
-                            <button class="bioma-btn bioma-btn-sm bioma-btn-success float-end" onclick="novaAnamneseModal()">
-                                <i class="bi bi-plus-circle"></i> Nova Anamnese
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> 
-                                <strong>Histórico de Anamneses:</strong> Visualize todas as anamneses anteriores e compare as mudanças ao longo do tempo.
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Versão</th>
-                                            <th>Data</th>
-                                            <th>Cadastrado por</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="anamnesesHistoricoBody">
-                                        <tr><td colspan="4" class="text-center text-muted">Nenhuma anamnese encontrada</td></tr>
-                                    </tbody>
-                                </table>
+                        <!-- Busca rápida opcional -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <input type="text" id="buscaAnamnese" class="form-control" placeholder="🔍 Buscar cliente por nome ou CPF..." onkeyup="filtrarAnamnese()">
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div id="anamneseMensagemInicial">
-                    <div class="alert alert-info">
-                        <h4><i class="bi bi-info-circle"></i> Sistema de Anamnese</h4>
-                        <p><strong>1.</strong> Digite o CPF do cliente no campo acima</p>
-                        <p><strong>2.</strong> Clique em "Buscar" para ver o histórico de anamneses</p>
-                        <p><strong>3.</strong> Clique em "Nova Anamnese" para cadastrar uma nova</p>
-                        <p><strong>4.</strong> Visualize ou compare anamneses anteriores</p>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>CPF</th>
+                                        <th>Última Atualização</th>
+                                        <th>Status</th>
+                                        <th style="min-width: 280px;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anamnesesListaBody">
+                                    <tr><td colspan="5" class="text-center text-muted">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Sub-tab: Prontuário -->
             <div id="clientes-prontuario" class="sub-tab-content">
-                <div class="card mb-4">
-                    <div class="card-header"><i class="bi bi-funnel"></i> Buscar Cliente</div>
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-file-earmark-text"></i> Prontuário - Histórico de Clientes
+                        <button class="btn btn-primary btn-sm float-end" onclick="refreshData(this, carregarListaProntuario, 'Prontuário atualizado')">
+                            <i class="bi bi-arrow-clockwise"></i> Atualizar
+                        </button>
+                    </div>
                     <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-8">
-                                <label class="form-label">CPF do Cliente</label>
-                                <input type="text" id="prontuarioCPF" class="form-control" placeholder="000.000.000-00" maxlength="14">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">&nbsp;</label>
-                                <button class="btn btn-primary w-100" onclick="buscarProntuariosCliente()">
-                                    <i class="bi bi-search"></i> Buscar
-                                </button>
-                            </div>
+                        <div class="alert alert-info mb-4">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Gerenciamento de Prontuário:</strong> Visualize todos os clientes com prontuário cadastrado. Clique nos botões para visualizar documentos digitais ou físicos (escaneados).
                         </div>
-                    </div>
-                </div>
 
-                <div id="prontuariosResultado" style="display:none;">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-person-badge"></i> Cliente: <span id="prontuariosClienteNome"></span>
-                            <button class="bioma-btn bioma-btn-sm bioma-btn-success float-end" onclick="novoProntuarioModal()">
-                                <i class="bi bi-plus-circle"></i> Novo Prontuário
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> 
-                                <strong>Histórico de Atendimentos:</strong> Registro completo de todos os procedimentos realizados.
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Data Atendimento</th>
-                                            <th>Profissional</th>
-                                            <th>Procedimento</th>
-                                            <th>Próxima Sessão</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="prontuariosHistoricoBody">
-                                        <tr><td colspan="5" class="text-center text-muted">Nenhum prontuário encontrado</td></tr>
-                                    </tbody>
-                                </table>
+                        <!-- Busca rápida opcional -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <input type="text" id="buscaProntuario" class="form-control" placeholder="🔍 Buscar cliente por nome ou CPF..." onkeyup="filtrarProntuario()">
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div id="prontuarioMensagemInicial">
-                    <div class="alert alert-info">
-                        <h4><i class="bi bi-info-circle"></i> Sistema de Prontuário</h4>
-                        <p><strong>1.</strong> Digite o CPF do cliente no campo acima</p>
-                        <p><strong>2.</strong> Clique em "Buscar" para ver o histórico de atendimentos</p>
-                        <p><strong>3.</strong> Clique em "Novo Prontuário" para registrar um atendimento</p>
-                        <p><strong>4.</strong> Visualize, edite ou delete prontuários anteriores</p>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>CPF</th>
+                                        <th>Última Atualização</th>
+                                        <th>Status</th>
+                                        <th style="min-width: 280px;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="prontuariosListaBody">
+                                    <tr><td colspan="5" class="text-center text-muted">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -10929,6 +10886,838 @@ async function editarCliente(id){
         mostrarNotificacao('error', 'Não foi possível carregar o cliente para edição');
     }
 }
+
+// ========================================================================================
+// === FUNÇÕES DE ANAMNESE E PRONTUÁRIO ===
+// ========================================================================================
+
+/**
+ * Carrega lista de todos os clientes para Anamnese
+ */
+async function carregarListaAnamnese() {
+    try {
+        const response = await fetch('/api/clientes', {
+            credentials: 'include'
+        });
+        const clientes = await response.json();
+
+        const tbody = document.getElementById('anamnesesListaBody');
+
+        if (!clientes || clientes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado</td></tr>';
+            return;
+        }
+
+        // Renderizar cada cliente
+        const rows = clientes.map(cliente => {
+            const temAnamnese = cliente.anamnese && Object.keys(cliente.anamnese).length > 0;
+            const temDocumentoFisico = cliente.documentos_anamnese && cliente.documentos_anamnese.length > 0;
+
+            let statusBadge = '';
+            let ultimaAtualizacao = '-';
+
+            if (temAnamnese) {
+                statusBadge = '<span class="badge bg-success">Digital OK</span>';
+                if (cliente.anamnese.data_preenchimento) {
+                    ultimaAtualizacao = new Date(cliente.anamnese.data_preenchimento).toLocaleDateString('pt-BR');
+                }
+            }
+
+            if (temDocumentoFisico) {
+                statusBadge += ' <span class="badge bg-info">Físico OK</span>';
+            }
+
+            if (!temAnamnese && !temDocumentoFisico) {
+                statusBadge = '<span class="badge bg-secondary">Sem registro</span>';
+            }
+
+            return `
+                <tr>
+                    <td><strong>${cliente.nome}</strong></td>
+                    <td>${cliente.cpf || '-'}</td>
+                    <td>${ultimaAtualizacao}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="visualizarAnamneseDigital('${cliente._id}')"
+                                title="Ver Anamnese Digital" ${!temAnamnese ? 'disabled' : ''}>
+                            <i class="bi bi-file-earmark-medical"></i> Digital
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="visualizarAnamneseFisica('${cliente._id}')"
+                                title="Ver Documento Escaneado" ${!temDocumentoFisico ? 'disabled' : ''}>
+                            <i class="bi bi-file-earmark-image"></i> Físico
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="editarAnamnese('${cliente._id}')"
+                                title="Editar Anamnese">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="uploadAnamneseFisica('${cliente._id}')"
+                                title="Upload de Documento Escaneado">
+                            <i class="bi bi-upload"></i> Upload
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirAnamnese('${cliente._id}')"
+                                title="Excluir Anamnese" ${!temAnamnese && !temDocumentoFisico ? 'disabled' : ''}>
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        tbody.innerHTML = rows;
+
+    } catch (error) {
+        console.error('Erro ao carregar lista de anamnese:', error);
+        document.getElementById('anamnesesListaBody').innerHTML =
+            '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+    }
+}
+
+/**
+ * Filtra a tabela de anamnese baseado no input de busca
+ */
+function filtrarAnamnese() {
+    const busca = document.getElementById('buscaAnamnese').value.toLowerCase();
+    const tbody = document.getElementById('anamnesesListaBody');
+    const rows = tbody.getElementsByTagName('tr');
+
+    for (let row of rows) {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(busca) ? '' : 'none';
+    }
+}
+
+/**
+ * Visualiza a anamnese digital (criada no sistema) do cliente
+ */
+async function visualizarAnamneseDigital(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}`, {
+            credentials: 'include'
+        });
+        const cliente = await response.json();
+
+        if (!cliente.anamnese || Object.keys(cliente.anamnese).length === 0) {
+            Swal.fire('Aviso', 'Este cliente ainda não possui anamnese digital cadastrada', 'info');
+            return;
+        }
+
+        const anamnese = cliente.anamnese;
+
+        let html = `
+            <div class="text-start" style="max-height: 500px; overflow-y: auto;">
+                <h5 class="mb-3"><i class="bi bi-person"></i> ${cliente.nome}</h5>
+                <table class="table table-sm table-bordered">
+                    <tbody>
+        `;
+
+        // Renderizar todos os campos da anamnese
+        for (let [key, value] of Object.entries(anamnese)) {
+            if (key === '_id' || key === 'cliente_id') continue;
+
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            html += `
+                <tr>
+                    <td style="width: 40%; font-weight: bold;">${label}</td>
+                    <td style="width: 60%;">${value || '-'}</td>
+                </tr>
+            `;
+        }
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        Swal.fire({
+            title: 'Anamnese Digital',
+            html: html,
+            width: 800,
+            showCloseButton: true,
+            confirmButtonText: 'Fechar'
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar anamnese digital:', error);
+        Swal.fire('Erro', 'Não foi possível carregar a anamnese digital', 'error');
+    }
+}
+
+/**
+ * Visualiza os documentos físicos escaneados de anamnese do cliente
+ */
+async function visualizarAnamneseFisica(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}/anamnese/documentos`, {
+            credentials: 'include'
+        });
+        const result = await response.json();
+
+        if (!result.documentos || result.documentos.length === 0) {
+            Swal.fire('Aviso', 'Este cliente ainda não possui documentos físicos de anamnese', 'info');
+            return;
+        }
+
+        let html = `
+            <div class="text-start" style="max-height: 500px; overflow-y: auto;">
+                <p class="mb-3"><strong>Cliente:</strong> ${result.cliente_nome}</p>
+                <p class="mb-3"><strong>Total de documentos:</strong> ${result.documentos.length}</p>
+        `;
+
+        result.documentos.forEach((doc, index) => {
+            const dataUpload = doc.data_upload ? new Date(doc.data_upload).toLocaleString('pt-BR') : 'Data desconhecida';
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <strong>Documento ${index + 1}</strong>
+                        <small class="text-muted float-end">${dataUpload}</small>
+                    </div>
+                    <div class="card-body text-center">
+                        ${doc.tipo_arquivo === 'application/pdf' ?
+                            `<embed src="${doc.arquivo_base64}" type="application/pdf" width="100%" height="400px" />` :
+                            `<img src="${doc.arquivo_base64}" class="img-fluid" style="max-height: 400px;" />`
+                        }
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+
+        Swal.fire({
+            title: 'Documentos Físicos de Anamnese',
+            html: html,
+            width: 900,
+            showCloseButton: true,
+            confirmButtonText: 'Fechar'
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar documentos físicos:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os documentos físicos', 'error');
+    }
+}
+
+/**
+ * Abre modal para editar anamnese do cliente
+ */
+async function editarAnamnese(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}`, {
+            credentials: 'include'
+        });
+        const cliente = await response.json();
+
+        const anamnese = cliente.anamnese || {};
+
+        const html = `
+            <div class="text-start">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Queixa Principal</label>
+                        <textarea id="queixa_principal" class="form-control" rows="2">${anamnese.queixa_principal || ''}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">História da Doença Atual</label>
+                        <textarea id="historia_doenca" class="form-control" rows="3">${anamnese.historia_doenca || ''}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Histórico Médico</label>
+                        <textarea id="historico_medico" class="form-control" rows="3">${anamnese.historico_medico || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Medicamentos em Uso</label>
+                        <textarea id="medicamentos" class="form-control" rows="2">${anamnese.medicamentos || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Alergias</label>
+                        <textarea id="alergias" class="form-control" rows="2">${anamnese.alergias || ''}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Observações Adicionais</label>
+                        <textarea id="observacoes_anamnese" class="form-control" rows="2">${anamnese.observacoes || ''}</textarea>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const { value } = await Swal.fire({
+            title: `Editar Anamnese - ${cliente.nome}`,
+            html: html,
+            width: 800,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                return {
+                    queixa_principal: document.getElementById('queixa_principal').value.trim(),
+                    historia_doenca: document.getElementById('historia_doenca').value.trim(),
+                    historico_medico: document.getElementById('historico_medico').value.trim(),
+                    medicamentos: document.getElementById('medicamentos').value.trim(),
+                    alergias: document.getElementById('alergias').value.trim(),
+                    observacoes: document.getElementById('observacoes_anamnese').value.trim(),
+                    data_preenchimento: new Date().toISOString()
+                };
+            }
+        });
+
+        if (value) {
+            const updateResponse = await fetch(`/api/clientes/${clienteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ anamnese: value })
+            });
+
+            if (updateResponse.ok) {
+                Swal.fire('Sucesso', 'Anamnese atualizada com sucesso!', 'success');
+                carregarListaAnamnese();
+            } else {
+                Swal.fire('Erro', 'Não foi possível atualizar a anamnese', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao editar anamnese:', error);
+        Swal.fire('Erro', 'Não foi possível carregar a anamnese para edição', 'error');
+    }
+}
+
+/**
+ * Exclui a anamnese do cliente (digital e documentos físicos)
+ */
+async function excluirAnamnese(clienteId) {
+    try {
+        const result = await Swal.fire({
+            title: 'Excluir Anamnese?',
+            html: `
+                <p>Esta ação irá remover:</p>
+                <ul class="text-start">
+                    <li>Anamnese digital (preenchida no sistema)</li>
+                    <li>Todos os documentos físicos escaneados</li>
+                </ul>
+                <p class="text-danger"><strong>Esta ação não pode ser desfeita!</strong></p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            const response = await fetch(`/api/clientes/${clienteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    anamnese: {},
+                    documentos_anamnese: []
+                })
+            });
+
+            if (response.ok) {
+                Swal.fire('Excluído!', 'Anamnese removida com sucesso', 'success');
+                carregarListaAnamnese();
+            } else {
+                Swal.fire('Erro', 'Não foi possível excluir a anamnese', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao excluir anamnese:', error);
+        Swal.fire('Erro', 'Não foi possível excluir a anamnese', 'error');
+    }
+}
+
+/**
+ * Faz upload de documento físico escaneado de anamnese
+ */
+async function uploadAnamneseFisica(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}`, {
+            credentials: 'include'
+        });
+        const cliente = await response.json();
+
+        const { value: file } = await Swal.fire({
+            title: `Upload de Anamnese - ${cliente.nome}`,
+            html: `
+                <div class="text-start">
+                    <p class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Dica:</strong> Escaneie o documento físico e faça upload da imagem ou PDF.
+                    </p>
+                    <label class="form-label">Selecione o arquivo (imagem ou PDF)</label>
+                    <input type="file" id="arquivo-anamnese" class="form-control" accept="image/*,application/pdf">
+                </div>
+            `,
+            width: 600,
+            showCancelButton: true,
+            confirmButtonText: 'Upload',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const fileInput = document.getElementById('arquivo-anamnese');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    Swal.showValidationMessage('Por favor, selecione um arquivo');
+                    return false;
+                }
+                return fileInput.files[0];
+            }
+        });
+
+        if (file) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Fazendo upload...',
+                html: 'Por favor aguarde',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('arquivo', file);
+
+            const uploadResponse = await fetch(`/api/clientes/${clienteId}/anamnese/upload`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+
+            if (uploadResponse.ok) {
+                Swal.fire('Sucesso', 'Documento enviado com sucesso!', 'success');
+                carregarListaAnamnese();
+            } else {
+                const errorData = await uploadResponse.json();
+                Swal.fire('Erro', errorData.error || 'Não foi possível fazer upload do documento', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao fazer upload:', error);
+        Swal.fire('Erro', 'Não foi possível fazer upload do documento', 'error');
+    }
+}
+
+/**
+ * Carrega lista de todos os clientes para Prontuário
+ */
+async function carregarListaProntuario() {
+    try {
+        const response = await fetch('/api/clientes', {
+            credentials: 'include'
+        });
+        const clientes = await response.json();
+
+        const tbody = document.getElementById('prontuariosListaBody');
+
+        if (!clientes || clientes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado</td></tr>';
+            return;
+        }
+
+        // Renderizar cada cliente
+        const rows = clientes.map(cliente => {
+            const temProntuario = cliente.prontuario && Object.keys(cliente.prontuario).length > 0;
+            const temDocumentoFisico = cliente.documentos_prontuario && cliente.documentos_prontuario.length > 0;
+
+            let statusBadge = '';
+            let ultimaAtualizacao = '-';
+
+            if (temProntuario) {
+                statusBadge = '<span class="badge bg-success">Digital OK</span>';
+                if (cliente.prontuario.data_atendimento) {
+                    ultimaAtualizacao = new Date(cliente.prontuario.data_atendimento).toLocaleDateString('pt-BR');
+                }
+            }
+
+            if (temDocumentoFisico) {
+                statusBadge += ' <span class="badge bg-info">Físico OK</span>';
+            }
+
+            if (!temProntuario && !temDocumentoFisico) {
+                statusBadge = '<span class="badge bg-secondary">Sem registro</span>';
+            }
+
+            return `
+                <tr>
+                    <td><strong>${cliente.nome}</strong></td>
+                    <td>${cliente.cpf || '-'}</td>
+                    <td>${ultimaAtualizacao}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="visualizarProntuarioDigital('${cliente._id}')"
+                                title="Ver Prontuário Digital" ${!temProntuario ? 'disabled' : ''}>
+                            <i class="bi bi-file-earmark-text"></i> Digital
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="visualizarProntuarioFisico('${cliente._id}')"
+                                title="Ver Documento Escaneado" ${!temDocumentoFisico ? 'disabled' : ''}>
+                            <i class="bi bi-file-earmark-image"></i> Físico
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="editarProntuario('${cliente._id}')"
+                                title="Editar Prontuário">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="uploadProntuarioFisico('${cliente._id}')"
+                                title="Upload de Documento Escaneado">
+                            <i class="bi bi-upload"></i> Upload
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="excluirProntuario('${cliente._id}')"
+                                title="Excluir Prontuário" ${!temProntuario && !temDocumentoFisico ? 'disabled' : ''}>
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        tbody.innerHTML = rows;
+
+    } catch (error) {
+        console.error('Erro ao carregar lista de prontuário:', error);
+        document.getElementById('prontuariosListaBody').innerHTML =
+            '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+    }
+}
+
+/**
+ * Filtra a tabela de prontuário baseado no input de busca
+ */
+function filtrarProntuario() {
+    const busca = document.getElementById('buscaProntuario').value.toLowerCase();
+    const tbody = document.getElementById('prontuariosListaBody');
+    const rows = tbody.getElementsByTagName('tr');
+
+    for (let row of rows) {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(busca) ? '' : 'none';
+    }
+}
+
+/**
+ * Visualiza o prontuário digital (criado no sistema) do cliente
+ */
+async function visualizarProntuarioDigital(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}`, {
+            credentials: 'include'
+        });
+        const cliente = await response.json();
+
+        if (!cliente.prontuario || Object.keys(cliente.prontuario).length === 0) {
+            Swal.fire('Aviso', 'Este cliente ainda não possui prontuário digital cadastrado', 'info');
+            return;
+        }
+
+        const prontuario = cliente.prontuario;
+
+        let html = `
+            <div class="text-start" style="max-height: 500px; overflow-y: auto;">
+                <h5 class="mb-3"><i class="bi bi-person"></i> ${cliente.nome}</h5>
+                <table class="table table-sm table-bordered">
+                    <tbody>
+        `;
+
+        // Renderizar todos os campos do prontuário
+        for (let [key, value] of Object.entries(prontuario)) {
+            if (key === '_id' || key === 'cliente_id') continue;
+
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            html += `
+                <tr>
+                    <td style="width: 40%; font-weight: bold;">${label}</td>
+                    <td style="width: 60%;">${value || '-'}</td>
+                </tr>
+            `;
+        }
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        Swal.fire({
+            title: 'Prontuário Digital',
+            html: html,
+            width: 800,
+            showCloseButton: true,
+            confirmButtonText: 'Fechar'
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar prontuário digital:', error);
+        Swal.fire('Erro', 'Não foi possível carregar o prontuário digital', 'error');
+    }
+}
+
+/**
+ * Visualiza os documentos físicos escaneados de prontuário do cliente
+ */
+async function visualizarProntuarioFisico(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}/prontuario/documentos`, {
+            credentials: 'include'
+        });
+        const result = await response.json();
+
+        if (!result.documentos || result.documentos.length === 0) {
+            Swal.fire('Aviso', 'Este cliente ainda não possui documentos físicos de prontuário', 'info');
+            return;
+        }
+
+        let html = `
+            <div class="text-start" style="max-height: 500px; overflow-y: auto;">
+                <p class="mb-3"><strong>Cliente:</strong> ${result.cliente_nome}</p>
+                <p class="mb-3"><strong>Total de documentos:</strong> ${result.documentos.length}</p>
+        `;
+
+        result.documentos.forEach((doc, index) => {
+            const dataUpload = doc.data_upload ? new Date(doc.data_upload).toLocaleString('pt-BR') : 'Data desconhecida';
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <strong>Documento ${index + 1}</strong>
+                        <small class="text-muted float-end">${dataUpload}</small>
+                    </div>
+                    <div class="card-body text-center">
+                        ${doc.tipo_arquivo === 'application/pdf' ?
+                            `<embed src="${doc.arquivo_base64}" type="application/pdf" width="100%" height="400px" />` :
+                            `<img src="${doc.arquivo_base64}" class="img-fluid" style="max-height: 400px;" />`
+                        }
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+
+        Swal.fire({
+            title: 'Documentos Físicos de Prontuário',
+            html: html,
+            width: 900,
+            showCloseButton: true,
+            confirmButtonText: 'Fechar'
+        });
+
+    } catch (error) {
+        console.error('Erro ao visualizar documentos físicos:', error);
+        Swal.fire('Erro', 'Não foi possível carregar os documentos físicos', 'error');
+    }
+}
+
+/**
+ * Abre modal para editar prontuário do cliente
+ */
+async function editarProntuario(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}`, {
+            credentials: 'include'
+        });
+        const cliente = await response.json();
+
+        const prontuario = cliente.prontuario || {};
+
+        const html = `
+            <div class="text-start">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Data do Atendimento</label>
+                        <input type="date" id="data_atendimento" class="form-control" value="${prontuario.data_atendimento ? prontuario.data_atendimento.substring(0,10) : ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Profissional Responsável</label>
+                        <input type="text" id="profissional" class="form-control" value="${prontuario.profissional || ''}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Procedimento Realizado</label>
+                        <textarea id="procedimento" class="form-control" rows="2">${prontuario.procedimento || ''}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Observações do Atendimento</label>
+                        <textarea id="observacoes_atendimento" class="form-control" rows="3">${prontuario.observacoes || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Produtos Utilizados</label>
+                        <textarea id="produtos_utilizados" class="form-control" rows="2">${prontuario.produtos_utilizados || ''}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Próxima Sessão</label>
+                        <input type="date" id="proxima_sessao" class="form-control" value="${prontuario.proxima_sessao ? prontuario.proxima_sessao.substring(0,10) : ''}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Recomendações</label>
+                        <textarea id="recomendacoes" class="form-control" rows="2">${prontuario.recomendacoes || ''}</textarea>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const { value } = await Swal.fire({
+            title: `Editar Prontuário - ${cliente.nome}`,
+            html: html,
+            width: 800,
+            showCancelButton: true,
+            confirmButtonText: 'Salvar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                return {
+                    data_atendimento: document.getElementById('data_atendimento').value,
+                    profissional: document.getElementById('profissional').value.trim(),
+                    procedimento: document.getElementById('procedimento').value.trim(),
+                    observacoes: document.getElementById('observacoes_atendimento').value.trim(),
+                    produtos_utilizados: document.getElementById('produtos_utilizados').value.trim(),
+                    proxima_sessao: document.getElementById('proxima_sessao').value,
+                    recomendacoes: document.getElementById('recomendacoes').value.trim()
+                };
+            }
+        });
+
+        if (value) {
+            const updateResponse = await fetch(`/api/clientes/${clienteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ prontuario: value })
+            });
+
+            if (updateResponse.ok) {
+                Swal.fire('Sucesso', 'Prontuário atualizado com sucesso!', 'success');
+                carregarListaProntuario();
+            } else {
+                Swal.fire('Erro', 'Não foi possível atualizar o prontuário', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao editar prontuário:', error);
+        Swal.fire('Erro', 'Não foi possível carregar o prontuário para edição', 'error');
+    }
+}
+
+/**
+ * Exclui o prontuário do cliente (digital e documentos físicos)
+ */
+async function excluirProntuario(clienteId) {
+    try {
+        const result = await Swal.fire({
+            title: 'Excluir Prontuário?',
+            html: `
+                <p>Esta ação irá remover:</p>
+                <ul class="text-start">
+                    <li>Prontuário digital (preenchido no sistema)</li>
+                    <li>Todos os documentos físicos escaneados</li>
+                </ul>
+                <p class="text-danger"><strong>Esta ação não pode ser desfeita!</strong></p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            const response = await fetch(`/api/clientes/${clienteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    prontuario: {},
+                    documentos_prontuario: []
+                })
+            });
+
+            if (response.ok) {
+                Swal.fire('Excluído!', 'Prontuário removido com sucesso', 'success');
+                carregarListaProntuario();
+            } else {
+                Swal.fire('Erro', 'Não foi possível excluir o prontuário', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao excluir prontuário:', error);
+        Swal.fire('Erro', 'Não foi possível excluir o prontuário', 'error');
+    }
+}
+
+/**
+ * Faz upload de documento físico escaneado de prontuário
+ */
+async function uploadProntuarioFisico(clienteId) {
+    try {
+        const response = await fetch(`/api/clientes/${clienteId}`, {
+            credentials: 'include'
+        });
+        const cliente = await response.json();
+
+        const { value: file } = await Swal.fire({
+            title: `Upload de Prontuário - ${cliente.nome}`,
+            html: `
+                <div class="text-start">
+                    <p class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Dica:</strong> Escaneie o documento físico e faça upload da imagem ou PDF.
+                    </p>
+                    <label class="form-label">Selecione o arquivo (imagem ou PDF)</label>
+                    <input type="file" id="arquivo-prontuario" class="form-control" accept="image/*,application/pdf">
+                </div>
+            `,
+            width: 600,
+            showCancelButton: true,
+            confirmButtonText: 'Upload',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const fileInput = document.getElementById('arquivo-prontuario');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    Swal.showValidationMessage('Por favor, selecione um arquivo');
+                    return false;
+                }
+                return fileInput.files[0];
+            }
+        });
+
+        if (file) {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Fazendo upload...',
+                html: 'Por favor aguarde',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('arquivo', file);
+
+            const uploadResponse = await fetch(`/api/clientes/${clienteId}/prontuario/upload`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+
+            if (uploadResponse.ok) {
+                Swal.fire('Sucesso', 'Documento enviado com sucesso!', 'success');
+                carregarListaProntuario();
+            } else {
+                const errorData = await uploadResponse.json();
+                Swal.fire('Erro', errorData.error || 'Não foi possível fazer upload do documento', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error('Erro ao fazer upload:', error);
+        Swal.fire('Erro', 'Não foi possível fazer upload do documento', 'error');
+    }
+}
+
+// ========================================================================================
 
 async function loadProfissionais(){
     const key = 'loadProfissionais';
