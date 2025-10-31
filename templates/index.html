@@ -3484,6 +3484,29 @@
             }
         }
 
+/* ========== (Ponto 11) ANIMAÇÃO ESTOQUE CRÍTICO (v6.0) ========== */
+.badge-pulse-danger {
+    background: linear-gradient(135deg, var(--danger), #DC2626) !important;
+    color: white !important;
+    animation: pulse-red-v6 2s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+}
+
+@keyframes pulse-red-v6 {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
 </style>
 
 <!-- ========== MELHORIAS DE UX E ANIMAÇÕES V4.1 ========== -->
@@ -4023,7 +4046,7 @@
 // VERSÃO DO BUILD - Injetada pelo Flask via Jinja2
 // ============================================================
 const BUILD_TIMESTAMP = '{{ cache_buster|default("LOCAL", true) }}';
-const APP_VERSION = 'v5.3.8';
+const APP_VERSION = 'v6.0';
 
 console.log('%c═══════════════════════════════════════════════════════════', 'color: #7C3AED;');
 console.log(`%c🔥 BIOMA ${APP_VERSION} - Build: ${BUILD_TIMESTAMP}`, 'background: #7C3AED; color: white; font-size: 16px; padding: 10px; font-weight: bold;');
@@ -8608,7 +8631,7 @@ function goTo(section){
         console.error('❌ Erro navegação:',e);
     } finally {
         // Resetar flag após 1 segundo
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 
 }
@@ -9002,7 +9025,7 @@ async function loadEstoque(){
             await loadEstoqueResumo(); // Chama novamente para garantir gráficos
         }
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -9099,7 +9122,7 @@ async function loadEstoqueResumo(){
     }catch(error){
         console.error('Erro ao carregar resumo de estoque', error);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -9177,7 +9200,7 @@ async function loadEstoquePendentes(){
         if(tbody) tbody.innerHTML = errorMsg;
         if(container) container.innerHTML = '<p class="text-center text-danger">Erro ao carregar dados</p>';
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -9243,7 +9266,7 @@ async function loadEstoqueMovimentos(){
         console.error('Erro ao carregar movimentações', error);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados</td></tr>';
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -9705,7 +9728,7 @@ async function loadConfiguracoes(force=false){
     }catch(error){
         console.error('Erro ao carregar configurações', error);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
     return configuracoesAtuais;
 }
@@ -10003,7 +10026,7 @@ async function loadDashboard(){
     }catch(e){
         console.error('❌ Dashboard error:',e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -10044,7 +10067,7 @@ async function verificarStatus(){
     }catch(e){
         console.error('❌ Status error:',e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 
     // Verificar status dos novos recursos
@@ -10398,7 +10421,7 @@ async function loadClientes(){
         console.error('Erro ao carregar clientes', e);
         document.getElementById('clientesBody').innerHTML='<tr><td colspan="6" class="text-center text-danger">Erro</td></tr>';
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -10948,7 +10971,7 @@ async function loadProfissionais(){
     }catch(e){
         console.error(e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -10989,7 +11012,7 @@ async function loadAssistentes() {
     } catch(e) {
         console.error('Erro ao carregar assistentes:', e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -12536,7 +12559,7 @@ async function loadServicosLista(){
     }catch(e){
         console.error('❌ Erro ao carregar serviços:', e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -12907,7 +12930,7 @@ async function loadProdutosLista(){
     }catch(e){
         console.error('❌ Erro ao carregar produtos:', e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -13072,7 +13095,7 @@ async function loadConsultar(){
         const tbody=document.getElementById('consultaBody');
         tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger">Erro ao carregar orçamentos</td></tr>';
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -13199,7 +13222,7 @@ async function loadContratos(){
         console.error('❌ Erro ao carregar contratos:',e);
         Swal.fire('Erro','Não foi possível carregar os contratos','error');
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -13663,7 +13686,7 @@ async function loadFila(silent = false){
             Swal.fire('Erro','Não foi possível carregar a fila','error');
         }
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -13902,7 +13925,7 @@ async function loadAgendamentos(){
     }catch(e){
         console.error('❌ Erro ao carregar agendamentos:',e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -15238,6 +15261,101 @@ function cancelarOrc(){
     if(window.orcamentoEditandoId){delete window.orcamentoEditandoId;}
 }
 
+// (Ponto 5) Funções de aprovação/rejeição de orçamento
+async function aprovarOrcamento(id) {
+    const result = await Swal.fire({
+        title: 'Aprovar Orçamento?',
+        text: 'O orçamento será movido para "Aprovados".',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, Aprovar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10B981'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const res = await fetch(`/api/orcamentos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ status: 'Aprovado' })
+            });
+
+            if (!res.ok) throw new Error('Erro ao aprovar orçamento');
+
+            Swal.fire('Aprovado!', 'Orçamento aprovado com sucesso', 'success');
+            // Recarregar ambas as abas
+            carregarOrcamentosPendentes();
+            carregarOrcamentosAprovados();
+
+        } catch (error) {
+            console.error('Erro:', error);
+            Swal.fire('Erro', 'Não foi possível aprovar o orçamento', 'error');
+        }
+    }
+}
+
+async function rejeitarOrcamento(id) {
+    const { value: motivo } = await Swal.fire({
+        title: 'Rejeitar Orçamento',
+        input: 'textarea',
+        inputLabel: 'Motivo da rejeição (opcional)',
+        inputPlaceholder: 'Digite o motivo...',
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar Rejeição',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EF4444'
+    });
+
+    if (motivo !== undefined) { // Permite motivo vazio
+        try {
+            const res = await fetch(`/api/orcamentos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ status: 'Rejeitado', motivo_rejeicao: motivo || 'Nenhum motivo informado' })
+            });
+
+            if (!res.ok) throw new Error('Erro ao rejeitar orçamento');
+
+            Swal.fire('Rejeitado!', 'Orçamento rejeitado com sucesso', 'success');
+            // Recarregar ambas as abas
+            carregarOrcamentosPendentes();
+            carregarOrcamentosRejeitados();
+
+        } catch (error) {
+            console.error('Erro:', error);
+            Swal.fire('Erro', 'Não foi possível rejeitar o orçamento', 'error');
+        }
+    }
+}
+
+async function deletarOrcamento(id) {
+    const result = await Swal.fire({
+        title: 'Deletar Orçamento?',
+        text: 'Esta ação não pode ser desfeita e removerá o registro permanentemente.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sim, Deletar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#EF4444'
+    });
+    if (result.isConfirmed) {
+        try {
+            await fetch(`/api/orcamentos/${id}`, { method: 'DELETE', credentials: 'include' });
+            Swal.fire('Deletado!', 'Orçamento removido com sucesso.', 'success');
+            // Recarregar todas as abas de orçamento
+            carregarOrcamentosPendentes();
+            carregarOrcamentosAprovados();
+            carregarOrcamentosRejeitados();
+            carregarHistoricoOrcamentos();
+        } catch (e) {
+            Swal.fire('Erro', 'Não foi possível deletar o orçamento.', 'error');
+        }
+    }
+}
+
 let chartServicos=null,chartFaturamento=null;
 let assistentesCache=[];
 let anamneseDef=null;
@@ -15252,6 +15370,131 @@ let filtrosFinanceiro = {
     dataInicio: null,
     dataFim: null
 };
+
+// ==========================================================
+// ========== (Ponto 1 & 3) FILTROS E PDF C/GRÁFICOS (v6.0) ====
+// ==========================================================
+
+/**
+ * Obtém os filtros de data ativos nas abas Financeiro ou Relatórios.
+ * Retorna um objeto { data_inicio, data_fim }
+ */
+function getFiltrosDeDataAtivos() {
+    const activeSection = document.querySelector('.content-section.active')?.id;
+    let data_inicio = '', data_fim = '';
+
+    if (activeSection === 'section-financeiro') {
+        data_inicio = document.getElementById('financeiroDataInicio')?.value;
+        data_fim = document.getElementById('financeiroDataFim')?.value;
+    } else if (activeSection === 'section-relatorios') {
+        data_inicio = document.getElementById('relatorioDataInicio')?.value;
+        data_fim = document.getElementById('relatorioDataFim')?.value;
+    }
+
+    // Formatar para ISOString se existirem
+    if (data_inicio) data_inicio = new Date(data_inicio + 'T00:00:00').toISOString();
+    if (data_fim) data_fim = new Date(data_fim + 'T23:59:59').toISOString();
+
+    return { data_inicio, data_fim };
+}
+
+/**
+ * Recarrega todos os gráficos da aba atual, aplicando filtros.
+ */
+async function recarregarGraficosComFiltros() {
+    const { data_inicio, data_fim } = getFiltrosDeDataAtivos();
+    const activeSection = document.querySelector('.content-section.active')?.id;
+
+    if (activeSection === 'section-financeiro') {
+        await carregarFaturamentoMensal(data_inicio, data_fim);
+        await carregarServicosMaisVendidos(data_inicio, data_fim);
+        await carregarProdutosMaisVendidos(data_inicio, data_fim);
+    } else if (activeSection === 'section-relatorios') {
+        await loadRelatorios(data_inicio, data_fim);
+    }
+}
+
+/**
+ * Exporta um relatório em PDF, incluindo imagens dos gráficos.
+ */
+async function exportarRelatorioComGrafico() {
+    const { data_inicio, data_fim } = getFiltrosDeDataAtivos();
+    const activeSection = document.querySelector('.content-section.active')?.id;
+
+    let chart1_id = null;
+    let chart2_id = null;
+
+    if (activeSection === 'section-financeiro') {
+        chart1_id = 'graficoFaturamentoMensal';
+        chart2_id = 'graficoServicosMaisVendidos';
+    } else if (activeSection === 'section-relatorios') {
+        chart1_id = 'chartFaturamento';
+        chart2_id = 'chartServicos';
+    } else {
+        mostrarNotificacao('error', 'Não há gráficos para exportar nesta aba', 3000);
+        return;
+    }
+
+    try {
+        Swal.fire({
+            title: 'Gerando PDF...',
+            html: 'Convertendo gráficos e montando o documento...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        // 1. Converter gráficos para imagem base64
+        const getChartImage = (canvasId) => {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+            return canvas.toDataURL('image/png');
+        };
+
+        const img_grafico1 = getChartImage(chart1_id);
+        const img_grafico2 = getChartImage(chart2_id);
+
+        // 2. Montar payload
+        const payload = {
+            data_inicio: data_inicio ? new Date(data_inicio).toLocaleDateString('pt-BR') : 'N/A',
+            data_fim: data_fim ? new Date(data_fim).toLocaleDateString('pt-BR') : 'N/A',
+            img_vendas_mes: img_grafico1,
+            img_top_servicos: img_grafico2
+        };
+
+        // 3. Enviar para o backend
+        const res = await fetch('/api/relatorios/exportar-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || 'Erro do servidor ao gerar PDF');
+        }
+
+        // 4. Baixar o PDF retornado
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Relatorio_${activeSection}_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        Swal.close();
+        mostrarNotificacao('success', 'PDF gerado com sucesso!', 3000);
+
+    } catch (err) {
+        console.error('Erro ao exportar PDF com gráficos:', err);
+        Swal.fire('Erro', `Não foi possível gerar o PDF: ${err.message}`, 'error');
+    }
+}
+
+// ========== FIM FILTROS E EXPORTAÇÃO (v6.0) ==========
 
 // Função para atualizar relatórios
 async function atualizarRelatorios() {
@@ -15733,7 +15976,7 @@ async function loadRelatorios(){
     }catch(e){
         console.error('❌ Relatórios error:',e);
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -15925,8 +16168,40 @@ async function testarEmailConfig() {
     }
 }
 
-function salvarConfigOp(){
-    Swal.fire({icon:'success',title:'✅ Configurações operacionais salvas',timer:2000});
+// (Ponto 2) Função atualizada para salvar configs operacionais
+async function salvarConfigOp() {
+    try {
+        const payload = {
+            horario_abertura: document.getElementById('cfgHorarioAbertura').value,
+            horario_fechamento: document.getElementById('cfgHorarioFechamento').value,
+            duracao_padrao: parseInt(document.getElementById('cfgDuracaoPadrao').value) || 60,
+            cashback_padrao: parseFloat(document.getElementById('cfgCashbackPadrao').value) || 5,
+            comissao_padrao: parseFloat(document.getElementById('cfgComissaoPadrao').value) || 10,
+        };
+
+        // Usar o endpoint /api/config existente
+        const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload) // Envia SOMENTE os campos operacionais
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            Swal.fire({ icon: 'success', title: 'Configurações salvas!', timer: 2000 });
+            // Atualizar cache local
+            if (configuracoesAtuais) {
+                configuracoesAtuais = { ...configuracoesAtuais, ...payload };
+            }
+        } else {
+            throw new Error(data.message || 'Não foi possível salvar');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar config operacional:', error);
+        Swal.fire('Erro', 'Não foi possível salvar as configurações.', 'error');
+    }
 }
 
 // ====== NOVAS FUNÇÕES - AUDITORIA E DASHBOARD ======
@@ -16019,7 +16294,7 @@ async function loadAuditoria() {
         console.error('Erro ao carregar auditoria:', error);
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar registros de auditoria</td></tr>';
     } finally {
-        setTimeout(() => setLoading(key, false), 1000);
+        setTimeout(() => setLoading(key, false), 250);
     }
 }
 
@@ -17204,9 +17479,7 @@ function calcularTotalOrcamentoBase() {
 
 // ====== FIM NOVAS FUNÇÕES ======
 
-function salvarConfigOp(){
-    Swal.fire({icon:'info',title:'Configurações operacionais',text:'Valores registrados localmente. Ajuste manualmente horários e comissões conforme necessidade.'});
-}
+// Função removida - duplicada, já implementada acima
 
 console.log('%c✅ BIOMA v4.0 COMPLETO - 100% FUNCIONAL','color:#10B981;font-size:18px;font-weight:900');
 console.log('%c🔥 Todas as funções implementadas sem erros','color:#7C3AED;font-size:14px;font-weight:700');
@@ -18180,7 +18453,7 @@ async function loadSystem(){
       </div>`;
   }catch{}
   finally {
-      setTimeout(() => setLoading(key, false), 1000);
+      setTimeout(() => setLoading(key, false), 250);
   }
 }
 
@@ -21644,15 +21917,13 @@ async function carregarProdutosEstoque() {
                 const preco = parseFloat(prod.preco || 0);
                 const valorTotal = quantidade * preco;
 
+                // LÓGICA V6.0: < 5 = Vermelho Pulsante, >= 5 = Verde
                 let statusBadge = '';
                 let statusClass = '';
 
-                if(quantidade === 0){
-                    statusBadge = '<span class="badge danger">Esgotado</span>';
+                if(quantidade < 5){
+                    statusBadge = '<span class="badge badge-pulse-danger">Crítico</span>';
                     statusClass = 'text-danger';
-                } else if(quantidade <= minimo){
-                    statusBadge = '<span class="badge warning">Estoque Baixo</span>';
-                    statusClass = 'text-warning';
                 } else {
                     statusBadge = '<span class="badge success">Disponível</span>';
                     statusClass = '';

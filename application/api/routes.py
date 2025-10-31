@@ -114,7 +114,7 @@ def health():
 
     response = {
         'status': 'healthy' if db_status == 'connected' else 'degraded',
-        'version': '3.7.0',
+        'version': '6.0',
         'time': datetime.now().isoformat(),
         'database': db_status,
         'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
@@ -3278,6 +3278,12 @@ def config():
             'cnpj': data.get('cnpj', ''),
             'cor_primaria': data.get('cor_primaria', '#7C3AED'),
             'cor_secundaria': data.get('cor_secundaria', '#EC4899'),
+            # (Ponto 2) CAMPOS OPERACIONAIS ADICIONADOS
+            'horario_abertura': data.get('horario_abertura', '08:00'),
+            'horario_fechamento': data.get('horario_fechamento', '19:00'),
+            'duracao_padrao': data.get('duracao_padrao', 60),
+            'cashback_padrao': data.get('cashback_padrao', 5),
+            'comissao_padrao': data.get('comissao_padrao', 10),
             'updated_at': datetime.now()
         }
         
@@ -4396,16 +4402,19 @@ def relatorio_vendas_por_mes():
         return jsonify({'success': False, 'message': 'Database offline'}), 500
 
     try:
-        # Parâmetros
-        meses = int(request.args.get('meses', 12))  # Últimos 12 meses por padrão
-        data_inicio = datetime.now() - timedelta(days=meses * 30)
+        # (Ponto 1) Funções de Relatório atualizadas para aceitar filtros de data
+        data_inicio_str = request.args.get('data_inicio')
+        data_fim_str = request.args.get('data_fim')
+
+        match_query = {'status': 'Aprovado'}
+        if data_inicio_str:
+            match_query['created_at'] = {'$gte': datetime.fromisoformat(data_inicio_str)}
+        if data_fim_str:
+            match_query.setdefault('created_at', {})['$lte'] = datetime.fromisoformat(data_fim_str)
 
         # Pipeline de agregação - vendas por mês
         pipeline = [
-            {'$match': {
-                'created_at': {'$gte': data_inicio},
-                'status': 'Aprovado'
-            }},
+            {'$match': match_query},
             {'$group': {
                 '_id': {
                     'ano': {'$year': '$created_at'},
@@ -4483,16 +4492,19 @@ def relatorio_servicos_top():
         return jsonify({'success': False, 'message': 'Database offline'}), 500
 
     try:
-        # Parâmetros
-        dias = int(request.args.get('dias', 90))
+        # Parâmetros atualizados para filtros de data
         limite = int(request.args.get('limite', 10))
-        data_inicio = datetime.now() - timedelta(days=dias)
+        data_inicio_str = request.args.get('data_inicio')
+        data_fim_str = request.args.get('data_fim')
+
+        match_query = {'status': 'Aprovado'}
+        if data_inicio_str:
+            match_query['created_at'] = {'$gte': datetime.fromisoformat(data_inicio_str)}
+        if data_fim_str:
+            match_query.setdefault('created_at', {})['$lte'] = datetime.fromisoformat(data_fim_str)
 
         # Buscar orçamentos aprovados
-        orcamentos = list(db.orcamentos.find({
-            'status': 'Aprovado',
-            'created_at': {'$gte': data_inicio}
-        }))
+        orcamentos = list(db.orcamentos.find(match_query))
 
         # Agregar serviços
         servicos_map = {}
@@ -4753,6 +4765,99 @@ def relatorio_taxa_conversao():
 
     except Exception as e:
         logger.error(f"Erro ao gerar relatório de taxa de conversão: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/api/relatorios/exportar-pdf', methods=['POST'])
+@login_required
+@permission_required('Admin', 'Gestão')
+def exportar_relatorio_pdf_com_grafico():
+    """
+    (Ponto 3) NOVO ENDPOINT: Recebe imagens base64 dos gráficos e as insere em um PDF.
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({'success': False}), 500
+
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.utils import ImageReader
+        from reportlab.lib.colors import HexColor
+        import base64
+        import io
+
+        data = request.json
+        data_inicio = data.get('data_inicio', (datetime.now() - timedelta(days=30)).strftime('%d/%m/%Y'))
+        data_fim = data.get('data_fim', datetime.now().strftime('%d/%m/%Y'))
+
+        # Imagens dos gráficos (base64)
+        img_vendas_mes = data.get('img_vendas_mes')  # Gráfico 1
+        img_top_servicos = data.get('img_top_servicos')  # Gráfico 2
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm,
+                              topMargin=1.5*cm, bottomMargin=2.5*cm)
+        elements = []
+
+        # Configurar estilos
+        styles = getSampleStyleSheet()
+        COLOR_PRIMARY = HexColor('#7C3AED')
+        styles.add(ParagraphStyle(name='MainTitle', fontName='Helvetica-Bold',
+                                 fontSize=20, textColor=COLOR_PRIMARY, spaceAfter=18, alignment=1))
+        styles.add(ParagraphStyle(name='SectionTitle', fontName='Helvetica-Bold',
+                                 fontSize=14, textColor=COLOR_PRIMARY, spaceAfter=10))
+
+        # Título
+        elements.append(Paragraph("RELATÓRIO FINANCEIRO", styles['MainTitle']))
+        elements.append(Paragraph(f"Período: {data_inicio} a {data_fim}", styles['Normal']))
+        elements.append(Spacer(1, 1*cm))
+
+        # Função para adicionar imagem base64
+        def add_base64_image(img_data_uri):
+            if not img_data_uri or ',' not in img_data_uri:
+                return Paragraph("Erro: Imagem do gráfico indisponível.", styles['Normal'])
+
+            img_data = base64.b64decode(img_data_uri.split(',')[1])
+            img_file = io.BytesIO(img_data)
+            img = ImageReader(img_file)
+
+            # Redimensionar para caber na página
+            width, height = img.getSize()
+            max_width = A4[0] - 4*cm  # Largura da página menos margens
+            if width > max_width:
+                ratio = max_width / width
+                height = height * ratio
+                width = max_width
+
+            return Image(img_file, width=width, height=height)
+
+        # Adicionar Gráfico 1 (Vendas por Mês)
+        if img_vendas_mes:
+            elements.append(Paragraph("Vendas por Mês", styles['SectionTitle']))
+            elements.append(add_base64_image(img_vendas_mes))
+            elements.append(Spacer(1, 1*cm))
+
+        # Adicionar Gráfico 2 (Top Serviços)
+        if img_top_servicos:
+            elements.append(Paragraph("Top Serviços (Faturamento)", styles['SectionTitle']))
+            elements.append(add_base64_image(img_top_servicos))
+            elements.append(Spacer(1, 1*cm))
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"relatorio_financeiro_{datetime.now().strftime('%Y%m%d')}.pdf"
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar PDF com gráficos: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 13. Editar Serviço
@@ -7296,7 +7401,8 @@ def produto_detalhes(id):
         if 'preco' in data:
             update_data['preco'] = float(data['preco'])
         if 'estoque' in data:
-            update_data['estoque'] = int(data['estoque'])
+            # Garante que o valor não seja None nem string vazia antes de converter para int
+            update_data['estoque'] = int(data.get('estoque') or 0)
         if 'estoque_minimo' in data:
             update_data['estoque_minimo'] = int(data['estoque_minimo'])
         if 'status' in data:
