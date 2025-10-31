@@ -3608,8 +3608,8 @@ def limpar_banco_dados():
         data = request.get_json()
         codigo_confirmacao = data.get('codigo_confirmacao', '')
 
-        # Código de segurança: LIMPAR_TUDO_2025
-        if codigo_confirmacao != 'LIMPAR_TUDO_2025':
+        # Código de segurança: LIMPAR2025
+        if codigo_confirmacao != 'LIMPAR2025':
             return jsonify({
                 'success': False,
                 'message': 'Código de confirmação inválido'
@@ -4904,7 +4904,7 @@ def editar_produto(id):
     """Edita informações de um produto"""
     try:
         data = request.get_json()
-        
+
         update_data = {}
         if 'nome' in data:
             update_data['nome'] = data['nome']
@@ -4912,24 +4912,35 @@ def editar_produto(id):
             update_data['marca'] = data['marca']
         if 'preco' in data:
             update_data['preco'] = float(data['preco'])
+        if 'estoque' in data:
+            update_data['estoque'] = int(data.get('estoque') or 0)
         if 'estoque_minimo' in data:
             update_data['estoque_minimo'] = int(data['estoque_minimo'])
         if 'sku' in data:
             update_data['sku'] = data['sku']
         if 'codigo_barras' in data:
             update_data['codigo_barras'] = data['codigo_barras']
-        
+        if 'categoria' in data:
+            update_data['categoria'] = data['categoria']
+        if 'status' in data:
+            update_data['status'] = data['status']
+            update_data['ativo'] = (data['status'] == 'Ativo')
+        if 'ativo' in data:
+            update_data['ativo'] = bool(data['ativo'])
+            update_data['status'] = 'Ativo' if data['ativo'] else 'Inativo'
+
         if not update_data:
             return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
-        
+
         result = db.produtos.update_one(
             {'_id': ObjectId(id)},
             {'$set': update_data}
         )
-        
-        if result.modified_count > 0:
+
+        # Aceitar tanto modificações quanto quando não há mudanças
+        if result.matched_count > 0:
             return jsonify({'success': True, 'message': 'Produto atualizado com sucesso'})
-        return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
+        return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
     except Exception as e:
         logger.error(f"Erro ao editar produto: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -5066,6 +5077,234 @@ def prontuario_cliente(id):
             })
     except Exception as e:
         logger.error(f"Erro no prontuário: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 17.1 Upload de Documento Físico - Anamnese
+@bp.route('/api/clientes/<id>/anamnese/upload', methods=['POST'])
+@login_required
+def upload_anamnese_documento(id):
+    """Upload de foto/documento físico de anamnese"""
+    db = get_db()
+    try:
+        # Buscar cliente
+        try:
+            cliente = db.clientes.find_one({'_id': ObjectId(id)})
+        except:
+            cliente = db.clientes.find_one({'cpf': id})
+
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Verificar se há arquivo
+        if 'documento' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+
+        file = request.files['documento']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
+
+        if file and allowed_file(file.filename):
+            import base64
+
+            # Ler arquivo em memória
+            file_content = file.read()
+            doc_base64 = base64.b64encode(file_content).decode('utf-8')
+
+            # Determinar tipo MIME
+            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+            mime_types = {
+                'png': 'image/png',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'gif': 'image/gif',
+                'webp': 'image/webp',
+                'pdf': 'application/pdf'
+            }
+            mime_type = mime_types.get(ext, 'image/jpeg')
+
+            # Montar data URI
+            data_uri = f"data:{mime_type};base64,{doc_base64}"
+
+            # Criar registro de documento
+            documento = {
+                'tipo': 'anamnese_fisica',
+                'cliente_id': str(cliente['_id']),
+                'cliente_cpf': cliente.get('cpf'),
+                'cliente_nome': cliente.get('nome'),
+                'data_upload': datetime.now().isoformat(),
+                'data_uri': data_uri,
+                'mime_type': mime_type,
+                'filename': secure_filename(file.filename),
+                'uploaded_by': session.get('user', {}).get('nome', 'Sistema')
+            }
+
+            # Salvar no array de documentos do cliente
+            db.clientes.update_one(
+                {'_id': cliente['_id']},
+                {
+                    '$push': {'documentos_anamnese': documento},
+                    '$set': {'anamnese_fisica_disponivel': True}
+                }
+            )
+
+            logger.info(f"✅ Documento de anamnese física uploaded para cliente {cliente.get('nome')}")
+
+            return jsonify({
+                'success': True,
+                'message': 'Documento enviado com sucesso',
+                'documento': documento
+            })
+
+        return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido. Use PNG, JPG ou PDF'}), 400
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao fazer upload de anamnese: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 17.2 Upload de Documento Físico - Prontuário
+@bp.route('/api/clientes/<id>/prontuario/upload', methods=['POST'])
+@login_required
+def upload_prontuario_documento(id):
+    """Upload de foto/documento físico de prontuário"""
+    db = get_db()
+    try:
+        # Buscar cliente
+        try:
+            cliente = db.clientes.find_one({'_id': ObjectId(id)})
+        except:
+            cliente = db.clientes.find_one({'cpf': id})
+
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        # Verificar se há arquivo
+        if 'documento' not in request.files:
+            return jsonify({'success': False, 'message': 'Nenhum arquivo enviado'}), 400
+
+        file = request.files['documento']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Arquivo vazio'}), 400
+
+        if file and allowed_file(file.filename):
+            import base64
+
+            # Ler arquivo em memória
+            file_content = file.read()
+            doc_base64 = base64.b64encode(file_content).decode('utf-8')
+
+            # Determinar tipo MIME
+            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+            mime_types = {
+                'png': 'image/png',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'gif': 'image/gif',
+                'webp': 'image/webp',
+                'pdf': 'application/pdf'
+            }
+            mime_type = mime_types.get(ext, 'image/jpeg')
+
+            # Montar data URI
+            data_uri = f"data:{mime_type};base64,{doc_base64}"
+
+            # Obter observações do form (opcional)
+            observacoes = request.form.get('observacoes', '')
+
+            # Criar registro de documento
+            documento = {
+                'tipo': 'prontuario_fisico',
+                'cliente_id': str(cliente['_id']),
+                'cliente_cpf': cliente.get('cpf'),
+                'cliente_nome': cliente.get('nome'),
+                'data_upload': datetime.now().isoformat(),
+                'data_uri': data_uri,
+                'mime_type': mime_type,
+                'filename': secure_filename(file.filename),
+                'uploaded_by': session.get('user', {}).get('nome', 'Sistema'),
+                'observacoes': observacoes
+            }
+
+            # Salvar no array de documentos do cliente
+            db.clientes.update_one(
+                {'_id': cliente['_id']},
+                {
+                    '$push': {'documentos_prontuario': documento},
+                    '$set': {'prontuario_fisico_disponivel': True}
+                }
+            )
+
+            logger.info(f"✅ Documento de prontuário físico uploaded para cliente {cliente.get('nome')}")
+
+            return jsonify({
+                'success': True,
+                'message': 'Documento enviado com sucesso',
+                'documento': documento
+            })
+
+        return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido. Use PNG, JPG ou PDF'}), 400
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao fazer upload de prontuário: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 17.3 Listar Documentos - Anamnese
+@bp.route('/api/clientes/<id>/anamnese/documentos', methods=['GET'])
+@login_required
+def listar_documentos_anamnese(id):
+    """Lista todos os documentos físicos de anamnese do cliente"""
+    db = get_db()
+    try:
+        try:
+            cliente = db.clientes.find_one({'_id': ObjectId(id)})
+        except:
+            cliente = db.clientes.find_one({'cpf': id})
+
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        documentos = cliente.get('documentos_anamnese', [])
+
+        return jsonify({
+            'success': True,
+            'documentos': documentos,
+            'cliente': {
+                'nome': cliente.get('nome'),
+                'cpf': cliente.get('cpf')
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar documentos de anamnese: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# 17.4 Listar Documentos - Prontuário
+@bp.route('/api/clientes/<id>/prontuario/documentos', methods=['GET'])
+@login_required
+def listar_documentos_prontuario(id):
+    """Lista todos os documentos físicos de prontuário do cliente"""
+    db = get_db()
+    try:
+        try:
+            cliente = db.clientes.find_one({'_id': ObjectId(id)})
+        except:
+            cliente = db.clientes.find_one({'cpf': id})
+
+        if not cliente:
+            return jsonify({'success': False, 'message': 'Cliente não encontrado'}), 404
+
+        documentos = cliente.get('documentos_prontuario', [])
+
+        return jsonify({
+            'success': True,
+            'documentos': documentos,
+            'cliente': {
+                'nome': cliente.get('nome'),
+                'cpf': cliente.get('cpf')
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar documentos de prontuário: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # 18. Gerar PDF Resumo do Cliente
@@ -7392,7 +7631,7 @@ def produto_detalhes(id):
     """Atualiza produto (incluindo toggle de status)"""
     try:
         data = request.get_json()
-        
+
         update_data = {}
         if 'nome' in data:
             update_data['nome'] = data['nome']
@@ -7407,25 +7646,34 @@ def produto_detalhes(id):
             update_data['estoque_minimo'] = int(data['estoque_minimo'])
         if 'status' in data:
             update_data['status'] = data['status']
+            # Sincronizar campo ativo com status
+            update_data['ativo'] = (data['status'] == 'Ativo')
+        if 'ativo' in data:
+            # Se enviar ativo diretamente (boolean), processar
+            update_data['ativo'] = bool(data['ativo'])
+            update_data['status'] = 'Ativo' if data['ativo'] else 'Inativo'
         if 'sku' in data:
             update_data['sku'] = data['sku']
         if 'categoria' in data:
             update_data['categoria'] = data['categoria']
-        
+        if 'codigo_barras' in data:
+            update_data['codigo_barras'] = data['codigo_barras']
+
         if not update_data:
             return jsonify({'success': False, 'message': 'Nenhum dado para atualizar'}), 400
-        
+
         result = db.produtos.update_one(
             {'_id': ObjectId(id)},
             {'$set': update_data}
         )
-        
-        if result.modified_count > 0:
+
+        # Aceitar tanto modificações quanto quando não há mudanças (matched_count > 0)
+        if result.matched_count > 0:
             logger.info(f"✅ Produto {id} atualizado: {update_data}")
             return jsonify({'success': True, 'message': 'Produto atualizado com sucesso'})
-        
-        return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
-        
+
+        return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
+
     except Exception as e:
         logger.error(f"❌ Erro ao atualizar produto: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500

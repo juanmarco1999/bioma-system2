@@ -8625,6 +8625,10 @@ function goTo(section){
                 else if(section==='clube')loadClube();
                 else if(section==='comissoes')loadComissoes();
                 else if(section==='relatorios')loadRelatorios();
+                else if(section==='financeiro'){
+                    carregarDadosFinanceiro();
+                    carregarClientesParaFaturamento();
+                }
             }, 250);
         });
     }catch(e){
@@ -9967,24 +9971,23 @@ async function loadDashboard(){
                 // Renderizar produtos com estoque baixo
                 const html = estoqueData.produtos.map(p => {
                     const estoqueAtual = p.estoque || p.quantidade || 0;
-                    const estoqueMinimo = p.estoque_minimo || p.minimo || 0;
-                    const percentual = estoqueMinimo > 0 ? (estoqueAtual / estoqueMinimo * 100).toFixed(0) : 0;
+                    const estoqueMinimo = p.estoque_minimo || p.minimo || 5;
 
-                    // Status badge com cores
+                    // LÓGICA V6.0: < 5 = Vermelho Pulsante, >= 5 = Verde
                     let statusBadge = '';
                     if (estoqueAtual === 0) {
-                        statusBadge = '<span class="badge danger">🚫 ESGOTADO</span>';
-                    } else if (estoqueAtual < estoqueMinimo) {
-                        statusBadge = `<span class="badge danger">⚠️ CRÍTICO (${percentual}%)</span>`;
-                    } else if (estoqueAtual < estoqueMinimo * 1.5) {
-                        statusBadge = `<span class="badge warning">⚡ BAIXO (${percentual}%)</span>`;
+                        statusBadge = '<span class="badge badge-pulse-danger">🚫 ESGOTADO</span>';
+                    } else if (estoqueAtual < 5) {
+                        statusBadge = '<span class="badge badge-pulse-danger">⚠️ CRÍTICO</span>';
+                    } else {
+                        statusBadge = '<span class="badge success">✓ Disponível</span>';
                     }
 
                     return `
-                    <tr style="background: ${estoqueAtual === 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(234, 179, 8, 0.05)'};">
+                    <tr style="background: ${estoqueAtual < 5 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(16, 185, 129, 0.05)'};">
                         <td><strong>${p.nome || 'Produto'}</strong></td>
                         <td>${p.marca || 'N/A'}</td>
-                        <td style="color: ${estoqueAtual === 0 ? 'var(--danger)' : 'var(--warning)'}; font-weight: bold;">${estoqueAtual}</td>
+                        <td style="color: ${estoqueAtual < 5 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">${estoqueAtual}</td>
                         <td>${estoqueMinimo}</td>
                         <td>${statusBadge}</td>
                     </tr>
@@ -12905,14 +12908,14 @@ async function loadProdutosLista(){
 
             // Todos os produtos
             if(tbodies[0]){
-                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${(p.estoque||0)<5?'badge-pulse-danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('');
                 tbodies[0].innerHTML=htmlTodos;
             }
 
             // Produtos ativos
             if(tbodies[1]){
                 const ativos = data.produtos.filter(p => p.ativo);
-                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
+                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${(p.estoque||0)<5?'badge-pulse-danger':'success'}">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
                 tbodies[1].innerHTML=htmlAtivos;
             }
 
@@ -22189,12 +22192,10 @@ function filtrarProdutosEstoque(){
             let statusBadge = '';
             let statusClass = '';
 
-            if(quantidade === 0){
-                statusBadge = '<span class="badge danger">Esgotado</span>';
+            // LÓGICA V6.0: < 5 = Vermelho Pulsante, >= 5 = Verde
+            if(quantidade < 5){
+                statusBadge = '<span class="badge badge-pulse-danger">Crítico</span>';
                 statusClass = 'text-danger';
-            } else if(quantidade <= minimo){
-                statusBadge = '<span class="badge warning">Estoque Baixo</span>';
-                statusClass = 'text-warning';
             } else {
                 statusBadge = '<span class="badge success">Disponível</span>';
                 statusClass = '';
