@@ -3422,6 +3422,29 @@
 
         /* ========== FIM INDICADOR DE CONECTIVIDADE ========== */
 
+        /* ========== CORREÇÃO AUTOCOMPLETE CORTADO (Clipping) ========== */
+        /*
+         * O Problema: A classe .card usa "contain: layout style paint;"
+         * para otimização de performance. Isso cria um novo contexto
+         * de empilhamento que "corta" qualquer elemento filho que tente
+         * flutuar para fora, como o nosso .autocomplete-results.
+         *
+         * A Solução: Desativar a contenção (contain: none) APENAS
+         * para os cards dentro da seção de orçamento.
+        */
+        #section-orcamento .card {
+            contain: none !important;
+        }
+
+        /* Também garantir que autocomplete-results tenha z-index alto */
+        .autocomplete-results,
+        #cpfResults,
+        #servicoResults,
+        #produtoResults {
+            z-index: 99999999 !important;
+            position: fixed !important;
+        }
+
 </style>
 
 <!-- ========== MELHORIAS DE UX E ANIMAÇÕES V4.1 ========== -->
@@ -13863,28 +13886,65 @@ async function handleUpload(input,tipo){
     formData.append('file',file);
     formData.append('tipo',tipo);
 
-    // Mostrar modal de loading
+    // Mostrar modal de loading com animação moderna
     Swal.fire({
         title: `<i class="bi bi-cloud-arrow-up-fill"></i> Importando ${tipo}...`,
         html: `
             <div style="padding: 20px;">
-                <div class="progress" style="height: 30px; margin-bottom: 20px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated"
-                         role="progressbar"
-                         style="width: 100%; background: linear-gradient(90deg, #7C3AED, #EC4899);">
-                        Processando...
+                <!-- Novo ícone de loading animado colorido -->
+                <div style="margin: 30px auto;">
+                    <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+                                <stop offset="50%" style="stop-color:#EC4899;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="url(#grad)" stroke-width="8"
+                                stroke-linecap="round" stroke-dasharray="0 220"
+                                transform="rotate(-90 50 50)">
+                            <animate attributeName="stroke-dasharray" values="0 220;180 220;180 220"
+                                    dur="1.5s" repeatCount="indefinite"/>
+                            <animateTransform attributeName="transform" type="rotate"
+                                            values="-90 50 50;270 50 50;270 50 50"
+                                            dur="1.5s" repeatCount="indefinite"/>
+                        </circle>
+                        <circle cx="50" cy="50" r="25" fill="none" stroke="url(#grad)" stroke-width="6"
+                                stroke-linecap="round" stroke-dasharray="0 160" opacity="0.5"
+                                transform="rotate(90 50 50)">
+                            <animate attributeName="stroke-dasharray" values="0 160;120 160;120 160"
+                                    dur="1.2s" repeatCount="indefinite"/>
+                            <animateTransform attributeName="transform" type="rotate"
+                                            values="90 50 50;450 50 50;450 50 50"
+                                            dur="1.2s" repeatCount="indefinite"/>
+                        </circle>
+                    </svg>
+                </div>
+                <p style="margin-top: 20px; font-size: 1.1rem;">
+                    <strong>📁 Arquivo:</strong> ${file.name}
+                </p>
+                <p style="margin-top: 10px; color: var(--text-secondary);">
+                    <i class="bi bi-info-circle"></i> Processando dados, aguarde...
+                </p>
+                <div class="progress" style="height: 6px; margin-top: 20px; border-radius: 3px;">
+                    <div class="progress-bar" role="progressbar"
+                         style="width: 100%; background: linear-gradient(90deg, #7C3AED, #EC4899);
+                                animation: progress-animation 2s ease-in-out infinite;">
                     </div>
                 </div>
-                <p style="margin-top: 20px;"><strong>Arquivo:</strong> ${file.name}</p>
-                <p class="text-muted">Aguarde, isso pode levar alguns segundos...</p>
             </div>
+            <style>
+                @keyframes progress-animation {
+                    0% { width: 0%; }
+                    50% { width: 100%; }
+                    100% { width: 0%; }
+                }
+            </style>
         `,
         allowOutsideClick: false,
         allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
+        showConfirmButton: false
     });
 
     try{
@@ -13946,20 +14006,124 @@ async function handleUpload(input,tipo){
             else if(tipo==='profissionais') loadProfissionais();
             
         }else{
+            // Análise detalhada do erro
+            let errorDetails = '';
+            let errorIcon = '❌';
+            let errorTitle = 'Erro na Importação';
+
+            if(data.message){
+                if(data.message.includes('formato') || data.message.includes('coluna')){
+                    errorIcon = '📋';
+                    errorTitle = 'Formato Incorreto';
+                    errorDetails = `
+                        <div style="text-align: left; margin-top: 20px;">
+                            <h4>🔍 Possíveis causas:</h4>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Arquivo não está no formato CSV ou Excel</li>
+                                <li>Colunas obrigatórias estão faltando</li>
+                                <li>Cabeçalhos das colunas estão incorretos</li>
+                                <li>Dados estão em formato incompatível</li>
+                            </ul>
+                            <div style="margin-top: 15px; padding: 10px; background: var(--bg-main); border-radius: 8px;">
+                                <strong>💡 Dica:</strong> Baixe o template de exemplo e use-o como base
+                            </div>
+                        </div>
+                    `;
+                }else if(data.message.includes('duplica') || data.message.includes('existe')){
+                    errorIcon = '🔄';
+                    errorTitle = 'Registros Duplicados';
+                    errorDetails = `
+                        <div style="text-align: left; margin-top: 20px;">
+                            <p>Alguns registros já existem no banco de dados.</p>
+                            <p style="margin-top: 10px;"><strong>Campos únicos que não podem ser duplicados:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                ${tipo === 'clientes' ? '<li>CPF do cliente</li>' : ''}
+                                ${tipo === 'profissionais' ? '<li>CPF do profissional</li>' : ''}
+                                ${tipo === 'produtos' ? '<li>Código do produto</li>' : ''}
+                                ${tipo === 'servicos' ? '<li>Nome do serviço + categoria</li>' : ''}
+                            </ul>
+                        </div>
+                    `;
+                }else if(data.message.includes('vazio') || data.message.includes('empty')){
+                    errorIcon = '📄';
+                    errorTitle = 'Arquivo Vazio';
+                    errorDetails = `
+                        <div style="text-align: left; margin-top: 20px;">
+                            <p>O arquivo parece estar vazio ou sem dados válidos.</p>
+                            <p style="margin-top: 10px;">Verifique se:</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>O arquivo contém dados além do cabeçalho</li>
+                                <li>A planilha correta está selecionada (para Excel)</li>
+                                <li>Os dados não estão em células muito distantes</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+            }
+
             Swal.fire({
                 icon: 'error',
-                title: 'Erro na Importação',
-                text: data.message || 'Ocorreu um erro ao processar o arquivo',
-                footer: '<small>Verifique se o arquivo está no formato correto</small>'
+                title: `${errorIcon} ${errorTitle}`,
+                html: `
+                    <div style="padding: 10px;">
+                        <p style="font-size: 1.1rem; margin-bottom: 15px;">
+                            ${data.message || 'Ocorreu um erro ao processar o arquivo'}
+                        </p>
+                        ${errorDetails}
+                        ${data.errors && data.errors.length > 0 ? `
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                                <strong>📝 Erros específicos encontrados:</strong>
+                                <ul style="max-height: 150px; overflow-y: auto; margin-top: 10px; padding-left: 20px; text-align: left;">
+                                    ${data.errors.slice(0, 5).map(err => `<li style="margin: 5px 0; color: var(--danger);">${err}</li>`).join('')}
+                                    ${data.errors.length > 5 ? `<li style="color: var(--text-muted);">... e mais ${data.errors.length - 5} erros</li>` : ''}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `,
+                confirmButtonText: 'Entendi',
+                footer: `<a href="/api/template/download/${tipo}" class="btn btn-sm btn-outline">
+                            <i class="bi bi-download"></i> Baixar Template de Exemplo
+                        </a>`
             });
         }
     }catch(e){
         console.error('❌ Erro na importação:',e);
+
+        // Análise do erro de conexão
+        let errorMsg = 'Não foi possível enviar o arquivo.';
+        let errorHelp = '';
+
+        if(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')){
+            errorMsg = 'Erro de conexão com o servidor.';
+            errorHelp = 'Verifique se o servidor está rodando e tente novamente.';
+        }else if(e.message.includes('413') || file.size > 10485760){ // 10MB
+            errorMsg = 'Arquivo muito grande!';
+            errorHelp = `O arquivo tem ${(file.size / 1048576).toFixed(2)}MB. O limite é 10MB.`;
+        }else if(e.message.includes('timeout')){
+            errorMsg = 'Tempo limite excedido.';
+            errorHelp = 'O servidor demorou muito para responder. Tente com um arquivo menor.';
+        }
+
         Swal.fire({
             icon: 'error',
-            title: 'Erro no Upload',
-            text: 'Não foi possível enviar o arquivo. Tente novamente.',
-            footer: '<small>Verifique sua conexão e o tamanho do arquivo</small>'
+            title: '🚫 Erro no Upload',
+            html: `
+                <div style="padding: 15px;">
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;">${errorMsg}</p>
+                    ${errorHelp ? `<p style="color: var(--text-secondary);">${errorHelp}</p>` : ''}
+                    <div style="margin-top: 20px; padding: 15px; background: var(--bg-main); border-radius: 8px;">
+                        <strong>💡 Possíveis soluções:</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px; text-align: left;">
+                            <li>Verifique sua conexão com a internet</li>
+                            <li>Reduza o tamanho do arquivo</li>
+                            <li>Tente importar em lotes menores</li>
+                            <li>Reinicie o servidor se necessário</li>
+                        </ul>
+                    </div>
+                </div>
+            `,
+            confirmButtonText: 'OK'
         });
     }
     
@@ -15292,13 +15456,28 @@ const ExportLibrary = {
         }
 
         try {
+            // Criar workbook com SheetJS
+            if (typeof XLSX === 'undefined') {
+                throw new Error('Biblioteca XLSX não carregada');
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // Adicionar informações do cabeçalho corporativo
+            const headerData = [
+                ['BIOMA BEAUTY SYSTEM - RELATÓRIO EXPORTADO'],
+                ['Data de Exportação: ' + new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR')],
+                ['Total de Registros: ' + data.length],
+                [], // Linha vazia
+            ];
+
             // Preparar dados no formato de tabela
             const tableData = [];
 
-            // Cabeçalhos
+            // Adicionar cabeçalhos das colunas
             tableData.push(columns.map(col => col.label));
 
-            // Dados
+            // Dados formatados
             data.forEach(row => {
                 const rowData = columns.map(col => {
                     let value = row[col.key] ?? '';
@@ -15307,12 +15486,9 @@ const ExportLibrary = {
                     if (col.type === 'date' && value) {
                         value = new Date(value).toLocaleDateString('pt-BR');
                     }
-                    // Formatar moeda
+                    // Formatar moeda - sem símbolo R$ para Excel processar corretamente
                     else if (col.type === 'currency' && value) {
-                        value = 'R$ ' + Number(value).toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        });
+                        value = Number(value);
                     }
                     // Formatar boolean
                     else if (col.type === 'boolean') {
@@ -15324,19 +15500,77 @@ const ExportLibrary = {
                 tableData.push(rowData);
             });
 
-            // Criar workbook com SheetJS (biblioteca já carregada globalmente)
-            if (typeof XLSX === 'undefined') {
-                throw new Error('Biblioteca XLSX não carregada');
-            }
+            // Combinar header com dados
+            const finalData = [...headerData, ...tableData];
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(tableData);
+            // Criar worksheet
+            const ws = XLSX.utils.aoa_to_sheet(finalData);
 
-            // Estilizar cabeçalho (largura das colunas)
-            const wscols = columns.map(col => ({ wch: col.width || 15 }));
+            // Definir larguras das colunas
+            const wscols = columns.map(col => ({ wch: col.width || 20 }));
+            // Adicionar largura extra para a primeira coluna do cabeçalho
+            wscols.unshift({ wch: 50 });
             ws['!cols'] = wscols;
 
+            // Mesclar células do cabeçalho
+            if(!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push(
+                {s: {r: 0, c: 0}, e: {r: 0, c: columns.length - 1}}, // Título principal
+                {s: {r: 1, c: 0}, e: {r: 1, c: columns.length - 1}}, // Data de exportação
+                {s: {r: 2, c: 0}, e: {r: 2, c: columns.length - 1}}  // Total de registros
+            );
+
+            // Aplicar estilos (se a biblioteca suportar)
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = 0; R <= range.e.r; R++) {
+                for (let C = 0; C <= range.e.c; C++) {
+                    const cellAddress = XLSX.utils.encode_cell({r: R, c: C});
+
+                    if (!ws[cellAddress]) continue;
+
+                    // Estilo para cabeçalho corporativo
+                    if (R < 3) {
+                        ws[cellAddress].s = {
+                            font: { bold: true, sz: R === 0 ? 16 : 12 },
+                            alignment: { horizontal: 'center', vertical: 'center' },
+                            fill: R === 0 ? { fgColor: { rgb: '7C3AED' } } : {}
+                        };
+                    }
+                    // Estilo para cabeçalhos das colunas
+                    else if (R === 4) {
+                        ws[cellAddress].s = {
+                            font: { bold: true, color: { rgb: 'FFFFFF' } },
+                            fill: { fgColor: { rgb: '7C3AED' } },
+                            alignment: { horizontal: 'center', vertical: 'center' },
+                            border: {
+                                top: { style: 'thin', color: { rgb: '000000' } },
+                                bottom: { style: 'thin', color: { rgb: '000000' } },
+                                left: { style: 'thin', color: { rgb: '000000' } },
+                                right: { style: 'thin', color: { rgb: '000000' } }
+                            }
+                        };
+                    }
+                    // Formatar células de moeda
+                    else if (R > 4 && columns[C] && columns[C].type === 'currency') {
+                        ws[cellAddress].z = 'R$ #,##0.00';
+                        ws[cellAddress].t = 'n';
+                    }
+                }
+            }
+
+            // Adicionar auto-filtro
+            ws['!autofilter'] = { ref: `A5:${XLSX.utils.encode_col(columns.length - 1)}${range.e.r + 1}` };
+
+            // Adicionar planilha ao workbook
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+            // Adicionar propriedades do documento
+            wb.Props = {
+                Title: sheetName,
+                Author: 'BIOMA Beauty System',
+                Company: 'BIOMA Uberaba',
+                CreatedDate: new Date()
+            };
 
             // Gerar arquivo
             XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
