@@ -9622,7 +9622,13 @@ async function importarPlanilhaEstoque(input){
             throw new Error('Importação cancelada pelo usuário');
         }
 
-        document.getElementById('status-importacao').textContent = 'Processando arquivo...';
+        // Aguardar um pouco para garantir que o modal foi renderizado
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const statusImportacao = document.getElementById('status-importacao');
+        if (statusImportacao) {
+            statusImportacao.textContent = 'Processando arquivo...';
+        }
 
         const res = await fetch('/api/estoque/importar',{
             method:'POST',
@@ -9646,12 +9652,18 @@ async function importarPlanilhaEstoque(input){
         }
 
         if(data.success){
-            document.getElementById('status-importacao').textContent = '✅ Importação concluída!';
-            document.getElementById('resultado-importacao').style.display = 'block';
-            document.getElementById('resultado-importacao').innerHTML = `
-                <p class="text-success"><strong>✅ Importados:</strong> ${data.importados || 0}</p>
-                ${data.erros > 0 ? `<p class="text-danger"><strong>❌ Falhas:</strong> ${data.erros}</p>` : ''}
-            `;
+            const statusSuccess = document.getElementById('status-importacao');
+            if (statusSuccess) {
+                statusSuccess.textContent = '✅ Importação concluída!';
+            }
+            const resultadoImportacao = document.getElementById('resultado-importacao');
+            if (resultadoImportacao) {
+                resultadoImportacao.style.display = 'block';
+                resultadoImportacao.innerHTML = `
+                    <p class="text-success"><strong>✅ Importados:</strong> ${data.importados || 0}</p>
+                    ${data.erros > 0 ? `<p class="text-danger"><strong>❌ Falhas:</strong> ${data.erros}</p>` : ''}
+                `;
+            }
 
             // Mostrar botão OK
             const confirmBtn = Swal.getConfirmButton();
@@ -9676,11 +9688,18 @@ async function importarPlanilhaEstoque(input){
             barra.classList.add('bg-danger');
         }
 
-        document.getElementById('status-importacao').textContent = '❌ Erro na importação';
-        document.getElementById('resultado-importacao').style.display = 'block';
-        document.getElementById('resultado-importacao').innerHTML = `
-            <p class="text-danger"><strong>Motivo:</strong> ${error.message || 'Erro desconhecido'}</p>
-        `;
+        const statusError = document.getElementById('status-importacao');
+        if (statusError) {
+            statusError.textContent = '❌ Erro na importação';
+        }
+
+        const resultadoError = document.getElementById('resultado-importacao');
+        if (resultadoError) {
+            resultadoError.style.display = 'block';
+            resultadoError.innerHTML = `
+                <p class="text-danger"><strong>Motivo:</strong> ${error.message || 'Erro desconhecido'}</p>
+            `;
+        }
 
         // Mostrar botão OK
         const confirmBtn = Swal.getConfirmButton();
@@ -15562,7 +15581,13 @@ async function handleUpload(input,tipo){
             throw new Error('Importação cancelada pelo usuário');
         }
 
-        document.getElementById('status-upload').innerHTML = '<i class="bi bi-upload"></i> Processando arquivo...';
+        // Aguardar um pouco para garantir que o modal foi renderizado
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const statusElement = document.getElementById('status-upload');
+        if (statusElement) {
+            statusElement.innerHTML = '<i class="bi bi-upload"></i> Processando arquivo...';
+        }
 
         const res=await fetch('/api/importar',{
             method:'POST',
@@ -15598,9 +15623,12 @@ async function handleUpload(input,tipo){
                 barra.classList.add(data.count_error > 0 ? 'bg-warning' : 'bg-success');
             }
 
-            document.getElementById('status-upload').innerHTML = data.count_error > 0 ?
-                '<i class="bi bi-exclamation-triangle"></i> ⚠️ Importação Parcial' :
-                '<i class="bi bi-check-circle"></i> ✅ Importação Concluída!';
+            const statusUpload = document.getElementById('status-upload');
+            if (statusUpload) {
+                statusUpload.innerHTML = data.count_error > 0 ?
+                    '<i class="bi bi-exclamation-triangle"></i> ⚠️ Importação Parcial' :
+                    '<i class="bi bi-check-circle"></i> ✅ Importação Concluída!';
+            }
 
             // Atualizar detalhes
             const detalhesDiv = document.getElementById('detalhes-upload');
@@ -15720,7 +15748,10 @@ async function handleUpload(input,tipo){
                 }
             }
 
-            document.getElementById('status-upload').innerHTML = `${errorIcon} ${errorTitle}`;
+            const statusUploadError = document.getElementById('status-upload');
+            if (statusUploadError) {
+                statusUploadError.innerHTML = `${errorIcon} ${errorTitle}`;
+            }
 
             const detalhesDiv = document.getElementById('detalhes-upload');
             if (detalhesDiv) {
@@ -15786,7 +15817,10 @@ async function handleUpload(input,tipo){
             errorHelp = 'O servidor demorou muito para responder. Tente com um arquivo menor.';
         }
 
-        document.getElementById('status-upload').innerHTML = '🚫 Erro no Upload';
+        const statusUploadCatch = document.getElementById('status-upload');
+        if (statusUploadCatch) {
+            statusUploadCatch.innerHTML = '🚫 Erro no Upload';
+        }
 
         const detalhesDiv = document.getElementById('detalhes-upload');
         if (detalhesDiv) {
