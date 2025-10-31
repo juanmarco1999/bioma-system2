@@ -9554,24 +9554,143 @@ async function importarPlanilhaEstoque(input){
     if(!file){
         return;
     }
+
+    let cancelarProcesso = false;
+
+    // Mostrar modal de progresso
+    Swal.fire({
+        title: 'Importando Estoque...',
+        html: `
+            <div class="mb-3">
+                <div class="progress" style="height: 25px;">
+                    <div id="barra-progresso-importacao" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+                         role="progressbar" style="width: 0%">0%</div>
+                </div>
+            </div>
+            <div class="text-start">
+                <p><strong>Arquivo:</strong> ${file.name}</p>
+                <p><strong>Status:</strong> <span id="status-importacao">Enviando arquivo...</span></p>
+                <p id="resultado-importacao" style="display: none;"></p>
+            </div>
+        `,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        showCancelButton: true,
+        showCloseButton: true,
+        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Importação',
+        cancelButtonColor: '#dc3545',
+        didOpen: () => {
+            const confirmBtn = Swal.getConfirmButton();
+            const cancelBtn = Swal.getCancelButton();
+            const closeBtn = Swal.getCloseButton();
+
+            if (confirmBtn) confirmBtn.style.display = 'none';
+            if (closeBtn) closeBtn.style.display = 'none';
+
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    cancelarProcesso = true;
+                    cancelBtn.disabled = true;
+                    cancelBtn.innerHTML = '<i class="bi bi-hourglass"></i> Cancelando...';
+                    cancelBtn.style.backgroundColor = '#6c757d';
+                };
+            }
+
+            // Simular progresso
+            let progresso = 0;
+            const intervalo = setInterval(() => {
+                if (cancelarProcesso || progresso >= 90) {
+                    clearInterval(intervalo);
+                    return;
+                }
+                progresso += 10;
+                const barra = document.getElementById('barra-progresso-importacao');
+                if (barra) {
+                    barra.style.width = `${progresso}%`;
+                    barra.textContent = `${progresso}%`;
+                }
+            }, 300);
+        }
+    });
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('tipo', 'estoque');
-    mostrarLoading('Importando estoque...');
+
     try{
-        const res = await fetch('/api/estoque/importar',{method:'POST',credentials:'include',body:formData});
+        if (cancelarProcesso) {
+            throw new Error('Importação cancelada pelo usuário');
+        }
+
+        document.getElementById('status-importacao').textContent = 'Processando arquivo...';
+
+        const res = await fetch('/api/estoque/importar',{
+            method:'POST',
+            credentials:'include',
+            body:formData
+        });
+
+        if (cancelarProcesso) {
+            throw new Error('Importação cancelada pelo usuário');
+        }
+
         const data = await res.json();
-        Swal.close();
+
+        // Atualizar barra para 100%
+        const barra = document.getElementById('barra-progresso-importacao');
+        if (barra) {
+            barra.style.width = '100%';
+            barra.textContent = '100%';
+            barra.classList.remove('bg-info');
+            barra.classList.add(data.success ? 'bg-success' : 'bg-danger');
+        }
+
         if(data.success){
-            mostrarNotificacao('success', `Importação concluída! Registros: ${data.importados || 0} | Falhas: ${data.erros || 0}`, 3500);
-            loadEstoque();
+            document.getElementById('status-importacao').textContent = '✅ Importação concluída!';
+            document.getElementById('resultado-importacao').style.display = 'block';
+            document.getElementById('resultado-importacao').innerHTML = `
+                <p class="text-success"><strong>✅ Importados:</strong> ${data.importados || 0}</p>
+                ${data.erros > 0 ? `<p class="text-danger"><strong>❌ Falhas:</strong> ${data.erros}</p>` : ''}
+            `;
+
+            // Mostrar botão OK
+            const confirmBtn = Swal.getConfirmButton();
+            const cancelBtn = Swal.getCancelButton();
+            if (confirmBtn) {
+                confirmBtn.style.display = 'inline-block';
+                confirmBtn.textContent = 'OK';
+                confirmBtn.style.backgroundColor = '#3085d6';
+            }
+            if (cancelBtn) cancelBtn.style.display = 'none';
+
+            await loadEstoque();
         }else{
             throw new Error(data.message || 'Erro ao importar arquivo');
         }
     }catch(error){
         console.error('Erro ao importar estoque', error);
-        Swal.close();
-        mostrarNotificacao('error', 'Não foi possível importar o arquivo.');
+
+        const barra = document.getElementById('barra-progresso-importacao');
+        if (barra) {
+            barra.classList.remove('bg-info');
+            barra.classList.add('bg-danger');
+        }
+
+        document.getElementById('status-importacao').textContent = '❌ Erro na importação';
+        document.getElementById('resultado-importacao').style.display = 'block';
+        document.getElementById('resultado-importacao').innerHTML = `
+            <p class="text-danger"><strong>Motivo:</strong> ${error.message || 'Erro desconhecido'}</p>
+        `;
+
+        // Mostrar botão OK
+        const confirmBtn = Swal.getConfirmButton();
+        const cancelBtn = Swal.getCancelButton();
+        if (confirmBtn) {
+            confirmBtn.style.display = 'inline-block';
+            confirmBtn.textContent = 'Fechar';
+            confirmBtn.style.backgroundColor = '#dc3545';
+        }
+        if (cancelBtn) cancelBtn.style.display = 'none';
     }finally{
         input.value='';
     }
@@ -13896,56 +14015,159 @@ async function deletarTodosProdutos() {
 
     if (result.isConfirmed) {
         console.log('✅ Confirmação recebida, deletando todos os produtos...');
+
+        let cancelarProcesso = false;
+        let processoCompleto = false;
+        let deletados = 0;
+        let erros = 0;
+        let errosDetalhados = [];
+
         try {
             // Buscar todos os produtos primeiro
             const listRes = await fetch('/api/produtos', { credentials: 'include' });
             const listData = await listRes.json();
 
-            if (listData.success && listData.produtos) {
-                const produtos = listData.produtos;
-                let deletados = 0;
-                let erros = 0;
+            if (!listData.success || !listData.produtos) {
+                throw new Error(listData.message || 'Não foi possível buscar a lista de produtos');
+            }
 
-                // Mostrar progresso
-                Swal.fire({
-                    title: 'Deletando produtos...',
-                    html: `<div>Progresso: <span id="progresso-delete">0</span>/${produtos.length}</div>`,
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
+            const produtos = listData.produtos;
+            const total = produtos.length;
+
+            if (total === 0) {
+                Swal.fire('Aviso', 'Não há produtos para deletar', 'info');
+                return;
+            }
+
+            // Mostrar modal de progresso com botões condicionais
+            Swal.fire({
+                title: 'Deletando produtos...',
+                html: `
+                    <div class="mb-3">
+                        <div class="progress" style="height: 25px;">
+                            <div id="barra-progresso-delete-produtos" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+                                 role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    <div class="text-start">
+                        <p><strong>Total:</strong> ${total} produtos</p>
+                        <p><strong>Processados:</strong> <span id="progresso-delete-produtos">0</span>/${total}</p>
+                        <p><strong>Deletados:</strong> <span id="deletados-produtos">0</span></p>
+                        <p><strong>Erros:</strong> <span id="erros-produtos">0</span></p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                showCancelButton: true,
+                showCloseButton: true,
+                cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Processo',
+                cancelButtonColor: '#dc3545',
+                didOpen: () => {
+                    // Botão cancelar ativo, confirmar/fechar escondido
+                    const confirmBtn = Swal.getConfirmButton();
+                    const cancelBtn = Swal.getCancelButton();
+                    const closeBtn = Swal.getCloseButton();
+
+                    if (confirmBtn) confirmBtn.style.display = 'none';
+                    if (closeBtn) closeBtn.style.display = 'none';
+
+                    if (cancelBtn) {
+                        cancelBtn.onclick = () => {
+                            cancelarProcesso = true;
+                            cancelBtn.disabled = true;
+                            cancelBtn.innerHTML = '<i class="bi bi-hourglass"></i> Cancelando...';
+                            cancelBtn.style.backgroundColor = '#6c757d';
+                        };
                     }
-                });
+                }
+            });
 
-                // Deletar cada produto
-                for (let i = 0; i < produtos.length; i++) {
-                    try {
-                        const res = await fetch(`/api/produtos/${produtos[i]._id}`, {
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
-                        if (res.ok) deletados++;
-                        else erros++;
-                    } catch (e) {
+            // Deletar cada produto
+            for (let i = 0; i < total && !cancelarProcesso; i++) {
+                const produto = produtos[i];
+                try {
+                    const res = await fetch(`/api/produtos/${produto._id}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (res.ok) {
+                        deletados++;
+                        document.getElementById('deletados-produtos').textContent = deletados;
+                    } else {
+                        const errorData = await res.json().catch(() => ({}));
+                        const motivo = errorData.message || `Erro HTTP ${res.status}`;
                         erros++;
+                        errosDetalhados.push({
+                            produto: produto.nome || 'Sem nome',
+                            motivo: motivo
+                        });
+                        document.getElementById('erros-produtos').textContent = erros;
                     }
-                    document.getElementById('progresso-delete').textContent = i + 1;
+                } catch (e) {
+                    erros++;
+                    errosDetalhados.push({
+                        produto: produto.nome || 'Sem nome',
+                        motivo: e.message || 'Erro de conexão'
+                    });
+                    document.getElementById('erros-produtos').textContent = erros;
                 }
 
-                // Resultado final
-                Swal.fire({
-                    title: 'Operação Concluída!',
-                    html: `
-                        <p>✅ ${deletados} produtos deletados</p>
-                        ${erros > 0 ? `<p>❌ ${erros} erros</p>` : ''}
-                    `,
-                    icon: deletados > 0 ? 'success' : 'warning'
-                });
-
-                await loadProdutosLista();
+                // Atualizar progresso
+                const processados = i + 1;
+                const percentual = Math.round((processados / total) * 100);
+                document.getElementById('progresso-delete-produtos').textContent = processados;
+                const barra = document.getElementById('barra-progresso-delete-produtos');
+                if (barra) {
+                    barra.style.width = `${percentual}%`;
+                    barra.textContent = `${percentual}%`;
+                }
             }
+
+            processoCompleto = !cancelarProcesso;
+
+            // Montar mensagem de resultado
+            let htmlResultado = `
+                <div class="text-start">
+                    <p><strong>Status:</strong> ${cancelarProcesso ? '🛑 Cancelado pelo usuário' : '✅ Concluído'}</p>
+                    <p><strong>Processados:</strong> ${deletados + erros}/${total}</p>
+                    <p><strong>✅ Deletados:</strong> ${deletados}</p>
+                    <p><strong>❌ Erros:</strong> ${erros}</p>
+            `;
+
+            if (errosDetalhados.length > 0 && errosDetalhados.length <= 10) {
+                htmlResultado += '<hr><p><strong>Detalhes dos erros:</strong></p><ul>';
+                errosDetalhados.forEach(erro => {
+                    htmlResultado += `<li><strong>${erro.produto}:</strong> ${erro.motivo}</li>`;
+                });
+                htmlResultado += '</ul>';
+            } else if (errosDetalhados.length > 10) {
+                htmlResultado += `<hr><p><strong>Detalhes:</strong> ${errosDetalhados.length} erros (muito para exibir)</p>`;
+            }
+
+            htmlResultado += '</div>';
+
+            // Mostrar resultado final com botão OK
+            await Swal.fire({
+                title: cancelarProcesso ? 'Operação Cancelada' : 'Operação Concluída!',
+                html: htmlResultado,
+                icon: cancelarProcesso ? 'warning' : (deletados > 0 ? 'success' : 'error'),
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3085d6'
+            });
+
+            await loadProdutosLista();
+
         } catch (e) {
             console.error('❌ Erro ao deletar produtos:', e);
-            Swal.fire('Erro', 'Falha ao deletar produtos', 'error');
+            Swal.fire({
+                title: 'Erro',
+                html: `
+                    <p>Falha ao deletar produtos.</p>
+                    <p><strong>Motivo:</strong> ${e.message || 'Erro desconhecido'}</p>
+                `,
+                icon: 'error'
+            });
         }
     } else {
         console.log('❌ Operação cancelada pelo usuário');
@@ -13984,56 +14206,159 @@ async function deletarTodosServicos() {
 
     if (result.isConfirmed) {
         console.log('✅ Confirmação recebida, deletando todos os serviços...');
+
+        let cancelarProcesso = false;
+        let processoCompleto = false;
+        let deletados = 0;
+        let erros = 0;
+        let errosDetalhados = [];
+
         try {
             // Buscar todos os serviços primeiro
             const listRes = await fetch('/api/servicos', { credentials: 'include' });
             const listData = await listRes.json();
 
-            if (listData.success && listData.servicos) {
-                const servicos = listData.servicos;
-                let deletados = 0;
-                let erros = 0;
+            if (!listData.success || !listData.servicos) {
+                throw new Error(listData.message || 'Não foi possível buscar a lista de serviços');
+            }
 
-                // Mostrar progresso
-                Swal.fire({
-                    title: 'Deletando serviços...',
-                    html: `<div>Progresso: <span id="progresso-delete-servicos">0</span>/${servicos.length}</div>`,
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
+            const servicos = listData.servicos;
+            const total = servicos.length;
+
+            if (total === 0) {
+                Swal.fire('Aviso', 'Não há serviços para deletar', 'info');
+                return;
+            }
+
+            // Mostrar modal de progresso com botões condicionais
+            Swal.fire({
+                title: 'Deletando serviços...',
+                html: `
+                    <div class="mb-3">
+                        <div class="progress" style="height: 25px;">
+                            <div id="barra-progresso-delete-servicos" class="progress-bar progress-bar-striped progress-bar-animated bg-danger"
+                                 role="progressbar" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                    <div class="text-start">
+                        <p><strong>Total:</strong> ${total} serviços</p>
+                        <p><strong>Processados:</strong> <span id="progresso-delete-servicos">0</span>/${total}</p>
+                        <p><strong>Deletados:</strong> <span id="deletados-servicos">0</span></p>
+                        <p><strong>Erros:</strong> <span id="erros-servicos">0</span></p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                showCancelButton: true,
+                showCloseButton: true,
+                cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Processo',
+                cancelButtonColor: '#dc3545',
+                didOpen: () => {
+                    // Botão cancelar ativo, confirmar/fechar escondido
+                    const confirmBtn = Swal.getConfirmButton();
+                    const cancelBtn = Swal.getCancelButton();
+                    const closeBtn = Swal.getCloseButton();
+
+                    if (confirmBtn) confirmBtn.style.display = 'none';
+                    if (closeBtn) closeBtn.style.display = 'none';
+
+                    if (cancelBtn) {
+                        cancelBtn.onclick = () => {
+                            cancelarProcesso = true;
+                            cancelBtn.disabled = true;
+                            cancelBtn.innerHTML = '<i class="bi bi-hourglass"></i> Cancelando...';
+                            cancelBtn.style.backgroundColor = '#6c757d';
+                        };
                     }
-                });
+                }
+            });
 
-                // Deletar cada serviço
-                for (let i = 0; i < servicos.length; i++) {
-                    try {
-                        const res = await fetch(`/api/servicos/${servicos[i]._id}`, {
-                            method: 'DELETE',
-                            credentials: 'include'
-                        });
-                        if (res.ok) deletados++;
-                        else erros++;
-                    } catch (e) {
+            // Deletar cada serviço
+            for (let i = 0; i < total && !cancelarProcesso; i++) {
+                const servico = servicos[i];
+                try {
+                    const res = await fetch(`/api/servicos/${servico._id}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+
+                    if (res.ok) {
+                        deletados++;
+                        document.getElementById('deletados-servicos').textContent = deletados;
+                    } else {
+                        const errorData = await res.json().catch(() => ({}));
+                        const motivo = errorData.message || `Erro HTTP ${res.status}`;
                         erros++;
+                        errosDetalhados.push({
+                            servico: servico.nome || 'Sem nome',
+                            motivo: motivo
+                        });
+                        document.getElementById('erros-servicos').textContent = erros;
                     }
-                    document.getElementById('progresso-delete-servicos').textContent = i + 1;
+                } catch (e) {
+                    erros++;
+                    errosDetalhados.push({
+                        servico: servico.nome || 'Sem nome',
+                        motivo: e.message || 'Erro de conexão'
+                    });
+                    document.getElementById('erros-servicos').textContent = erros;
                 }
 
-                // Resultado final
-                Swal.fire({
-                    title: 'Operação Concluída!',
-                    html: `
-                        <p>✅ ${deletados} serviços deletados</p>
-                        ${erros > 0 ? `<p>❌ ${erros} erros</p>` : ''}
-                    `,
-                    icon: deletados > 0 ? 'success' : 'warning'
-                });
-
-                await loadServicosLista();
+                // Atualizar progresso
+                const processados = i + 1;
+                const percentual = Math.round((processados / total) * 100);
+                document.getElementById('progresso-delete-servicos').textContent = processados;
+                const barra = document.getElementById('barra-progresso-delete-servicos');
+                if (barra) {
+                    barra.style.width = `${percentual}%`;
+                    barra.textContent = `${percentual}%`;
+                }
             }
+
+            processoCompleto = !cancelarProcesso;
+
+            // Montar mensagem de resultado
+            let htmlResultado = `
+                <div class="text-start">
+                    <p><strong>Status:</strong> ${cancelarProcesso ? '🛑 Cancelado pelo usuário' : '✅ Concluído'}</p>
+                    <p><strong>Processados:</strong> ${deletados + erros}/${total}</p>
+                    <p><strong>✅ Deletados:</strong> ${deletados}</p>
+                    <p><strong>❌ Erros:</strong> ${erros}</p>
+            `;
+
+            if (errosDetalhados.length > 0 && errosDetalhados.length <= 10) {
+                htmlResultado += '<hr><p><strong>Detalhes dos erros:</strong></p><ul>';
+                errosDetalhados.forEach(erro => {
+                    htmlResultado += `<li><strong>${erro.servico}:</strong> ${erro.motivo}</li>`;
+                });
+                htmlResultado += '</ul>';
+            } else if (errosDetalhados.length > 10) {
+                htmlResultado += `<hr><p><strong>Detalhes:</strong> ${errosDetalhados.length} erros (muito para exibir)</p>`;
+            }
+
+            htmlResultado += '</div>';
+
+            // Mostrar resultado final com botão OK
+            await Swal.fire({
+                title: cancelarProcesso ? 'Operação Cancelada' : 'Operação Concluída!',
+                html: htmlResultado,
+                icon: cancelarProcesso ? 'warning' : (deletados > 0 ? 'success' : 'error'),
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3085d6'
+            });
+
+            await loadServicosLista();
+
         } catch (e) {
             console.error('❌ Erro ao deletar serviços:', e);
-            Swal.fire('Erro', 'Falha ao deletar serviços', 'error');
+            Swal.fire({
+                title: 'Erro',
+                html: `
+                    <p>Falha ao deletar serviços.</p>
+                    <p><strong>Motivo:</strong> ${e.message || 'Erro desconhecido'}</p>
+                `,
+                icon: 'error'
+            });
         }
     } else {
         console.log('❌ Operação cancelada pelo usuário');
@@ -15170,76 +15495,91 @@ async function handleUpload(input,tipo){
     formData.append('file',file);
     formData.append('tipo',tipo);
 
-    // Mostrar modal de loading com animação moderna
+    let cancelarProcesso = false;
+
+    // Mostrar modal de progresso com controle de cancelamento
     Swal.fire({
         title: `<i class="bi bi-cloud-arrow-up-fill"></i> Importando ${tipo}...`,
         html: `
             <div style="padding: 20px;">
-                <!-- Novo ícone de loading animado colorido -->
-                <div style="margin: 30px auto;">
-                    <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
-                                <stop offset="50%" style="stop-color:#EC4899;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
-                            </linearGradient>
-                        </defs>
-                        <circle cx="50" cy="50" r="35" fill="none" stroke="url(#grad)" stroke-width="8"
-                                stroke-linecap="round" stroke-dasharray="0 220"
-                                transform="rotate(-90 50 50)">
-                            <animate attributeName="stroke-dasharray" values="0 220;180 220;180 220"
-                                    dur="1.5s" repeatCount="indefinite"/>
-                            <animateTransform attributeName="transform" type="rotate"
-                                            values="-90 50 50;270 50 50;270 50 50"
-                                            dur="1.5s" repeatCount="indefinite"/>
-                        </circle>
-                        <circle cx="50" cy="50" r="25" fill="none" stroke="url(#grad)" stroke-width="6"
-                                stroke-linecap="round" stroke-dasharray="0 160" opacity="0.5"
-                                transform="rotate(90 50 50)">
-                            <animate attributeName="stroke-dasharray" values="0 160;120 160;120 160"
-                                    dur="1.2s" repeatCount="indefinite"/>
-                            <animateTransform attributeName="transform" type="rotate"
-                                            values="90 50 50;450 50 50;450 50 50"
-                                            dur="1.2s" repeatCount="indefinite"/>
-                        </circle>
-                    </svg>
+                <div class="mb-3">
+                    <div class="progress" style="height: 25px;">
+                        <div id="barra-progresso-upload" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+                             role="progressbar" style="width: 0%">0%</div>
+                    </div>
                 </div>
                 <p style="margin-top: 20px; font-size: 1.1rem;">
                     <strong>📁 Arquivo:</strong> ${file.name}
                 </p>
-                <p style="margin-top: 10px; color: var(--text-secondary);">
-                    <i class="bi bi-info-circle"></i> Processando dados, aguarde...
+                <p id="status-upload" style="margin-top: 10px; color: var(--text-secondary);">
+                    <i class="bi bi-info-circle"></i> Enviando arquivo...
                 </p>
-                <div class="progress" style="height: 6px; margin-top: 20px; border-radius: 3px;">
-                    <div class="progress-bar" role="progressbar"
-                         style="width: 100%; background: linear-gradient(90deg, #7C3AED, #EC4899);
-                                animation: progress-animation 2s ease-in-out infinite;">
-                    </div>
-                </div>
+                <div id="detalhes-upload" style="display: none; margin-top: 15px;"></div>
             </div>
-            <style>
-                @keyframes progress-animation {
-                    0% { width: 0%; }
-                    50% { width: 100%; }
-                    100% { width: 0%; }
-                }
-            </style>
         `,
         allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false
+        showConfirmButton: false,
+        showCancelButton: true,
+        showCloseButton: true,
+        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Importação',
+        cancelButtonColor: '#dc3545',
+        didOpen: () => {
+            const confirmBtn = Swal.getConfirmButton();
+            const cancelBtn = Swal.getCancelButton();
+            const closeBtn = Swal.getCloseButton();
+
+            if (confirmBtn) confirmBtn.style.display = 'none';
+            if (closeBtn) closeBtn.style.display = 'none';
+
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    cancelarProcesso = true;
+                    cancelBtn.disabled = true;
+                    cancelBtn.innerHTML = '<i class="bi bi-hourglass"></i> Cancelando...';
+                    cancelBtn.style.backgroundColor = '#6c757d';
+                };
+            }
+
+            // Simular progresso durante envio
+            let progresso = 0;
+            const intervalo = setInterval(() => {
+                if (cancelarProcesso || progresso >= 80) {
+                    clearInterval(intervalo);
+                    return;
+                }
+                progresso += 10;
+                const barra = document.getElementById('barra-progresso-upload');
+                if (barra) {
+                    barra.style.width = `${progresso}%`;
+                    barra.textContent = `${progresso}%`;
+                }
+            }, 200);
+        }
     });
 
     try{
+        if (cancelarProcesso) {
+            throw new Error('Importação cancelada pelo usuário');
+        }
+
+        document.getElementById('status-upload').innerHTML = '<i class="bi bi-upload"></i> Processando arquivo...';
+
         const res=await fetch('/api/importar',{
             method:'POST',
             credentials:'include',
             body:formData
         });
 
-        // Fechar modal de loading
-        Swal.close();
+        if (cancelarProcesso) {
+            throw new Error('Importação cancelada pelo usuário');
+        }
+
+        // Atualizar barra para 100%
+        const barra = document.getElementById('barra-progresso-upload');
+        if (barra) {
+            barra.style.width = '100%';
+            barra.textContent = '100%';
+        }
 
         if(!res.ok){
             throw new Error(`Erro HTTP: ${res.status}`);
@@ -15250,38 +15590,56 @@ async function handleUpload(input,tipo){
         if(data.success){
             const totalRegistros = data.count_success + (data.count_error || 0);
             const porcentagemSucesso = ((data.count_success / totalRegistros) * 100).toFixed(1);
-            
-            Swal.fire({
-                icon: data.count_error > 0 ? 'warning' : 'success',
-                title: data.count_error > 0 ? '⚠️ Importação Parcial' : '✅ Importação Concluída!',
-                html: `
-                    <div style="padding: 20px;">
-                        <div style="background: var(--bg-main); border-radius: 12px; padding: 20px; margin: 15px 0;">
-                            <h3 style="color: var(--success); margin: 0;">
-                                <i class="bi bi-check-circle"></i> ${data.count_success} registros importados
-                            </h3>
-                            ${data.count_error > 0 ? `
-                                <h4 style="color: var(--danger); margin-top: 10px;">
-                                    <i class="bi bi-x-circle"></i> ${data.count_error} erros encontrados
-                                </h4>
-                            ` : ''}
-                            <p style="margin-top: 15px; font-size: 0.9rem; color: var(--text-secondary);">
-                                Taxa de sucesso: <strong style="color: var(--primary);">${porcentagemSucesso}%</strong>
+
+            // Atualizar status e barra de progresso
+            const barra = document.getElementById('barra-progresso-upload');
+            if (barra) {
+                barra.classList.remove('bg-info');
+                barra.classList.add(data.count_error > 0 ? 'bg-warning' : 'bg-success');
+            }
+
+            document.getElementById('status-upload').innerHTML = data.count_error > 0 ?
+                '<i class="bi bi-exclamation-triangle"></i> ⚠️ Importação Parcial' :
+                '<i class="bi bi-check-circle"></i> ✅ Importação Concluída!';
+
+            // Atualizar detalhes
+            const detalhesDiv = document.getElementById('detalhes-upload');
+            if (detalhesDiv) {
+                detalhesDiv.style.display = 'block';
+                detalhesDiv.innerHTML = `
+                    <div style="background: var(--bg-main); border-radius: 12px; padding: 15px; text-align: left;">
+                        <p style="color: var(--success); margin: 5px 0;">
+                            <strong><i class="bi bi-check-circle"></i> Importados:</strong> ${data.count_success}
+                        </p>
+                        ${data.count_error > 0 ? `
+                            <p style="color: var(--danger); margin: 5px 0;">
+                                <strong><i class="bi bi-x-circle"></i> Erros:</strong> ${data.count_error}
                             </p>
-                        </div>
+                        ` : ''}
+                        <p style="margin: 5px 0; color: var(--text-secondary);">
+                            Taxa de sucesso: <strong>${porcentagemSucesso}%</strong>
+                        </p>
                         ${data.errors && data.errors.length > 0 ? `
-                            <div style="margin-top: 20px; text-align: left;">
-                                <strong>Detalhes dos erros:</strong>
-                                <ul style="max-height: 150px; overflow-y: auto; margin-top: 10px; padding-left: 20px;">
-                                    ${data.errors.slice(0, 5).map(err => `<li style="margin: 5px 0;">${err}</li>`).join('')}
-                                    ${data.errors.length > 5 ? `<li style="color: var(--text-muted);">... e mais ${data.errors.length - 5} erros</li>` : ''}
-                                </ul>
-                            </div>
+                            <hr style="margin: 10px 0;">
+                            <strong>Detalhes dos erros:</strong>
+                            <ul style="max-height: 120px; overflow-y: auto; margin: 5px 0; padding-left: 20px; font-size: 0.9rem;">
+                                ${data.errors.slice(0, 5).map(err => `<li style="margin: 3px 0;">${err}</li>`).join('')}
+                                ${data.errors.length > 5 ? `<li style="color: var(--text-muted);">... e mais ${data.errors.length - 5} erros</li>` : ''}
+                            </ul>
                         ` : ''}
                     </div>
-                `,
-                confirmButtonText: 'Entendi'
-            });
+                `;
+            }
+
+            // Mostrar botão OK e esconder cancelar
+            const confirmBtn = Swal.getConfirmButton();
+            const cancelBtn = Swal.getCancelButton();
+            if (confirmBtn) {
+                confirmBtn.style.display = 'inline-block';
+                confirmBtn.textContent = 'OK';
+                confirmBtn.style.backgroundColor = '#3085d6';
+            }
+            if (cancelBtn) cancelBtn.style.display = 'none';
             
             // Recarregar a lista apropriada
             if(tipo==='produtos') loadProdutosLista();
@@ -15303,95 +15661,121 @@ async function handleUpload(input,tipo){
             }
 
         }else{
+            // Atualizar barra para erro
+            const barra = document.getElementById('barra-progresso-upload');
+            if (barra) {
+                barra.classList.remove('bg-info');
+                barra.classList.add('bg-danger');
+            }
+
             // Análise detalhada do erro
-            let errorDetails = '';
             let errorIcon = '❌';
             let errorTitle = 'Erro na Importação';
+            let errorDetails = '';
 
             if(data.message){
                 if(data.message.includes('formato') || data.message.includes('coluna')){
                     errorIcon = '📋';
                     errorTitle = 'Formato Incorreto';
                     errorDetails = `
-                        <div style="text-align: left; margin-top: 20px;">
-                            <h4>🔍 Possíveis causas:</h4>
-                            <ul style="margin: 10px 0; padding-left: 20px;">
-                                <li>Arquivo não está no formato CSV ou Excel</li>
-                                <li>Colunas obrigatórias estão faltando</li>
-                                <li>Cabeçalhos das colunas estão incorretos</li>
-                                <li>Dados estão em formato incompatível</li>
-                            </ul>
-                            <div style="margin-top: 15px; padding: 10px; background: var(--bg-main); border-radius: 8px;">
-                                <strong>💡 Dica:</strong> Baixe o template de exemplo e use-o como base
-                            </div>
+                        <hr style="margin: 10px 0;">
+                        <h4 style="font-size: 1rem; margin-bottom: 10px;">🔍 Possíveis causas:</h4>
+                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.9rem;">
+                            <li>Arquivo não está no formato CSV ou Excel</li>
+                            <li>Colunas obrigatórias estão faltando</li>
+                            <li>Cabeçalhos das colunas estão incorretos</li>
+                            <li>Dados estão em formato incompatível</li>
+                        </ul>
+                        <div style="margin-top: 10px; padding: 10px; background: rgba(124, 58, 237, 0.1); border-radius: 8px; font-size: 0.9rem;">
+                            <strong>💡 Dica:</strong> Baixe o template de exemplo e use-o como base
                         </div>
                     `;
                 }else if(data.message.includes('duplica') || data.message.includes('existe')){
                     errorIcon = '🔄';
                     errorTitle = 'Registros Duplicados';
                     errorDetails = `
-                        <div style="text-align: left; margin-top: 20px;">
-                            <p>Alguns registros já existem no banco de dados.</p>
-                            <p style="margin-top: 10px;"><strong>Campos únicos que não podem ser duplicados:</strong></p>
-                            <ul style="margin: 10px 0; padding-left: 20px;">
-                                ${tipo === 'clientes' ? '<li>CPF do cliente</li>' : ''}
-                                ${tipo === 'profissionais' ? '<li>CPF do profissional</li>' : ''}
-                                ${tipo === 'produtos' ? '<li>Código do produto</li>' : ''}
-                                ${tipo === 'servicos' ? '<li>Nome do serviço + categoria</li>' : ''}
-                            </ul>
-                        </div>
+                        <hr style="margin: 10px 0;">
+                        <p style="font-size: 0.9rem; margin: 5px 0;">Alguns registros já existem no banco de dados.</p>
+                        <p style="font-size: 0.9rem; margin: 5px 0;"><strong>Campos únicos que não podem ser duplicados:</strong></p>
+                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.9rem;">
+                            ${tipo === 'clientes' ? '<li>CPF do cliente</li>' : ''}
+                            ${tipo === 'profissionais' ? '<li>CPF do profissional</li>' : ''}
+                            ${tipo === 'produtos' ? '<li>Código do produto</li>' : ''}
+                            ${tipo === 'servicos' ? '<li>Nome do serviço + categoria</li>' : ''}
+                        </ul>
                     `;
                 }else if(data.message.includes('vazio') || data.message.includes('empty')){
                     errorIcon = '📄';
                     errorTitle = 'Arquivo Vazio';
                     errorDetails = `
-                        <div style="text-align: left; margin-top: 20px;">
-                            <p>O arquivo parece estar vazio ou sem dados válidos.</p>
-                            <p style="margin-top: 10px;">Verifique se:</p>
-                            <ul style="margin: 10px 0; padding-left: 20px;">
-                                <li>O arquivo contém dados além do cabeçalho</li>
-                                <li>A planilha correta está selecionada (para Excel)</li>
-                                <li>Os dados não estão em células muito distantes</li>
-                            </ul>
-                        </div>
+                        <hr style="margin: 10px 0;">
+                        <p style="font-size: 0.9rem; margin: 5px 0;">O arquivo parece estar vazio ou sem dados válidos.</p>
+                        <p style="font-size: 0.9rem; margin: 5px 0;">Verifique se:</p>
+                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.9rem;">
+                            <li>O arquivo contém dados além do cabeçalho</li>
+                            <li>A planilha correta está selecionada (para Excel)</li>
+                            <li>Os dados não estão em células muito distantes</li>
+                        </ul>
                     `;
                 }
             }
 
-            Swal.fire({
-                icon: 'error',
-                title: `${errorIcon} ${errorTitle}`,
-                html: `
-                    <div style="padding: 10px;">
-                        <p style="font-size: 1.1rem; margin-bottom: 15px;">
-                            ${data.message || 'Ocorreu um erro ao processar o arquivo'}
+            document.getElementById('status-upload').innerHTML = `${errorIcon} ${errorTitle}`;
+
+            const detalhesDiv = document.getElementById('detalhes-upload');
+            if (detalhesDiv) {
+                detalhesDiv.style.display = 'block';
+                detalhesDiv.innerHTML = `
+                    <div style="background: rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 15px; text-align: left;">
+                        <p style="color: var(--danger); font-size: 0.95rem; margin-bottom: 10px;">
+                            <strong>Motivo:</strong> ${data.message || 'Ocorreu um erro ao processar o arquivo'}
                         </p>
                         ${errorDetails}
                         ${data.errors && data.errors.length > 0 ? `
-                            <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
-                                <strong>📝 Erros específicos encontrados:</strong>
-                                <ul style="max-height: 150px; overflow-y: auto; margin-top: 10px; padding-left: 20px; text-align: left;">
-                                    ${data.errors.slice(0, 5).map(err => `<li style="margin: 5px 0; color: var(--danger);">${err}</li>`).join('')}
-                                    ${data.errors.length > 5 ? `<li style="color: var(--text-muted);">... e mais ${data.errors.length - 5} erros</li>` : ''}
-                                </ul>
-                            </div>
+                            <hr style="margin: 10px 0;">
+                            <strong style="font-size: 0.9rem;">📝 Erros específicos encontrados:</strong>
+                            <ul style="max-height: 120px; overflow-y: auto; margin: 5px 0; padding-left: 20px; font-size: 0.85rem;">
+                                ${data.errors.slice(0, 5).map(err => `<li style="margin: 3px 0; color: var(--danger);">${err}</li>`).join('')}
+                                ${data.errors.length > 5 ? `<li style="color: var(--text-muted);">... e mais ${data.errors.length - 5} erros</li>` : ''}
+                            </ul>
                         ` : ''}
+                        <div style="margin-top: 10px; text-align: center;">
+                            <a href="/api/template/download/${tipo}" class="btn btn-sm" style="background: var(--primary); color: white; padding: 5px 15px; border-radius: 5px; text-decoration: none;">
+                                <i class="bi bi-download"></i> Baixar Template de Exemplo
+                            </a>
+                        </div>
                     </div>
-                `,
-                confirmButtonText: 'Entendi',
-                footer: `<a href="/api/template/download/${tipo}" class="btn btn-sm btn-outline">
-                            <i class="bi bi-download"></i> Baixar Template de Exemplo
-                        </a>`
-            });
+                `;
+            }
+
+            // Mostrar botão Fechar e esconder cancelar
+            const confirmBtn = Swal.getConfirmButton();
+            const cancelBtn = Swal.getCancelButton();
+            if (confirmBtn) {
+                confirmBtn.style.display = 'inline-block';
+                confirmBtn.textContent = 'Fechar';
+                confirmBtn.style.backgroundColor = '#dc3545';
+            }
+            if (cancelBtn) cancelBtn.style.display = 'none';
         }
     }catch(e){
         console.error('❌ Erro na importação:',e);
 
+        // Atualizar barra para erro
+        const barra = document.getElementById('barra-progresso-upload');
+        if (barra) {
+            barra.classList.remove('bg-info');
+            barra.classList.add('bg-danger');
+        }
+
         // Análise do erro de conexão
-        let errorMsg = 'Não foi possível enviar o arquivo.';
+        let errorMsg = e.message || 'Não foi possível enviar o arquivo.';
         let errorHelp = '';
 
-        if(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')){
+        if(e.message.includes('cancelad')){
+            errorMsg = 'Importação cancelada pelo usuário';
+            errorHelp = 'Nenhum dado foi importado.';
+        }else if(e.message.includes('Failed to fetch') || e.message.includes('NetworkError')){
             errorMsg = 'Erro de conexão com o servidor.';
             errorHelp = 'Verifique se o servidor está rodando e tente novamente.';
         }else if(e.message.includes('413') || file.size > 10485760){ // 10MB
@@ -15402,26 +15786,40 @@ async function handleUpload(input,tipo){
             errorHelp = 'O servidor demorou muito para responder. Tente com um arquivo menor.';
         }
 
-        Swal.fire({
-            icon: 'error',
-            title: '🚫 Erro no Upload',
-            html: `
-                <div style="padding: 15px;">
-                    <p style="font-size: 1.1rem; margin-bottom: 15px;">${errorMsg}</p>
-                    ${errorHelp ? `<p style="color: var(--text-secondary);">${errorHelp}</p>` : ''}
-                    <div style="margin-top: 20px; padding: 15px; background: var(--bg-main); border-radius: 8px;">
-                        <strong>💡 Possíveis soluções:</strong>
-                        <ul style="margin: 10px 0; padding-left: 20px; text-align: left;">
+        document.getElementById('status-upload').innerHTML = '🚫 Erro no Upload';
+
+        const detalhesDiv = document.getElementById('detalhes-upload');
+        if (detalhesDiv) {
+            detalhesDiv.style.display = 'block';
+            detalhesDiv.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.1); border-radius: 12px; padding: 15px; text-align: left;">
+                    <p style="color: var(--danger); font-size: 0.95rem; margin-bottom: 10px;">
+                        <strong>Erro:</strong> ${errorMsg}
+                    </p>
+                    ${errorHelp ? `<p style="color: var(--text-secondary); font-size: 0.9rem; margin: 5px 0;">${errorHelp}</p>` : ''}
+                    ${!e.message.includes('cancelad') ? `
+                        <hr style="margin: 10px 0;">
+                        <strong style="font-size: 0.9rem;">💡 Possíveis soluções:</strong>
+                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.85rem;">
                             <li>Verifique sua conexão com a internet</li>
                             <li>Reduza o tamanho do arquivo</li>
                             <li>Tente importar em lotes menores</li>
                             <li>Reinicie o servidor se necessário</li>
                         </ul>
-                    </div>
+                    ` : ''}
                 </div>
-            `,
-            confirmButtonText: 'OK'
-        });
+            `;
+        }
+
+        // Mostrar botão Fechar e esconder cancelar
+        const confirmBtn = Swal.getConfirmButton();
+        const cancelBtn = Swal.getCancelButton();
+        if (confirmBtn) {
+            confirmBtn.style.display = 'inline-block';
+            confirmBtn.textContent = 'Fechar';
+            confirmBtn.style.backgroundColor = '#dc3545';
+        }
+        if (cancelBtn) cancelBtn.style.display = 'none';
     }
     
     // Limpar o input para permitir upload do mesmo arquivo novamente
