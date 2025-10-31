@@ -2721,7 +2721,7 @@ def registrar_saida_estoque():
         logger.error(f"Erro ao registrar saída: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@bp.route('/api/estoque/relatorio', methods=['GET'])
+@bp.route('/api/estoque/relatorio-simples', methods=['GET'])
 @login_required
 def relatorio_estoque():
     db = get_db()
@@ -7770,99 +7770,16 @@ def heatmap_agendamentos_alias():
 
 
 # ==================== FILA DE ATENDIMENTO ====================
-@bp.route('/api/fila', methods=['GET'])
-@login_required
-def get_fila():
-    """Obter fila de atendimento"""
-    try:
-        fila = list(db.fila.find({}).sort([('ordem', 1), ('created_at', 1)]))
-        for f in fila:
-            f['_id'] = str(f['_id'])
-            if 'created_at' not in f:
-                f['created_at'] = datetime.now().isoformat()
-        return jsonify({'success': True, 'fila': fila})
-    except Exception as e:
-        logger.error(f"Erro ao obter fila: {e}")
-        return jsonify({'success': False, 'message': 'Erro ao carregar fila'}), 500
+# REMOVIDO - Rotas duplicadas movidas para linhas 2122-2142
+# As rotas /api/fila já estão definidas anteriormente no arquivo
 
-@bp.route('/api/fila', methods=['POST'])
-@login_required
-def add_to_fila():
-    """Adicionar cliente à fila"""
-    try:
-        data = request.get_json()
+# Nota: removi get_fila() e add_to_fila() pois conflitavam com a definição anterior
+# A rota funcional está na linha 2122 com métodos GET e POST
 
-        if not data.get('cliente_nome'):
-            return jsonify({'success': False, 'message': 'Nome do cliente é obrigatório'}), 400
 
-        # Obter próxima ordem
-        last_item = db.fila.find_one({}, sort=[('ordem', -1)])
-        next_ordem = (last_item.get('ordem', 0) + 1) if last_item else 1
-
-        novo_item = {
-            'cliente_nome': data['cliente_nome'],
-            'cliente_telefone': data.get('cliente_telefone', 'Não informado'),
-            'ordem': next_ordem,
-            'status': 'aguardando',
-            'created_at': datetime.now().isoformat(),
-            'user_id': str(current_user.id)
-        }
-
-        result = db.fila.insert_one(novo_item)
-        novo_item['_id'] = str(result.inserted_id)
-
-        return jsonify({'success': True, 'item': novo_item})
-    except Exception as e:
-        logger.error(f"Erro ao adicionar à fila: {e}")
-        return jsonify({'success': False, 'message': 'Erro ao adicionar à fila'}), 500
-
-@bp.route('/api/fila/<item_id>', methods=['DELETE'])
-@login_required
-def remove_from_fila(item_id):
-    """Remover cliente da fila"""
-    try:
-        from bson import ObjectId
-
-        result = db.fila.delete_one({'_id': ObjectId(item_id)})
-
-        if result.deleted_count > 0:
-            return jsonify({'success': True, 'message': 'Removido da fila'})
-        else:
-            return jsonify({'success': False, 'message': 'Item não encontrado'}), 404
-    except Exception as e:
-        logger.error(f"Erro ao remover da fila: {e}")
-        return jsonify({'success': False, 'message': 'Erro ao remover da fila'}), 500
-
-@bp.route('/api/fila/chamar/<item_id>', methods=['POST'])
-@login_required
-def chamar_cliente(item_id):
-    """Chamar cliente para atendimento"""
-    try:
-        from bson import ObjectId
-
-        result = db.fila.update_one(
-            {'_id': ObjectId(item_id)},
-            {'$set': {'status': 'chamado', 'chamado_at': datetime.now().isoformat()}}
-        )
-
-        if result.modified_count > 0:
-            return jsonify({'success': True, 'message': 'Cliente chamado'})
-        else:
-            return jsonify({'success': False, 'message': 'Item não encontrado'}), 404
-    except Exception as e:
-        logger.error(f"Erro ao chamar cliente: {e}")
-        return jsonify({'success': False, 'message': 'Erro ao chamar cliente'}), 500
-
-@bp.route('/api/fila/limpar', methods=['DELETE'])
-@login_required
-def limpar_fila():
-    """Limpar toda a fila"""
-    try:
-        result = db.fila.delete_many({})
-        return jsonify({'success': True, 'message': f'{result.deleted_count} itens removidos'})
-    except Exception as e:
-        logger.error(f"Erro ao limpar fila: {e}")
-        return jsonify({'success': False, 'message': 'Erro ao limpar fila'}), 500
+# REMOVIDO - Todas as rotas de fila duplicadas foram removidas
+# As rotas funcionais de fila estão definidas nas linhas 2122-2200
+# Isso resolve o erro 500 causado por rotas duplicadas e uso incorreto de 'db'
 
 
 # ==================== FIM ROTAS ADICIONAIS ====================

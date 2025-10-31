@@ -57,7 +57,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- BIOMA v5.0 - Sistema Consolidado -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- SweetAlert2 REMOVIDO - Usando sistema de modais customizado -->
+    <!-- SweetAlert2 - RESTAURADO para compatibilidade -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.8/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.8/dist/sweetalert2.all.min.js"></script>
     <!-- SheetJS para exportação Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <!-- jsPDF para geração de PDFs profissionais -->
@@ -430,7 +432,7 @@
         transform:scale(1.2);
         opacity:0.9;
     }
-}.text-center{text-align:center}.text-muted{color:var(--text-secondary)}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.autocomplete-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:2px solid var(--primary);border-radius:14px;margin-top:5px;max-height:400px;overflow-y:auto;z-index:999999;box-shadow:0 10px 40px rgba(124,58,237,0.3);display:none}.autocomplete-results::-webkit-scrollbar{width:8px}.autocomplete-results::-webkit-scrollbar-track{background:var(--bg-main);border-radius:10px}.autocomplete-results::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px}.autocomplete-item{padding:14px 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s ease;word-wrap:break-word;white-space:normal}.autocomplete-item:hover{background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));transform:translateX(5px);border-left:4px solid var(--primary)}.autocomplete-item:last-child{border-bottom:none}.autocomplete-item strong{color:var(--primary);font-size:1.05rem;display:block;margin-bottom:5px}.autocomplete-item small{color:var(--text-secondary);font-size:0.9rem;display:block}.row{display:flex;flex-wrap:wrap;margin:0 -15px}.row.g-4>*{padding:0 15px;margin-bottom:25px}[class^="col-"]{padding:0 15px}.col-12{width:100%}@media (min-width:768px){.col-md-6{width:50%}.col-md-4{width:33.333%}.col-md-3{width:25%}.col-md-2{width:16.666%}}@media (min-width:992px){.col-lg-3{width:25%}.col-lg-4{width:33.333%}.col-lg-6{width:50%}}
+}.text-center{text-align:center}.text-muted{color:var(--text-secondary)}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.autocomplete-results{position:fixed;background:var(--bg-card);border:2px solid var(--primary);border-radius:14px;margin-top:5px;max-height:400px;overflow-y:auto;z-index:99999999;box-shadow:0 10px 40px rgba(124,58,237,0.3);display:none;min-width:300px}.autocomplete-results::-webkit-scrollbar{width:8px}.autocomplete-results::-webkit-scrollbar-track{background:var(--bg-main);border-radius:10px}.autocomplete-results::-webkit-scrollbar-thumb{background:var(--primary);border-radius:10px}.autocomplete-item{padding:14px 18px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:all .2s ease;word-wrap:break-word;white-space:normal}.autocomplete-item:hover{background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(236,72,153,0.1));transform:translateX(5px);border-left:4px solid var(--primary)}.autocomplete-item:last-child{border-bottom:none}.autocomplete-item strong{color:var(--primary);font-size:1.05rem;display:block;margin-bottom:5px}.autocomplete-item small{color:var(--text-secondary);font-size:0.9rem;display:block}.row{display:flex;flex-wrap:wrap;margin:0 -15px}.row.g-4>*{padding:0 15px;margin-bottom:25px}[class^="col-"]{padding:0 15px}.col-12{width:100%}@media (min-width:768px){.col-md-6{width:50%}.col-md-4{width:33.333%}.col-md-3{width:25%}.col-md-2{width:16.666%}}@media (min-width:992px){.col-lg-3{width:25%}.col-lg-4{width:33.333%}.col-lg-6{width:50%}}
             .global-search-container{margin-bottom:24px;background:var(--bg-card);border-radius:18px;padding:20px;box-shadow:var(--shadow);position:relative}
         .global-search-field{display:flex;gap:12px;align-items:center}
         .global-search-field .bi-search{font-size:1.4rem;color:var(--primary)}
@@ -2865,19 +2867,17 @@
 }
 
 .bioma-autocomplete-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
+    position: fixed;
     max-height: 400px;
     overflow-y: auto;
     background: var(--bg-card);
     border: 2px solid var(--border-color);
     border-radius: 12px;
+    z-index: 99999999;
+    min-width: 300px;
     box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.15),
         0 2px 8px rgba(0, 0, 0, 0.08);
-    z-index: 999999;
     opacity: 0;
     transform: translateY(-10px);
     pointer-events: none;
@@ -4538,6 +4538,11 @@ class BiomaAutocomplete {
     }
 
     showDropdown() {
+        // Calcular posição para dropdown fixo
+        const rect = this.input.getBoundingClientRect();
+        this.dropdown.style.top = (rect.bottom + 8) + 'px';
+        this.dropdown.style.left = rect.left + 'px';
+        this.dropdown.style.width = Math.max(rect.width, 300) + 'px';
         this.dropdown.classList.add('active');
     }
 
@@ -8168,6 +8173,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('%c🌳 BIOMA v4.0 DEFINITIVO','background:#7C3AED;color:#fff;font-size:24px;padding:15px;border-radius:8px;font-weight:900');
     console.log('%c✅ Sistema 100% Completo Carregado','color:#10B981;font-size:16px;font-weight:700');
 
+    // Aplicar formatação automática em todos os campos de CPF
+    const cpfFields = [
+        'orcCPF',
+        'novoClienteCPF',
+        'anamneseCPF',
+        'prontuarioCPF',
+        'novoProfCPF',
+        'swal-cpf-cliente',
+        'swal-cpf',
+        'swal-cpf-assist'
+    ];
+
+    cpfFields.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            applyCPFFormatting(element);
+        }
+    });
+
     // Verificar auto-login primeiro
     const autoLoginAttempted = await checkAutoLogin();
 
@@ -10375,9 +10399,9 @@ function showModalCliente(){
         title:'Novo Cliente',
         html:`<div class="text-start">
                 <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Nome *</label><input type="text" id="swal-nome" class="form-control" placeholder="Nome completo"></div>
-                    <div class="col-md-6"><label class="form-label">CPF *</label><input type="text" id="swal-cpf" class="form-control" placeholder="000.000.000-00"></div>
-                    <div class="col-md-6"><label class="form-label">E-mail</label><input type="email" id="swal-email" class="form-control" placeholder="email@exemplo.com"></div>
+                    <div class="col-md-6"><label class="form-label">Nome *</label><input type="text" id="swal-nome-cliente" class="form-control" placeholder="Nome completo"></div>
+                    <div class="col-md-6"><label class="form-label">CPF *</label><input type="text" id="swal-cpf-cliente" class="form-control" placeholder="000.000.000-00"></div>
+                    <div class="col-md-6"><label class="form-label">E-mail</label><input type="email" id="swal-email-cliente" class="form-control" placeholder="email@exemplo.com"></div>
                     <div class="col-md-6"><label class="form-label">Telefone</label><input type="text" id="swal-telefone" class="form-control" placeholder="(00) 00000-0000"></div>
                     <div class="col-md-6"><label class="form-label">Data de nascimento</label><input type="date" id="swal-data-nascimento" class="form-control"></div>
                     <div class="col-md-6"><label class="form-label">Indicação</label><input type="text" id="swal-indicacao" class="form-control"></div>
@@ -10393,8 +10417,8 @@ function showModalCliente(){
         allowOutsideClick: true,
         showCloseButton: true,
         preConfirm:()=>{
-            const nome=document.getElementById('swal-nome').value.trim();
-            const cpf=document.getElementById('swal-cpf').value.trim();
+            const nome=document.getElementById('swal-nome-cliente').value.trim();
+            const cpf=document.getElementById('swal-cpf-cliente').value.trim();
             if(!nome || !cpf){
                 Swal.showValidationMessage('Nome e CPF são obrigatórios');
                 return false;
@@ -10402,7 +10426,7 @@ function showModalCliente(){
             return {
                 nome,
                 cpf,
-                email:document.getElementById('swal-email').value.trim(),
+                email:document.getElementById('swal-email-cliente').value.trim(),
                 telefone:document.getElementById('swal-telefone').value.trim(),
                 data_nascimento:document.getElementById('swal-data-nascimento').value,
                 indicacao:document.getElementById('swal-indicacao').value.trim(),
@@ -10620,8 +10644,8 @@ async function editarCliente(id){
             </div>`;
         const html = `<div class="text-start">
                 <div class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Nome *</label><input type="text" id="swal-nome" class="form-control" value="${c.nome || ''}"></div>
-                    <div class="col-md-6"><label class="form-label">CPF *</label><input type="text" id="swal-cpf" class="form-control" value="${c.cpf || ''}"></div>
+                    <div class="col-md-6"><label class="form-label">Nome *</label><input type="text" id="swal-edit-cliente-nome" class="form-control" value="${c.nome || ''}"></div>
+                    <div class="col-md-6"><label class="form-label">CPF *</label><input type="text" id="swal-edit-cliente-cpf" class="form-control" value="${c.cpf || ''}"></div>
                     <div class="col-md-6"><label class="form-label">E-mail</label><input type="email" id="swal-email" class="form-control" value="${c.email || ''}"></div>
                     <div class="col-md-6"><label class="form-label">Telefone</label><input type="text" id="swal-telefone" class="form-control" value="${c.telefone || ''}"></div>
                     <div class="col-md-6"><label class="form-label">Data de nascimento</label><input type="date" id="swal-data-nascimento" class="form-control" value="${c.data_nascimento ? c.data_nascimento.substring(0,10) : ''}"></div>
@@ -10650,8 +10674,8 @@ async function editarCliente(id){
             allowOutsideClick: true,
             showCloseButton: true,
             preConfirm:()=>{
-                const nome=document.getElementById('swal-nome').value.trim();
-                const cpf=document.getElementById('swal-cpf').value.trim();
+                const nome=document.getElementById('swal-edit-cliente-nome').value.trim();
+                const cpf=document.getElementById('swal-edit-cliente-cpf').value.trim();
                 if(!nome || !cpf){
                     Swal.showValidationMessage('Nome e CPF são obrigatórios');
                     return false;
@@ -10823,16 +10847,16 @@ async function deleteProfissional(id){
 function showModalProfissional(){
     Swal.fire({
         title:'Novo Profissional',
-        html:`<input type="text" id="swal-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-cpf" class="form-control mb-3" placeholder="CPF"><input type="text" id="swal-espec" class="form-control mb-3" placeholder="Especialidade"><input type="number" id="swal-comissao" class="form-control" placeholder="Comissão %" value="10">`,
+        html:`<input type="text" id="swal-prof-nome" class="form-control mb-3" placeholder="Nome"><input type="text" id="swal-prof-cpf" class="form-control mb-3" placeholder="CPF"><input type="text" id="swal-prof-espec" class="form-control mb-3" placeholder="Especialidade"><input type="number" id="swal-prof-comissao" class="form-control" placeholder="Comissão %" value="10">`,
         showCancelButton:true,
         allowEscapeKey: true,
         allowOutsideClick: true,
         showCloseButton: true,
         preConfirm:()=>{
-        const nome=document.getElementById('swal-nome').value;
-        const cpf=document.getElementById('swal-cpf').value;
+        const nome=document.getElementById('swal-prof-nome').value;
+        const cpf=document.getElementById('swal-prof-cpf').value;
         if(!nome||!cpf){Swal.showValidationMessage('Nome e CPF obrigatórios');return false;}
-        return {nome,cpf,especialidade:document.getElementById('swal-espec').value,comissao_perc:document.getElementById('swal-comissao').value};
+        return {nome,cpf,especialidade:document.getElementById('swal-prof-espec').value,comissao_perc:document.getElementById('swal-prof-comissao').value};
     }}).then(async(result)=>{
         if(result.isConfirmed){
             try{
@@ -13819,12 +13843,12 @@ async function handleUpload(input,tipo){
     if(!file){
         return;
     }
-    
+
     // Validar tipo de arquivo
     const validExtensions = ['.csv', '.xlsx', '.xls'];
     const fileName = file.name.toLowerCase();
     const isValidFile = validExtensions.some(ext => fileName.endsWith(ext));
-    
+
     if(!isValidFile){
         Swal.fire({
             icon: 'error',
@@ -13834,73 +13858,44 @@ async function handleUpload(input,tipo){
         input.value = '';
         return;
     }
-    
+
     const formData=new FormData();
     formData.append('file',file);
     formData.append('tipo',tipo);
-    
-    let abortController = new AbortController();
-    let uploadCanceled = false;
 
-    const result = await Swal.fire({
-        title: `Importando ${tipo}...`,
+    // Mostrar modal de loading
+    Swal.fire({
+        title: `<i class="bi bi-cloud-arrow-up-fill"></i> Importando ${tipo}...`,
         html: `
             <div style="padding: 20px;">
-                <div class="spinner" style="margin: 20px auto;"></div>
-                <p style="margin-top: 20px;">Processando arquivo: <strong>${file.name}</strong></p>
+                <div class="progress" style="height: 30px; margin-bottom: 20px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: 100%; background: linear-gradient(90deg, #7C3AED, #EC4899);">
+                        Processando...
+                    </div>
+                </div>
+                <p style="margin-top: 20px;"><strong>Arquivo:</strong> ${file.name}</p>
                 <p class="text-muted">Aguarde, isso pode levar alguns segundos...</p>
             </div>
         `,
         allowOutsideClick: false,
         allowEscapeKey: false,
-        showCancelButton: true,
         showConfirmButton: false,
-        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar',
-        cancelButtonColor: '#EF4444',
         didOpen: () => {
-            // Fazer o botão cancelar pulsar
-            const cancelBtn = Swal.getCancelButton();
-            if (cancelBtn) {
-                cancelBtn.style.animation = 'pulse 1.5s infinite';
-            }
-        },
-        preConfirm: () => false, // Evita fechamento ao clicar em confirmar
-        showLoaderOnConfirm: false,
-        preDeny: () => {
-            uploadCanceled = true;
-            abortController.abort();
-            return false;
+            Swal.showLoading();
         }
-    }).then((result) => {
-        if (result.dismiss === Swal.DismissReason.cancel) {
-            // Confirmar cancelamento
-            return Swal.fire({
-                title: 'Cancelar Importação?',
-                text: 'Deseja realmente cancelar a importação em andamento?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sim, Cancelar',
-                cancelButtonText: 'Não, Continuar',
-                confirmButtonColor: '#EF4444',
-                cancelButtonColor: '#6c757d'
-            });
-        }
-        return result;
     });
-
-    if (result.isConfirmed || uploadCanceled) {
-        input.value = '';
-        mostrarNotificacao('warning', 'Importação cancelada pelo usuário');
-        return;
-    }
 
     try{
         const res=await fetch('/api/importar',{
             method:'POST',
             credentials:'include',
-            body:formData,
-            signal: abortController.signal
+            body:formData
         });
+
+        // Fechar modal de loading
+        Swal.close();
 
         if(!res.ok){
             throw new Error(`Erro HTTP: ${res.status}`);
@@ -13974,16 +13969,29 @@ async function handleUpload(input,tipo){
 
 async function buscarClientePorCPF(){
     const cpf=document.getElementById('orcCPF').value.trim();
-    if(cpf.length<3){document.getElementById('cpfResults').style.display='none';return;}
+    const cpfInput = document.getElementById('orcCPF');
+    const cpfResults = document.getElementById('cpfResults');
+
+    if(cpf.length<3){
+        cpfResults.style.display='none';
+        return;
+    }
+
     try{
         const res=await fetch(`/api/clientes/buscar?termo=${cpf}`,{credentials:'include'});
         const data=await res.json();
         if(data.success&&data.clientes.length>0){
             const html=data.clientes.map(c=>`<div class="autocomplete-item" onclick="selecionarCliente('${c._id}','${c.cpf}','${c.nome}','${c.email||''}','${c.telefone||''}')"><strong>${c.nome}</strong><small>${c.cpf} | ${c.telefone||'Sem telefone'}</small></div>`).join('');
-            document.getElementById('cpfResults').innerHTML=html;
-            document.getElementById('cpfResults').style.display='block';
+            cpfResults.innerHTML=html;
+
+            // Calcular posição para dropdown fixo
+            const rect = cpfInput.getBoundingClientRect();
+            cpfResults.style.top = (rect.bottom + 5) + 'px';
+            cpfResults.style.left = rect.left + 'px';
+            cpfResults.style.width = rect.width + 'px';
+            cpfResults.style.display='block';
         }else{
-            document.getElementById('cpfResults').style.display='none';
+            cpfResults.style.display='none';
         }
     }catch(e){
         console.error('❌ Erro buscar cliente:',e);
@@ -17738,6 +17746,48 @@ function showSubTab(section, tab) {
 }
 // ========== FIM SISTEMA DE COMISSÕES ==========
 
+// ========== FUNÇÃO DE FORMATAÇÃO DE CPF ====================
+function formatCPF(cpf) {
+    // Remove todos os caracteres não numéricos
+    cpf = cpf.replace(/\D/g, '');
+
+    // Limita a 11 dígitos
+    cpf = cpf.substring(0, 11);
+
+    // Aplica a máscara XXX.XXX.XXX-XX
+    if (cpf.length <= 3) {
+        return cpf;
+    } else if (cpf.length <= 6) {
+        return cpf.substring(0, 3) + '.' + cpf.substring(3);
+    } else if (cpf.length <= 9) {
+        return cpf.substring(0, 3) + '.' + cpf.substring(3, 6) + '.' + cpf.substring(6);
+    } else {
+        return cpf.substring(0, 3) + '.' + cpf.substring(3, 6) + '.' + cpf.substring(6, 9) + '-' + cpf.substring(9);
+    }
+}
+
+// Aplicar formatação automaticamente em campos de CPF
+function applyCPFFormatting(inputElement) {
+    inputElement.addEventListener('input', function() {
+        const cursorPos = this.selectionStart;
+        const oldLength = this.value.length;
+        const unformattedValue = this.value.replace(/\D/g, '');
+
+        this.value = formatCPF(this.value);
+
+        // Ajustar posição do cursor
+        const newLength = this.value.length;
+        const diff = newLength - oldLength;
+
+        // Se adicionamos caracteres de formatação, mova o cursor para frente
+        if (diff > 0) {
+            this.setSelectionRange(cursorPos + diff, cursorPos + diff);
+        } else {
+            this.setSelectionRange(cursorPos, cursorPos);
+        }
+    });
+}
+
 // ========== SISTEMA DE ANAMNESE E PRONTUÁRIO ====================
 let currentClienteCPF = null;
 
@@ -18378,7 +18428,8 @@ async function carregarDadosSubTab(section, subtab) {
             else if (subtab === 'rejeitados') await carregarOrcamentosRejeitados();
             else if (subtab === 'historico') await carregarHistoricoOrcamentos();
         } else if (section === 'agendamentos') {
-            if (subtab === 'hoje') await carregarAgendamentosHoje();
+            if (subtab === 'novo') await carregarFormularioNovoAgendamento();
+            else if (subtab === 'hoje') await carregarAgendamentosHoje();
             else if (subtab === 'semana') await carregarAgendamentosSemana();
             else if (subtab === 'mes') await carregarAgendamentosMes();
             else if (subtab === 'todos') await carregarTodosAgendamentos();
@@ -18702,6 +18753,161 @@ async function rejeitarOrcamento(id) {
 // ========== FIM SUB-TABS ORÇAMENTOS ==========
 
 // ========== SISTEMA DE SUB-TABS - AGENDAMENTOS (CORRIGIDO) ====================
+
+// Função para carregar o formulário de novo agendamento
+async function carregarFormularioNovoAgendamento() {
+    console.log('📝 Carregando formulário de novo agendamento...');
+
+    try {
+        // Carregar clientes
+        const clientesRes = await fetch('/api/clientes', {credentials: 'include'});
+        if (clientesRes.ok) {
+            const clientesData = await clientesRes.json();
+            const clienteSelect = document.getElementById('novoAgendCliente');
+            if (clienteSelect) {
+                clienteSelect.innerHTML = '<option value="">Selecione o cliente...</option>';
+                if (clientesData.success && clientesData.clientes) {
+                    clientesData.clientes.forEach(cliente => {
+                        const option = document.createElement('option');
+                        option.value = cliente._id;
+                        option.textContent = `${cliente.nome} - ${cliente.cpf || 'Sem CPF'}`;
+                        clienteSelect.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        // Carregar profissionais
+        const profissionaisRes = await fetch('/api/profissionais', {credentials: 'include'});
+        if (profissionaisRes.ok) {
+            const profissionaisData = await profissionaisRes.json();
+            const profissionalSelect = document.getElementById('novoAgendProfissional');
+            if (profissionalSelect) {
+                profissionalSelect.innerHTML = '<option value="">Selecione o profissional...</option>';
+                if (profissionaisData.success && profissionaisData.profissionais) {
+                    profissionaisData.profissionais.forEach(prof => {
+                        if (prof.ativo !== false) { // Apenas profissionais ativos
+                            const option = document.createElement('option');
+                            option.value = prof._id;
+                            option.textContent = `${prof.nome} - ${prof.especialidade || 'Sem especialidade'}`;
+                            profissionalSelect.appendChild(option);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Carregar serviços
+        const servicosRes = await fetch('/api/servicos', {credentials: 'include'});
+        if (servicosRes.ok) {
+            const servicosData = await servicosRes.json();
+            const servicoSelect = document.getElementById('novoAgendServico');
+            if (servicoSelect) {
+                servicoSelect.innerHTML = '<option value="">Selecione o serviço...</option>';
+                if (servicosData.success && servicosData.servicos) {
+                    servicosData.servicos.forEach(servico => {
+                        const option = document.createElement('option');
+                        option.value = servico._id;
+                        option.textContent = `${servico.nome} - R$ ${parseFloat(servico.preco || 0).toFixed(2)}`;
+                        servicoSelect.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        // Definir data e hora padrão (hoje)
+        const hoje = new Date();
+        const dataInput = document.getElementById('novoAgendData');
+        if (dataInput) {
+            dataInput.value = hoje.toISOString().split('T')[0];
+        }
+
+        const horaInput = document.getElementById('novoAgendHora');
+        if (horaInput && !horaInput.value) {
+            horaInput.value = '09:00';
+        }
+
+        console.log('✅ Formulário de novo agendamento carregado com sucesso');
+    } catch(e) {
+        console.error('❌ Erro ao carregar formulário de novo agendamento:', e);
+    }
+}
+
+// Função para salvar novo agendamento
+async function salvarNovoAgendamento() {
+    const cliente = document.getElementById('novoAgendCliente')?.value;
+    const profissional = document.getElementById('novoAgendProfissional')?.value;
+    const servico = document.getElementById('novoAgendServico')?.value;
+    const data = document.getElementById('novoAgendData')?.value;
+    const hora = document.getElementById('novoAgendHora')?.value;
+    const observacoes = document.getElementById('novoAgendObservacoes')?.value;
+
+    if (!cliente || !profissional || !servico || !data || !hora) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Campos obrigatórios',
+            text: 'Por favor, preencha todos os campos obrigatórios'
+        });
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/agendamentos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({
+                cliente_id: cliente,
+                profissional_id: profissional,
+                servico_id: servico,
+                data,
+                hora,
+                observacoes,
+                status: 'Confirmado'
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Agendamento criado!',
+                text: 'O agendamento foi criado com sucesso'
+            });
+
+            // Limpar formulário
+            limparFormularioNovoAgendamento();
+
+            // Mudar para aba de hoje
+            switchSubTab('agendamentos', 'hoje');
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: result.message || 'Erro ao criar agendamento'
+            });
+        }
+    } catch(e) {
+        console.error('Erro ao salvar agendamento:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Erro ao criar agendamento'
+        });
+    }
+}
+
+// Função para limpar formulário de novo agendamento
+function limparFormularioNovoAgendamento() {
+    document.getElementById('novoAgendCliente').value = '';
+    document.getElementById('novoAgendProfissional').value = '';
+    document.getElementById('novoAgendServico').value = '';
+    document.getElementById('novoAgendData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('novoAgendHora').value = '09:00';
+    document.getElementById('novoAgendObservacoes').value = '';
+}
+
 async function carregarAgendamentosHoje() {
     const FUNC_KEY = 'agendamentosHoje';
     const tbody = document.getElementById('agendamentosHojeBody');
@@ -19124,7 +19330,39 @@ function filtrarProdutosTodos() {
 }
 
 function filtrarProdutosAtivos() {
-    // Implementar filtro local
+    const termo = document.getElementById('buscaProdutoAtivo')?.value.toLowerCase() || '';
+    const tbody = document.getElementById('produtosAtivosBody');
+
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('tr');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        if (row.cells.length <= 1) { // Linha de "nenhum produto"
+            row.style.display = visibleCount === 0 ? '' : 'none';
+            return;
+        }
+
+        const nome = row.cells[0]?.textContent.toLowerCase() || '';
+        const marca = row.cells[1]?.textContent.toLowerCase() || '';
+        const sku = row.cells[2]?.textContent.toLowerCase() || '';
+        const categoria = row.cells[3]?.textContent.toLowerCase() || '';
+
+        if (nome.includes(termo) || marca.includes(termo) ||
+            sku.includes(termo) || categoria.includes(termo)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Atualizar contador se existir
+    const counter = document.getElementById('produtosAtivosCont');
+    if (counter) {
+        counter.textContent = visibleCount;
+    }
 }
 
 async function toggleStatusProduto(id, statusAtual) {
@@ -19319,7 +19557,39 @@ function filtrarServicosTodos() {
 }
 
 function filtrarServicosAtivos() {
-    // Implementar filtro local
+    const termo = document.getElementById('buscaServicoAtivo')?.value.toLowerCase() || '';
+    const tbody = document.getElementById('servicosAtivosBody');
+
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('tr');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        if (row.cells.length <= 1) { // Linha de "nenhum serviço"
+            row.style.display = visibleCount === 0 ? '' : 'none';
+            return;
+        }
+
+        const nome = row.cells[0]?.textContent.toLowerCase() || '';
+        const tamanho = row.cells[1]?.textContent.toLowerCase() || '';
+        const categoria = row.cells[2]?.textContent.toLowerCase() || '';
+        const preco = row.cells[3]?.textContent.toLowerCase() || '';
+
+        if (nome.includes(termo) || tamanho.includes(termo) ||
+            categoria.includes(termo) || preco.includes(termo)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Atualizar contador se existir
+    const counter = document.getElementById('servicosAtivosCont');
+    if (counter) {
+        counter.textContent = visibleCount;
+    }
 }
 
 async function toggleStatusServico(id, statusAtual) {
