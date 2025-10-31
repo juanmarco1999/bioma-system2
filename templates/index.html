@@ -5175,7 +5175,47 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                     <button class="bioma-btn bioma-btn-primary" onclick="atualizarRelatorios()">
                         <i class="bi bi-arrow-clockwise"></i> Atualizar
                     </button>
+                    <button class="bioma-btn bioma-btn-danger" onclick="exportarRelatoriosPDF()">
+                        <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+                    </button>
                     <button class="bioma-btn bioma-btn-success" onclick="exportarRelatorio()"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</button>
+                </div>
+            </div>
+
+            <!-- Filtros de Data para Relatórios -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-funnel"></i> Filtros de Período
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Data Início</label>
+                            <input type="date" id="relatorioDataInicio" class="form-control" onchange="aplicarFiltrosRelatorios()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Data Fim</label>
+                            <input type="date" id="relatorioDataFim" class="form-control" onchange="aplicarFiltrosRelatorios()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Período Rápido</label>
+                            <select class="form-select" id="relatorioPeriodoRapido" onchange="aplicarPeriodoRapidoRelatorios(this.value)">
+                                <option value="">Personalizado</option>
+                                <option value="hoje">Hoje</option>
+                                <option value="semana">Esta Semana</option>
+                                <option value="mes">Este Mês</option>
+                                <option value="trimestre">Últimos 3 Meses</option>
+                                <option value="semestre">Últimos 6 Meses</option>
+                                <option value="ano">Este Ano</option>
+                                <option value="tudo" selected>Tudo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button class="bioma-btn bioma-btn-outline w-100" onclick="limparFiltrosRelatorios()">
+                                <i class="bi bi-x-circle"></i> Limpar Filtros
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -7026,6 +7066,46 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
             <button class="bioma-btn bioma-btn-primary" onclick="carregarDadosFinanceiro()">
                 <i class="bi bi-arrow-clockwise"></i> Atualizar
             </button>
+            <button class="bioma-btn bioma-btn-danger" onclick="exportarFinanceiroPDF()">
+                <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros de Data para Financeiro -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-funnel"></i> Filtros de Período
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Data Início</label>
+                    <input type="date" id="financeiroDataInicio" class="form-control" onchange="aplicarFiltrosFinanceiro()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Data Fim</label>
+                    <input type="date" id="financeiroDataFim" class="form-control" onchange="aplicarFiltrosFinanceiro()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Período Rápido</label>
+                    <select class="form-select" id="financeiroPeriodoRapido" onchange="aplicarPeriodoRapidoFinanceiro(this.value)">
+                        <option value="">Personalizado</option>
+                        <option value="hoje">Hoje</option>
+                        <option value="semana">Esta Semana</option>
+                        <option value="mes" selected>Este Mês</option>
+                        <option value="trimestre">Últimos 3 Meses</option>
+                        <option value="semestre">Últimos 6 Meses</option>
+                        <option value="ano">Este Ano</option>
+                        <option value="tudo">Tudo</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="bioma-btn bioma-btn-outline w-100" onclick="limparFiltrosFinanceiro()">
+                        <i class="bi bi-x-circle"></i> Limpar Filtros
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -15162,12 +15242,392 @@ let chartServicos=null,chartFaturamento=null;
 let assistentesCache=[];
 let anamneseDef=null;
 let prontuarioDef=null;
+// Variáveis globais para filtros
+let filtrosRelatorios = {
+    dataInicio: null,
+    dataFim: null
+};
+
+let filtrosFinanceiro = {
+    dataInicio: null,
+    dataFim: null
+};
+
 // Função para atualizar relatórios
 async function atualizarRelatorios() {
     toast('Atualizando relatórios...', 'info');
     await loadRelatorios();
     await carregarMapaCalor();
     mostrarNotificacao('success', 'Relatórios atualizados!', 2000);
+}
+
+// Funções de filtro para Relatórios
+function aplicarPeriodoRapidoRelatorios(periodo) {
+    const hoje = new Date();
+    let dataInicio = new Date();
+    let dataFim = new Date();
+
+    switch(periodo) {
+        case 'hoje':
+            dataInicio = new Date(hoje.setHours(0,0,0,0));
+            dataFim = new Date(hoje.setHours(23,59,59,999));
+            break;
+        case 'semana':
+            const diaSemana = hoje.getDay();
+            dataInicio = new Date(hoje.setDate(hoje.getDate() - diaSemana));
+            dataFim = new Date();
+            break;
+        case 'mes':
+            dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            dataFim = new Date();
+            break;
+        case 'trimestre':
+            dataInicio = new Date(hoje.setMonth(hoje.getMonth() - 3));
+            dataFim = new Date();
+            break;
+        case 'semestre':
+            dataInicio = new Date(hoje.setMonth(hoje.getMonth() - 6));
+            dataFim = new Date();
+            break;
+        case 'ano':
+            dataInicio = new Date(hoje.getFullYear(), 0, 1);
+            dataFim = new Date();
+            break;
+        case 'tudo':
+            dataInicio = null;
+            dataFim = null;
+            break;
+        default:
+            return;
+    }
+
+    if(dataInicio) {
+        document.getElementById('relatorioDataInicio').value = dataInicio.toISOString().split('T')[0];
+    } else {
+        document.getElementById('relatorioDataInicio').value = '';
+    }
+
+    if(dataFim) {
+        document.getElementById('relatorioDataFim').value = dataFim.toISOString().split('T')[0];
+    } else {
+        document.getElementById('relatorioDataFim').value = '';
+    }
+
+    aplicarFiltrosRelatorios();
+}
+
+function aplicarFiltrosRelatorios() {
+    const dataInicio = document.getElementById('relatorioDataInicio').value;
+    const dataFim = document.getElementById('relatorioDataFim').value;
+
+    filtrosRelatorios.dataInicio = dataInicio ? new Date(dataInicio) : null;
+    filtrosRelatorios.dataFim = dataFim ? new Date(dataFim) : null;
+
+    loadRelatorios();
+}
+
+function limparFiltrosRelatorios() {
+    document.getElementById('relatorioDataInicio').value = '';
+    document.getElementById('relatorioDataFim').value = '';
+    document.getElementById('relatorioPeriodoRapido').value = 'tudo';
+    filtrosRelatorios = { dataInicio: null, dataFim: null };
+    loadRelatorios();
+}
+
+// Funções de filtro para Financeiro
+function aplicarPeriodoRapidoFinanceiro(periodo) {
+    const hoje = new Date();
+    let dataInicio = new Date();
+    let dataFim = new Date();
+
+    switch(periodo) {
+        case 'hoje':
+            dataInicio = new Date(hoje.setHours(0,0,0,0));
+            dataFim = new Date(hoje.setHours(23,59,59,999));
+            break;
+        case 'semana':
+            const diaSemana = hoje.getDay();
+            dataInicio = new Date(hoje.setDate(hoje.getDate() - diaSemana));
+            dataFim = new Date();
+            break;
+        case 'mes':
+            dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            dataFim = new Date();
+            break;
+        case 'trimestre':
+            dataInicio = new Date(hoje.setMonth(hoje.getMonth() - 3));
+            dataFim = new Date();
+            break;
+        case 'semestre':
+            dataInicio = new Date(hoje.setMonth(hoje.getMonth() - 6));
+            dataFim = new Date();
+            break;
+        case 'ano':
+            dataInicio = new Date(hoje.getFullYear(), 0, 1);
+            dataFim = new Date();
+            break;
+        case 'tudo':
+            dataInicio = null;
+            dataFim = null;
+            break;
+        default:
+            return;
+    }
+
+    if(dataInicio) {
+        document.getElementById('financeiroDataInicio').value = dataInicio.toISOString().split('T')[0];
+    } else {
+        document.getElementById('financeiroDataInicio').value = '';
+    }
+
+    if(dataFim) {
+        document.getElementById('financeiroDataFim').value = dataFim.toISOString().split('T')[0];
+    } else {
+        document.getElementById('financeiroDataFim').value = '';
+    }
+
+    aplicarFiltrosFinanceiro();
+}
+
+function aplicarFiltrosFinanceiro() {
+    const dataInicio = document.getElementById('financeiroDataInicio').value;
+    const dataFim = document.getElementById('financeiroDataFim').value;
+
+    filtrosFinanceiro.dataInicio = dataInicio ? new Date(dataInicio) : null;
+    filtrosFinanceiro.dataFim = dataFim ? new Date(dataFim) : null;
+
+    carregarDadosFinanceiro();
+}
+
+function limparFiltrosFinanceiro() {
+    document.getElementById('financeiroDataInicio').value = '';
+    document.getElementById('financeiroDataFim').value = '';
+    document.getElementById('financeiroPeriodoRapido').value = 'mes';
+    filtrosFinanceiro = { dataInicio: null, dataFim: null };
+    carregarDadosFinanceiro();
+}
+
+// Função para exportar relatórios como PDF com gráficos
+async function exportarRelatoriosPDF() {
+    try {
+        mostrarNotificacao('info', 'Gerando PDF com gráficos...', 2000);
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+
+        // Cabeçalho
+        doc.setFontSize(20);
+        doc.setTextColor(124, 58, 237);
+        doc.text('BIOMA - Relatório de Análises', 105, 20, { align: 'center' });
+
+        // Informações do período
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        const dataHoje = new Date().toLocaleDateString('pt-BR');
+        doc.text(`Gerado em: ${dataHoje}`, 105, 28, { align: 'center' });
+
+        if(filtrosRelatorios.dataInicio || filtrosRelatorios.dataFim) {
+            const inicio = filtrosRelatorios.dataInicio ? filtrosRelatorios.dataInicio.toLocaleDateString('pt-BR') : 'Início';
+            const fim = filtrosRelatorios.dataFim ? filtrosRelatorios.dataFim.toLocaleDateString('pt-BR') : 'Hoje';
+            doc.text(`Período: ${inicio} até ${fim}`, 105, 33, { align: 'center' });
+        }
+
+        // Linha separadora
+        doc.setDrawColor(124, 58, 237);
+        doc.setLineWidth(0.5);
+        doc.line(20, 38, 190, 38);
+
+        // Cards de resumo
+        let yPos = 48;
+        doc.setFontSize(14);
+        doc.setTextColor(50, 50, 50);
+        doc.text('Resumo Geral', 20, yPos);
+
+        yPos += 10;
+        doc.setFontSize(10);
+
+        const faturamentoTotal = document.getElementById('relFaturamentoTotal').textContent;
+        const faturamentoMes = document.getElementById('relFaturamentoMes').textContent;
+        const cashbackTotal = document.getElementById('relCashbackTotal').textContent;
+        const ticketMedio = document.getElementById('relTicketMedio').textContent;
+
+        doc.setTextColor(16, 185, 129);
+        doc.text(`Faturamento Total: ${faturamentoTotal}`, 20, yPos);
+        doc.text(`Faturamento do Mês: ${faturamentoMes}`, 110, yPos);
+
+        yPos += 8;
+        doc.text(`Cashback Gerado: ${cashbackTotal}`, 20, yPos);
+        doc.text(`Ticket Médio: ${ticketMedio}`, 110, yPos);
+
+        // Capturar gráficos como imagens
+        yPos += 15;
+
+        // Gráfico de Serviços
+        if(chartServicos) {
+            try {
+                const imgServicos = chartServicos.toBase64Image();
+                doc.setFontSize(12);
+                doc.setTextColor(50, 50, 50);
+                doc.text('Top 5 Serviços Mais Vendidos', 20, yPos);
+                yPos += 5;
+                doc.addImage(imgServicos, 'PNG', 20, yPos, 170, 70);
+                yPos += 75;
+            } catch(e) {
+                console.warn('Erro ao capturar gráfico de serviços:', e);
+            }
+        }
+
+        // Nova página se necessário
+        if(yPos > 220) {
+            doc.addPage();
+            yPos = 20;
+        }
+
+        // Gráfico de Faturamento
+        if(chartFaturamento) {
+            try {
+                const imgFaturamento = chartFaturamento.toBase64Image();
+                doc.setFontSize(12);
+                doc.setTextColor(50, 50, 50);
+                doc.text('Faturamento Mensal', 20, yPos);
+                yPos += 5;
+                doc.addImage(imgFaturamento, 'PNG', 20, yPos, 170, 70);
+                yPos += 75;
+            } catch(e) {
+                console.warn('Erro ao capturar gráfico de faturamento:', e);
+            }
+        }
+
+        // Nova página para Top Clientes
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFontSize(14);
+        doc.setTextColor(50, 50, 50);
+        doc.text('Top 10 Clientes', 20, yPos);
+        yPos += 10;
+
+        // Tabela de Top Clientes
+        const topClientesTable = [];
+        const topClientesBody = document.getElementById('topClientesBody');
+        if(topClientesBody) {
+            const rows = topClientesBody.querySelectorAll('tr');
+            rows.forEach((row, idx) => {
+                if(idx < 10 && row.cells.length >= 3) {
+                    topClientesTable.push([
+                        row.cells[0].textContent.trim(),
+                        row.cells[1].textContent.trim(),
+                        row.cells[2].textContent.trim()
+                    ]);
+                }
+            });
+        }
+
+        if(topClientesTable.length > 0) {
+            doc.autoTable({
+                startY: yPos,
+                head: [['Posição', 'Nome', 'Total Gasto']],
+                body: topClientesTable,
+                theme: 'grid',
+                headStyles: { fillColor: [124, 58, 237] },
+                margin: { left: 20, right: 20 }
+            });
+        }
+
+        // Rodapé em todas as páginas
+        const pageCount = doc.internal.getNumberOfPages();
+        for(let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Página ${i} de ${pageCount}`, 105, 285, { align: 'center' });
+            doc.text('BIOMA - Sistema de Gestão', 105, 290, { align: 'center' });
+        }
+
+        // Salvar PDF
+        const nomeArquivo = `BIOMA_Relatorio_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(nomeArquivo);
+
+        mostrarNotificacao('success', 'PDF gerado com sucesso!', 3000);
+    } catch(e) {
+        console.error('Erro ao gerar PDF:', e);
+        mostrarNotificacao('error', 'Erro ao gerar PDF. Verifique o console.', 3000);
+    }
+}
+
+// Função para exportar financeiro como PDF
+async function exportarFinanceiroPDF() {
+    try {
+        mostrarNotificacao('info', 'Gerando PDF financeiro...', 2000);
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+
+        // Cabeçalho
+        doc.setFontSize(20);
+        doc.setTextColor(124, 58, 237);
+        doc.text('BIOMA - Relatório Financeiro', 105, 20, { align: 'center' });
+
+        // Informações do período
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        const dataHoje = new Date().toLocaleDateString('pt-BR');
+        doc.text(`Gerado em: ${dataHoje}`, 105, 28, { align: 'center' });
+
+        if(filtrosFinanceiro.dataInicio || filtrosFinanceiro.dataFim) {
+            const inicio = filtrosFinanceiro.dataInicio ? filtrosFinanceiro.dataInicio.toLocaleDateString('pt-BR') : 'Início';
+            const fim = filtrosFinanceiro.dataFim ? filtrosFinanceiro.dataFim.toLocaleDateString('pt-BR') : 'Hoje';
+            doc.text(`Período: ${inicio} até ${fim}`, 105, 33, { align: 'center' });
+        }
+
+        // Linha separadora
+        doc.setDrawColor(124, 58, 237);
+        doc.setLineWidth(0.5);
+        doc.line(20, 38, 190, 38);
+
+        // Cards de resumo financeiro
+        let yPos = 48;
+        doc.setFontSize(14);
+        doc.setTextColor(50, 50, 50);
+        doc.text('Resumo Financeiro', 20, yPos);
+
+        yPos += 10;
+        doc.setFontSize(11);
+
+        const receitas = document.getElementById('financeiroReceitas').textContent;
+        const despesas = document.getElementById('financeiroDespesas').textContent;
+        const comissoes = document.getElementById('financeiroComissoes').textContent;
+        const lucro = document.getElementById('financeiroLucro').textContent;
+
+        doc.setTextColor(16, 185, 129);
+        doc.text(`Receitas: ${receitas}`, 20, yPos);
+
+        doc.setTextColor(239, 68, 68);
+        doc.text(`Despesas: ${despesas}`, 110, yPos);
+
+        yPos += 10;
+        doc.setTextColor(245, 158, 11);
+        doc.text(`Comissões a Pagar: ${comissoes}`, 20, yPos);
+
+        doc.setTextColor(59, 130, 246);
+        doc.text(`Lucro Líquido: ${lucro}`, 110, yPos);
+
+        // Rodapé
+        doc.setPage(1);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Página 1 de 1', 105, 285, { align: 'center' });
+        doc.text('BIOMA - Sistema de Gestão', 105, 290, { align: 'center' });
+
+        // Salvar PDF
+        const nomeArquivo = `BIOMA_Financeiro_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(nomeArquivo);
+
+        mostrarNotificacao('success', 'PDF financeiro gerado com sucesso!', 3000);
+    } catch(e) {
+        console.error('Erro ao gerar PDF financeiro:', e);
+        mostrarNotificacao('error', 'Erro ao gerar PDF. Verifique o console.', 3000);
+    }
 }
 
 async function loadRelatorios(){
@@ -15182,7 +15642,27 @@ async function loadRelatorios(){
         const res=await fetch('/api/orcamentos',{credentials:'include'});
         const data=await res.json();
         if(!data.success||!data.orcamentos)return;
-        const orcamentos=data.orcamentos.filter(o=>o.status==='Aprovado');
+
+        // Aplicar filtros de data
+        let orcamentos = data.orcamentos.filter(o=>o.status==='Aprovado');
+        if(filtrosRelatorios.dataInicio || filtrosRelatorios.dataFim) {
+            orcamentos = orcamentos.filter(o => {
+                const dataOrcamento = new Date(o.created_at);
+                let atendeFiltro = true;
+
+                if(filtrosRelatorios.dataInicio) {
+                    atendeFiltro = atendeFiltro && dataOrcamento >= filtrosRelatorios.dataInicio;
+                }
+
+                if(filtrosRelatorios.dataFim) {
+                    const dataFimAjustada = new Date(filtrosRelatorios.dataFim);
+                    dataFimAjustada.setHours(23, 59, 59, 999);
+                    atendeFiltro = atendeFiltro && dataOrcamento <= dataFimAjustada;
+                }
+
+                return atendeFiltro;
+            });
+        }
         const faturamentoTotal=orcamentos.reduce((acc,o)=>acc+(o.total_final||0),0);
         document.getElementById('relFaturamentoTotal').textContent=`R$ ${faturamentoTotal.toFixed(0)}`;
         const mesAtual=new Date().getMonth();
