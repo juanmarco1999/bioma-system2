@@ -7547,6 +7547,7 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                 <th>Preço</th>
                                 <th>Valor Total</th>
                                 <th>Status</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="estoqueProdutosBody">
@@ -12347,21 +12348,21 @@ async function loadServicosLista(){
 
             // Todos os serviços
             if(tbodies[0]){
-                const htmlTodos=data.servicos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><span class="badge ${s.ativo?'success':'danger'}">${s.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                const htmlTodos=data.servicos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><span class="badge ${s.ativo?'success':'danger'}">${s.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarServico('${s._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteServico('${s._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('');
                 tbodies[0].innerHTML=htmlTodos;
             }
 
             // Serviços ativos
             if(tbodies[1]){
                 const ativos = data.servicos.filter(s => s.ativo);
-                const htmlAtivos = ativos.length > 0 ? ativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteServico('${s._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço ativo</td></tr>';
+                const htmlAtivos = ativos.length > 0 ? ativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarServico('${s._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteServico('${s._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço ativo</td></tr>';
                 tbodies[1].innerHTML=htmlAtivos;
             }
 
             // Serviços inativos
             if(tbodies[2]){
                 const inativos = data.servicos.filter(s => !s.ativo);
-                const htmlInativos = inativos.length > 0 ? inativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="ativarServico('${s._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço inativo</td></tr>';
+                const htmlInativos = inativos.length > 0 ? inativos.map(s=>`<tr data-id="${s._id}"><td><strong>${s.nome}</strong></td><td>${s.categoria}</td><td>${s.tamanho}</td><td><strong>R$ ${s.preco.toFixed(2)}</strong></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarServico('${s._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="ativarServico('${s._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum serviço inativo</td></tr>';
                 tbodies[2].innerHTML=htmlInativos;
             }
         }else{
@@ -12476,6 +12477,129 @@ function showModalServico(){
             }
         }
     });
+}
+
+// Função para editar serviço
+async function editarServico(id) {
+    try {
+        // Buscar dados do serviço
+        const res = await fetch(`/api/servicos/${id}`, { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.servico) {
+            throw new Error('Serviço não encontrado');
+        }
+
+        const s = data.servico;
+
+        // Criar formulário de edição
+        const html = `
+            <div class="text-start">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Nome do Serviço *</label>
+                        <input type="text" id="swal-servico-nome" class="form-control" value="${s.nome || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Categoria</label>
+                        <input type="text" id="swal-servico-categoria" class="form-control" value="${s.categoria || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Tamanho</label>
+                        <input type="text" id="swal-servico-tamanho" class="form-control" value="${s.tamanho || ''}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Preço (R$) *</label>
+                        <input type="number" id="swal-servico-preco" class="form-control" step="0.01" value="${s.preco || 0}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Duração (minutos)</label>
+                        <input type="number" id="swal-servico-duracao" class="form-control" value="${s.duracao || 30}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Status *</label>
+                        <select id="swal-servico-ativo" class="form-select">
+                            <option value="true" ${s.ativo !== false ? 'selected' : ''}>Ativo</option>
+                            <option value="false" ${s.ativo === false ? 'selected' : ''}>Inativo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const result = await Swal.fire({
+            title: '✏️ Editar Serviço',
+            html: html,
+            width: '700px',
+            showCancelButton: true,
+            confirmButtonText: 'Salvar Alterações',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#7C3AED',
+            preConfirm: () => {
+                const nome = document.getElementById('swal-servico-nome').value.trim();
+                const preco = document.getElementById('swal-servico-preco').value;
+
+                if (!nome) {
+                    Swal.showValidationMessage('Nome do serviço é obrigatório');
+                    return false;
+                }
+                if (!preco || preco <= 0) {
+                    Swal.showValidationMessage('Preço deve ser maior que zero');
+                    return false;
+                }
+
+                return {
+                    nome: nome,
+                    categoria: document.getElementById('swal-servico-categoria').value.trim(),
+                    tamanho: document.getElementById('swal-servico-tamanho').value.trim(),
+                    preco: parseFloat(preco),
+                    duracao: parseInt(document.getElementById('swal-servico-duracao').value) || 30,
+                    ativo: document.getElementById('swal-servico-ativo').value === 'true'
+                };
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const updateRes = await fetch(`/api/servicos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(result.value)
+                });
+
+                const updateData = await updateRes.json();
+
+                if (updateData.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Serviço Atualizado!',
+                        text: `${result.value.nome} foi atualizado com sucesso.`,
+                        timer: 2000
+                    });
+                    // Recarregar lista de serviços
+                    loadServicosLista();
+                } else {
+                    throw new Error(updateData.message || 'Erro ao atualizar serviço');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao atualizar serviço:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: error.message || 'Não foi possível atualizar o serviço'
+                });
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao carregar serviço para edição:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: error.message || 'Não foi possível carregar os detalhes do serviço'
+        });
+    }
 }
 
 // Função para ativar todos os serviços
@@ -12595,21 +12719,21 @@ async function loadProdutosLista(){
 
             // Todos os produtos
             if(tbodies[0]){
-                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+                const htmlTodos=data.produtos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><span class="badge ${p.ativo?'success':'danger'}">${p.ativo?'Ativo':'Inativo'}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('');
                 tbodies[0].innerHTML=htmlTodos;
             }
 
             // Produtos ativos
             if(tbodies[1]){
                 const ativos = data.produtos.filter(p => p.ativo);
-                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
+                const htmlAtivos = ativos.length > 0 ? ativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge ${p.estoque<=p.estoque_minimo?'danger':'success'}">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-danger" onclick="deleteProduto('${p._id}')" title="Deletar"><i class="bi bi-trash"></i></button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto ativo</td></tr>';
                 tbodies[1].innerHTML=htmlAtivos;
             }
 
             // Produtos inativos
             if(tbodies[2]){
                 const inativos = data.produtos.filter(p => !p.ativo);
-                const htmlInativos = inativos.length > 0 ? inativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge danger">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="ativarProduto('${p._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
+                const htmlInativos = inativos.length > 0 ? inativos.map(p=>`<tr data-id="${p._id}"><td><strong>${p.nome}</strong></td><td>${p.marca||'-'}</td><td><strong>R$ ${p.preco.toFixed(2)}</strong></td><td><span class="badge danger">${p.estoque||0}</span></td><td><button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarProduto('${p._id}')" title="Editar"><i class="bi bi-pencil"></i></button> <button class="bioma-btn bioma-btn-sm bioma-btn-success" onclick="ativarProduto('${p._id}')"><i class="bi bi-check-circle"></i> Ativar</button></td></tr>`).join('') : '<tr data-keep-visible="true"><td colspan="5" class="text-center text-muted">Nenhum produto inativo</td></tr>';
                 tbodies[2].innerHTML=htmlInativos;
             }
         }else{
@@ -20424,6 +20548,11 @@ async function carregarProdutosEstoque() {
                         <td>R$ ${preco.toFixed(2)}</td>
                         <td><strong>R$ ${valorTotal.toFixed(2)}</strong></td>
                         <td>${statusBadge}</td>
+                        <td>
+                            <button class="bioma-btn bioma-btn-sm bioma-btn-primary" onclick="editarEstoqueProduto('${prod._id}')" title="Editar Estoque">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -20449,6 +20578,197 @@ async function carregarProdutosEstoque() {
                 </td>
             </tr>
         `;
+    }
+}
+
+// Função para editar estoque de produto
+async function editarEstoqueProduto(id) {
+    try {
+        // Buscar dados do produto
+        const res = await fetch(`/api/produtos/${id}`, { credentials: 'include' });
+        const data = await res.json();
+
+        if (!data.success || !data.produto) {
+            throw new Error('Produto não encontrado');
+        }
+
+        const p = data.produto;
+
+        // Criar formulário de edição de estoque
+        const html = `
+            <div class="text-start">
+                <div class="alert alert-info mb-3">
+                    <strong>${p.nome}</strong> ${p.marca ? `- ${p.marca}` : ''}
+                    <br>Estoque atual: <strong>${p.estoque || 0}</strong>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de Movimentação *</label>
+                        <select id="swal-tipo-movimento" class="form-select" onchange="toggleMovimentacaoFields()">
+                            <option value="">Selecione...</option>
+                            <option value="entrada">✅ Entrada</option>
+                            <option value="saida">📤 Saída</option>
+                            <option value="ajuste">🔧 Ajuste Manual</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Quantidade *</label>
+                        <input type="number" id="swal-quantidade" class="form-control" min="1" placeholder="0">
+                    </div>
+                    <div class="col-md-12" id="campo-novo-estoque" style="display: none;">
+                        <label class="form-label">Novo Estoque (Ajuste Manual)</label>
+                        <input type="number" id="swal-novo-estoque" class="form-control" min="0" placeholder="${p.estoque || 0}">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Motivo/Observação</label>
+                        <textarea id="swal-motivo" class="form-control" rows="2" placeholder="Ex: Compra, venda, quebra, ajuste de inventário..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nota Fiscal</label>
+                        <input type="text" id="swal-nota-fiscal" class="form-control" placeholder="Número da NF (opcional)">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fornecedor</label>
+                        <input type="text" id="swal-fornecedor" class="form-control" placeholder="Nome do fornecedor (opcional)">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Script para alternar campos baseado no tipo de movimentação
+        window.toggleMovimentacaoFields = function() {
+            const tipo = document.getElementById('swal-tipo-movimento').value;
+            const campoNovoEstoque = document.getElementById('campo-novo-estoque');
+            const campoQuantidade = document.getElementById('swal-quantidade').parentElement.parentElement;
+
+            if (tipo === 'ajuste') {
+                campoNovoEstoque.style.display = 'block';
+                campoQuantidade.style.display = 'none';
+            } else {
+                campoNovoEstoque.style.display = 'none';
+                campoQuantidade.style.display = 'block';
+            }
+        };
+
+        const result = await Swal.fire({
+            title: '📦 Movimentação de Estoque',
+            html: html,
+            width: '700px',
+            showCancelButton: true,
+            confirmButtonText: 'Confirmar Movimentação',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#7C3AED',
+            preConfirm: () => {
+                const tipo = document.getElementById('swal-tipo-movimento').value;
+                const quantidade = document.getElementById('swal-quantidade').value;
+                const novoEstoque = document.getElementById('swal-novo-estoque').value;
+                const motivo = document.getElementById('swal-motivo').value.trim();
+
+                if (!tipo) {
+                    Swal.showValidationMessage('Selecione o tipo de movimentação');
+                    return false;
+                }
+
+                if (tipo === 'ajuste') {
+                    if (!novoEstoque && novoEstoque !== 0) {
+                        Swal.showValidationMessage('Informe o novo valor do estoque');
+                        return false;
+                    }
+                } else {
+                    if (!quantidade || quantidade <= 0) {
+                        Swal.showValidationMessage('Quantidade deve ser maior que zero');
+                        return false;
+                    }
+                }
+
+                if (!motivo) {
+                    Swal.showValidationMessage('Informe o motivo da movimentação');
+                    return false;
+                }
+
+                return {
+                    tipo: tipo,
+                    quantidade: tipo === 'ajuste' ? (parseInt(novoEstoque) - p.estoque) : parseInt(quantidade),
+                    novo_estoque: tipo === 'ajuste' ? parseInt(novoEstoque) : null,
+                    motivo: motivo,
+                    nota_fiscal: document.getElementById('swal-nota-fiscal').value.trim(),
+                    fornecedor: document.getElementById('swal-fornecedor').value.trim(),
+                    produto_id: id,
+                    produto_nome: p.nome
+                };
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                // Registrar movimentação
+                const movRes = await fetch('/api/estoque/movimentacao', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(result.value)
+                });
+
+                const movData = await movRes.json();
+
+                if (movData.success) {
+                    // Atualizar estoque do produto
+                    let novoEstoque;
+                    if (result.value.tipo === 'ajuste') {
+                        novoEstoque = result.value.novo_estoque;
+                    } else if (result.value.tipo === 'entrada') {
+                        novoEstoque = (p.estoque || 0) + result.value.quantidade;
+                    } else {
+                        novoEstoque = Math.max(0, (p.estoque || 0) - result.value.quantidade);
+                    }
+
+                    const updateRes = await fetch(`/api/produtos/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ estoque: novoEstoque })
+                    });
+
+                    const updateData = await updateRes.json();
+
+                    if (updateData.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Movimentação Registrada!',
+                            text: `Estoque atualizado: ${p.estoque || 0} → ${novoEstoque}`,
+                            timer: 2000
+                        });
+
+                        // Recarregar lista de produtos do estoque
+                        carregarProdutosEstoque();
+
+                        // Se estiver na aba de visão geral, atualizar também
+                        if (document.getElementById('totalProdutosEstoque')) {
+                            loadEstoqueResumo();
+                        }
+                    } else {
+                        throw new Error(updateData.message || 'Erro ao atualizar estoque');
+                    }
+                } else {
+                    throw new Error(movData.message || 'Erro ao registrar movimentação');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao processar movimentação:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro',
+                    text: error.message || 'Não foi possível processar a movimentação'
+                });
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Erro ao carregar produto para edição de estoque:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: error.message || 'Não foi possível carregar os detalhes do produto'
+        });
     }
 }
 
