@@ -116,15 +116,28 @@ def create_strategic_indexes():
         # Índice composto para detecção de conflitos
         db.agendamentos.create_index([("profissional_id", 1), ("data", 1), ("horario", 1)], background=True)
 
-        # Índices para ORÇAMENTOS (status + temporal)
-        db.orcamentos.create_index([("status", 1), ("created_at", -1)], background=True)
+        # Índices para ORÇAMENTOS (status + temporal) v7.2 OTIMIZADO
+        db.orcamentos.create_index([("status", 1)], background=True)  # Sozinho - MUITO usado
+        db.orcamentos.create_index([("cliente_cpf", 1)], background=True)  # CRÍTICO - N+1 query fix
+        db.orcamentos.create_index([("created_at", -1)], background=True)  # Ordenação
+        db.orcamentos.create_index([("status", 1), ("created_at", -1)], background=True)  # Compound
         db.orcamentos.create_index([("cliente_id", 1), ("created_at", -1)], background=True)
 
-        # Índices para PRODUTOS/ESTOQUE (busca + estoque baixo)
+        # Índices para PRODUTOS/ESTOQUE (busca + estoque baixo) v7.2 OTIMIZADO
+        db.produtos.create_index([("status", 1)], background=True)  # CRÍTICO - muito usado
         db.produtos.create_index([("nome", 1)], background=True)
         db.produtos.create_index([("sku", 1)], background=True)
-        db.produtos.create_index([("estoque_atual", 1)], background=True)  # Para alertas
-        db.produtos.create_index([("categoria", 1), ("estoque_atual", 1)], background=True)
+        db.produtos.create_index([("estoque", 1)], background=True)  # Para alertas (estoque baixo)
+        db.produtos.create_index([("estoque_atual", 1)], background=True)  # Fallback
+        db.produtos.create_index([("categoria", 1), ("estoque", 1)], background=True)
+
+        # Índices para SERVICOS v7.2
+        db.servicos.create_index([("categoria", 1)], background=True)
+        db.servicos.create_index([("nome", 1)], background=True)
+
+        # Índices para PROFISSIONAIS v7.2
+        db.profissionais.create_index([("ativo", 1)], background=True)
+        db.profissionais.create_index([("nome", 1)], background=True)
 
         # Índices para MOVIMENTAÇÕES DE ESTOQUE
         db.estoque_movimentacoes.create_index([("tipo", 1), ("created_at", -1)], background=True)
