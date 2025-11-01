@@ -3383,7 +3383,8 @@ def importar():
                             for tam, patterns in tamanhos_patterns.items():
                                 for pattern in patterns:
                                     pattern_norm = normalizar_coluna(pattern)
-                                    # v7.2: Buscar padrão NA coluna (unidirecional para evitar "longo" in "extralongo")
+                                    # v7.2: Buscar padrão NA coluna (ordem do OrderedDict garante extra_longo antes de longo)
+                                    # v7.3.1: Lógica mantida - ordem extra_longo > longo evita conflitos
                                     if pattern_norm in coluna_normalizada:
                                         tamanho_detectado = tam
                                         metodo_deteccao = f"padrão '{pattern}'"
@@ -8195,7 +8196,7 @@ def listar_servicos():
                 'id': str(s['_id']),
                 'nome': s.get('nome', 'Sem nome'),
                 'categoria': s.get('categoria', 'Geral'),
-                'tamanho': s.get('tamanho', 'Médio'),
+                'tamanho': s.get('tamanho', ''),  # v7.3.1: Removido default 'Médio' - mostra vazio se não detectou
                 'preco': float(s.get('preco', 0)),
                 'duracao': int(s.get('duracao', 60)),
                 'status': status_val,
