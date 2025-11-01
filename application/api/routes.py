@@ -1027,7 +1027,7 @@ def profissionais():
 
         profissional_data = {
             'nome': data['nome'],
-            'cpf': data['cpf'],
+            'cpf': data.get('cpf', ''),  # CPF OPCIONAL
             'email': data.get('email', ''),
             'telefone': data.get('telefone', ''),
             'especialidade': data.get('especialidade', ''),
@@ -3026,19 +3026,29 @@ def importar():
                     
                     # Categoria
                     categoria = 'Serviço'
-                    for col in ['categoria', 'category']:
+                    for col in ['categoria', 'category', 'tipo']:
                         if col in r and r[col]:
                             categoria = str(r[col]).strip().title()
                             break
-                    
-                    # Preços por tamanho
+
+                    # Duração (em minutos)
+                    duracao = 60  # Padrão: 60 minutos
+                    for col in ['duracao', 'duração', 'tempo', 'duration', 'minutos']:
+                        if col in r and r[col]:
+                            try:
+                                duracao = int(float(r[col]))
+                                break
+                            except:
+                                continue
+
+                    # Preços por tamanho - EXPANDIDO com mais aliases
                     tamanhos_map = {
-                        'kids': ['kids', 'crianca', 'infantil'],
-                        'masculino': ['masculino', 'male', 'homem'],
-                        'curto': ['curto', 'short'],
-                        'medio': ['medio', 'médio', 'medium'],
-                        'longo': ['longo', 'long'],
-                        'extra_longo': ['extra_longo', 'extra longo', 'extralongo', 'extralong']
+                        'kids': ['kids', 'crianca', 'criança', 'infantil', 'child', 'kid'],
+                        'masculino': ['masculino', 'male', 'homem', 'masc', 'masculina'],
+                        'curto': ['curto', 'short', 'p', 'pequeno', 'mini'],
+                        'medio': ['medio', 'médio', 'medium', 'm', 'media', 'média'],
+                        'longo': ['longo', 'long', 'l', 'grande', 'g'],
+                        'extra_longo': ['extra_longo', 'extra longo', 'extralongo', 'extralong', 'xl', 'extra', 'muito longo', 'gg']
                     }
                     
                     tamanhos_precos = {}
@@ -3086,7 +3096,7 @@ def importar():
                                 'preco_longo': preco_unico,
                                 'preco_extra_longo': preco_unico,
                                 'categoria': categoria,
-                                'duracao': 60,
+                                'duracao': duracao,  # Usar duração detectada
                                 'ativo': True,
                                 'created_at': datetime.now()
                             })
@@ -3116,7 +3126,7 @@ def importar():
                             'tamanho': tamanho_label,
                             'preco': preco,
                             'categoria': categoria,
-                            'duracao': 60,
+                            'duracao': duracao,  # Usar duração detectada
                             'ativo': True,
                             'created_at': datetime.now()
                         })
