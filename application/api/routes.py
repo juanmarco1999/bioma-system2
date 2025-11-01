@@ -7291,7 +7291,7 @@ def financeiro_dashboard():
 
         # Query 2: Despesas
         pipeline_despesas = [
-            {'$match': query} if query else {'$match': {}},
+            {'$match': query if query else {}},
             {'$group': {'_id': None, 'total': {'$sum': '$valor'}}}
         ]
         despesas_result = list(db.despesas.aggregate(pipeline_despesas))

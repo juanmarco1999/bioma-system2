@@ -14785,9 +14785,9 @@ async function deletarTodosProdutos() {
                 confirmButtonColor: '#3085d6'
             });
 
-            // Aguardar um pouco antes de recarregar (evita modal sobreposto)
-            await new Promise(resolve => setTimeout(resolve, 300));
-            await loadProdutosLista();
+            // SSE já faz o auto-refresh, não precisamos chamar manualmente
+            // (evita conflito entre refresh manual e múltiplos broadcasts SSE)
+            await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (e) {
             console.error('❌ Erro ao deletar produtos:', e);
@@ -15000,9 +15000,9 @@ async function deletarTodosServicos() {
                 confirmButtonColor: '#3085d6'
             });
 
-            // Aguardar um pouco antes de recarregar (evita modal sobreposto)
-            await new Promise(resolve => setTimeout(resolve, 300));
-            await loadServicosLista();
+            // SSE já faz o auto-refresh, não precisamos chamar manualmente
+            // (evita conflito entre refresh manual e múltiplos broadcasts SSE)
+            await new Promise(resolve => setTimeout(resolve, 500));
 
         } catch (e) {
             console.error('❌ Erro ao deletar serviços:', e);
@@ -19917,9 +19917,8 @@ async function autoRefreshAfterOperation(section) {
     const refreshMap = {
         'servicos': loadServicosLista,
         'produtos': loadProdutosLista,
-        'clientes': loadClientesLista,
-        'profissionais': loadProfissionaisLista,
-        'orcamentos': loadOrcamentosLista,
+        'clientes': loadClientes,
+        'profissionais': loadProfissionais,
         'estoque': loadEstoque,
         'dashboard': () => {
             loadMensalResumo();
