@@ -13102,7 +13102,7 @@ async function salvarNovoServico() {
             limparFormularioNovoServico();
 
             // Recarregar lista
-            loadServicos();
+            await loadServicosLista();
 
             // Voltar para aba de todos
             setTimeout(() => {
@@ -14173,7 +14173,7 @@ function showModalServico(){
                 const data=await res.json();
                 if(data.success){
                     Swal.fire('Sucesso!',`${data.count} SKUs criados`,'success');
-                    loadServicosLista();
+                    await loadServicosLista();
                 }
             }catch(e){
                 Swal.fire('Erro','','error');
