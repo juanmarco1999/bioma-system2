@@ -11218,10 +11218,16 @@ async function deleteCliente(id){
 
     if(result.isConfirmed){
         try{
-            await fetch(`/api/clientes/${id}`,{method:'DELETE',credentials:'include'});
-            mostrarNotificacao('success', 'Cliente deletado com sucesso!');
-            loadClientes();
+            const response = await fetchWithTimeout(`/api/clientes/${id}`, {method:'DELETE',credentials:'include'}, 30000, 1);
+            const data = await response.json();
+            if(data.success){
+                mostrarNotificacao('success', 'Cliente deletado com sucesso!');
+                loadClientes();
+            }else{
+                mostrarNotificacao('error', data.message || 'Erro ao deletar cliente');
+            }
         }catch(e){
+            console.error('Erro ao deletar cliente:',e);
             mostrarNotificacao('error', 'Erro ao deletar cliente');
         }
     }
@@ -12505,14 +12511,20 @@ async function deleteAssistente(id) {
 }
 
 async function deleteProfissional(id){
-    const result=await Swal.fire({title:'Deletar?',icon:'warning',showCancelButton:true});
+    const result=await Swal.fire({title:'Deletar profissional?',text:'Esta ação não pode ser desfeita',icon:'warning',showCancelButton:true,confirmButtonText:'Sim, deletar',cancelButtonText:'Cancelar'});
     if(result.isConfirmed){
         try{
-            await fetch(`/api/profissionais/${id}`,{method:'DELETE',credentials:'include'});
-            Swal.fire('Deletado!','','success');
-            loadProfissionais();
+            const response = await fetchWithTimeout(`/api/profissionais/${id}`, {method:'DELETE',credentials:'include'}, 30000, 1);
+            const data = await response.json();
+            if(data.success){
+                Swal.fire('Deletado!','Profissional removido com sucesso','success');
+                loadProfissionais();
+            }else{
+                Swal.fire('Erro',data.message || 'Erro ao deletar profissional','error');
+            }
         }catch(e){
-            Swal.fire('Erro','','error');
+            console.error('Erro ao deletar profissional:',e);
+            Swal.fire('Erro','Não foi possível deletar o profissional','error');
         }
     }
 
@@ -14033,14 +14045,20 @@ async function loadServicosLista(){
 }
 
 async function deleteServico(id){
-    const result=await Swal.fire({title:'Deletar?',icon:'warning',showCancelButton:true});
+    const result=await Swal.fire({title:'Deletar serviço?',text:'Esta ação não pode ser desfeita',icon:'warning',showCancelButton:true,confirmButtonText:'Sim, deletar',cancelButtonText:'Cancelar'});
     if(result.isConfirmed){
         try{
-            await fetch(`/api/servicos/${id}`,{method:'DELETE',credentials:'include'});
-            Swal.fire('Deletado!','','success');
-            loadServicosLista();
+            const response = await fetchWithTimeout(`/api/servicos/${id}`, {method:'DELETE',credentials:'include'}, 30000, 1);
+            const data = await response.json();
+            if(data.success){
+                Swal.fire('Deletado!','Serviço removido com sucesso','success');
+                loadServicosLista();
+            }else{
+                Swal.fire('Erro',data.message || 'Erro ao deletar serviço','error');
+            }
         }catch(e){
-            Swal.fire('Erro','','error');
+            console.error('Erro ao deletar serviço:',e);
+            Swal.fire('Erro','Não foi possível deletar o serviço','error');
         }
     }
 }
@@ -14404,14 +14422,20 @@ async function loadProdutosLista(){
 }
 
 async function deleteProduto(id){
-    const result=await Swal.fire({title:'Deletar?',icon:'warning',showCancelButton:true});
+    const result=await Swal.fire({title:'Deletar produto?',text:'Esta ação não pode ser desfeita',icon:'warning',showCancelButton:true,confirmButtonText:'Sim, deletar',cancelButtonText:'Cancelar'});
     if(result.isConfirmed){
         try{
-            await fetch(`/api/produtos/${id}`,{method:'DELETE',credentials:'include'});
-            Swal.fire('Deletado!','','success');
-            loadProdutosLista();
+            const response = await fetchWithTimeout(`/api/produtos/${id}`, {method:'DELETE',credentials:'include'}, 30000, 1);
+            const data = await response.json();
+            if(data.success){
+                Swal.fire('Deletado!','Produto removido com sucesso','success');
+                loadProdutosLista();
+            }else{
+                Swal.fire('Erro',data.message || 'Erro ao deletar produto','error');
+            }
         }catch(e){
-            Swal.fire('Erro','','error');
+            console.error('Erro ao deletar produto:',e);
+            Swal.fire('Erro','Não foi possível deletar o produto','error');
         }
     }
 

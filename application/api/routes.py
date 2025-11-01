@@ -657,17 +657,59 @@ def clientes():
             logger.error(f"❌ Error loading clientes: {e}")
             return jsonify({'success': False, 'message': str(e)}), 500
     
-    data = request.json
+    # Aceitar tanto JSON quanto FormData (multipart para upload de foto)
+    if request.is_json:
+        data = request.json
+    else:
+        # FormData (multipart/form-data)
+        data = request.form.to_dict()
+
     try:
+        # Validar campos obrigatórios
+        if not data.get('nome') or not data.get('cpf'):
+            return jsonify({'success': False, 'message': 'Nome e CPF são obrigatórios'}), 400
+
         existing = db.clientes.find_one({'cpf': data['cpf']})
-        cliente_data = {'nome': data['nome'], 'cpf': data['cpf'], 'email': data.get('email', ''), 'telefone': data.get('telefone', ''), 'updated_at': datetime.now()}
+
+        # Dados completos do cliente
+        cliente_data = {
+            'nome': data['nome'],
+            'cpf': data['cpf'],
+            'email': data.get('email', ''),
+            'telefone': data.get('telefone', ''),
+            'data_nascimento': data.get('data_nascimento', ''),
+            'cep': data.get('cep', ''),
+            'estado': data.get('estado', ''),
+            'cidade': data.get('cidade', ''),
+            'bairro': data.get('bairro', ''),
+            'rua': data.get('rua', ''),
+            'numero': data.get('numero', ''),
+            'observacoes': data.get('observacoes', ''),
+            'updated_at': datetime.now()
+        }
+
+        # Upload de foto (se enviado)
+        if 'foto' in request.files:
+            foto = request.files['foto']
+            if foto and foto.filename:
+                # Processar foto (salvar como base64 ou URL)
+                import base64
+                foto_b64 = base64.b64encode(foto.read()).decode('utf-8')
+                cliente_data['foto_url'] = f"data:image/jpeg;base64,{foto_b64}"
+
         if existing:
             db.clientes.update_one({'cpf': data['cpf']}, {'$set': cliente_data})
+            logger.info(f"✅ Cliente atualizado: {data['nome']} (CPF: {data['cpf']})")
         else:
             cliente_data['created_at'] = datetime.now()
+            cliente_data['total_faturado'] = 0
+            cliente_data['total_visitas'] = 0
             db.clientes.insert_one(cliente_data)
-        return jsonify({'success': True})
+            logger.info(f"✅ Cliente criado: {data['nome']} (CPF: {data['cpf']})")
+
+        return jsonify({'success': True, 'message': 'Cliente salvo com sucesso'})
     except Exception as e:
+        logger.error(f"❌ Erro ao salvar cliente: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/clientes/<id>', methods=['DELETE'])
@@ -3084,33 +3126,65 @@ def importar():
                             except:
                                 continue
 
-                    # Preços por tamanho - NORMALIZADO com mais aliases
-                    tamanhos_map = {
-                        'kids': [normalizar_coluna(x) for x in ['kids', 'crianca', 'criança', 'infantil', 'child', 'kid', 'bebe', 'bebê']],
-                        'masculino': [normalizar_coluna(x) for x in ['masculino', 'male', 'homem', 'masc', 'masculina', 'barba', 'beard']],
-                        'curto': [normalizar_coluna(x) for x in ['curto', 'short', 'p', 'pequeno', 'mini', 'small', 's']],
-                        'medio': [normalizar_coluna(x) for x in ['medio', 'médio', 'medium', 'm', 'media', 'média', 'normal']],
-                        'longo': [normalizar_coluna(x) for x in ['longo', 'long', 'l', 'grande', 'g', 'large', 'big']],
-                        'extra_longo': [normalizar_coluna(x) for x in ['extra_longo', 'extra longo', 'extralongo', 'extralong', 'xl', 'extra', 'muito longo', 'gg', 'xxl', 'extralarge']]
+                    # Preços por tamanho - DETECÇÃO MELHORADA
+                    # Busca por padrões DENTRO do nome da coluna (ex: "Preço P" contém "p")
+                    tamanhos_patterns = {
+                        'kids': ['kids', 'crianca', 'infantil', 'child', 'kid', 'bebe'],
+                        'masculino': ['masculino', 'male', 'homem', 'masc', 'barba', 'beard'],
+                        'curto': ['curto', 'short', 'pequeno', 'mini', 'small'],
+                        'medio': ['medio', 'medium', 'media', 'normal'],
+                        'longo': ['longo', 'long', 'grande', 'large', 'big'],
+                        'extra_longo': ['extralongo', 'extralong', 'extralarge', 'muitolongo']
+                    }
+
+                    # Letras únicas para tamanhos (P, M, G, etc) - busca EXATA
+                    tamanhos_letras = {
+                        'curto': ['p', 's'],
+                        'medio': ['m'],
+                        'longo': ['g', 'l'],
+                        'extra_longo': ['gg', 'xl', 'xxl']
                     }
 
                     tamanhos_precos = {}
-                    for tamanho_key, col_aliases in tamanhos_map.items():
-                        preco = 0.0
-                        for col_alias in col_aliases:
-                            if col_alias in r and r[col_alias]:
-                                try:
-                                    val = str(r[col_alias]).replace('R$', '').replace('$', '').strip()
-                                    if ',' in val:
-                                        val = val.replace(',', '.')
-                                    preco = float(val)
-                                    logger.debug(f"  ✓ Preço {tamanho_key} encontrado: R$ {preco:.2f} (coluna: {col_alias})")
+
+                    # Buscar por colunas normalizadas
+                    for coluna_normalizada, valor in r.items():
+                        if not valor:
+                            continue
+
+                        tamanho_detectado = None
+
+                        # 1. Verificar se a coluna é EXATAMENTE uma letra (p, m, g, etc)
+                        if len(coluna_normalizada) <= 3:  # Colunas curtas como 'p', 'm', 'g', 'gg', 'xl'
+                            for tam, letras in tamanhos_letras.items():
+                                if coluna_normalizada in letras:
+                                    tamanho_detectado = tam
                                     break
-                                except Exception as e:
-                                    logger.debug(f"  ⚠ Erro ao converter preço da coluna '{col_alias}': {e}")
-                                    continue
-                        if preco > 0:
-                            tamanhos_precos[tamanho_key] = preco
+
+                        # 2. Se não achou, verificar se algum padrão está CONTIDO na coluna
+                        if not tamanho_detectado:
+                            for tam, patterns in tamanhos_patterns.items():
+                                for pattern in patterns:
+                                    pattern_norm = normalizar_coluna(pattern)
+                                    # Buscar o padrão DENTRO da coluna
+                                    if pattern_norm in coluna_normalizada or coluna_normalizada in pattern_norm:
+                                        tamanho_detectado = tam
+                                        break
+                                if tamanho_detectado:
+                                    break
+
+                        # Se detectou um tamanho, extrair o preço
+                        if tamanho_detectado and tamanho_detectado not in tamanhos_precos:
+                            try:
+                                val = str(valor).replace('R$', '').replace('$', '').strip()
+                                if ',' in val:
+                                    val = val.replace(',', '.')
+                                preco = float(val)
+                                if preco > 0:
+                                    tamanhos_precos[tamanho_detectado] = preco
+                                    logger.debug(f"  ✓ Preço {tamanho_detectado} encontrado: R$ {preco:.2f} (coluna: '{coluna_normalizada}')")
+                            except Exception as e:
+                                logger.debug(f"  ⚠ Erro ao converter preço da coluna '{coluna_normalizada}': {e}")
 
                     # Se não há nenhum preço válido, tentar preço único
                     if not tamanhos_precos:
