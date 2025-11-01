@@ -1908,10 +1908,11 @@ def mapa_calor_agendamentos():
     """Gerar mapa de calor de agendamentos e orçamentos"""
     if db is None:
         return jsonify({'success': False}), 500
-    
+
     try:
-        # Últimos 30 dias
-        data_inicio = datetime.now() - timedelta(days=30)
+        # Parâmetro de dias (padrão: 30)
+        dias = request.args.get('dias', 30, type=int)
+        data_inicio = datetime.now() - timedelta(days=dias)
         data_fim = datetime.now()
         
         # Buscar agendamentos
@@ -2879,6 +2880,35 @@ def relatorio_estoque():
         logger.error(f"Erro ao gerar relatório: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+def normalizar_coluna(texto):
+    """Normalização extrema de nomes de colunas para máxima compatibilidade"""
+    import unicodedata
+    import re
+
+    if not texto:
+        return ''
+
+    # Converter para string
+    texto = str(texto)
+
+    # Remover acentos (NFD = Canonical Decomposition)
+    texto = unicodedata.normalize('NFD', texto)
+    texto = ''.join(char for char in texto if unicodedata.category(char) != 'Mn')
+
+    # Converter para lowercase
+    texto = texto.lower()
+
+    # Remover caracteres especiais, manter apenas alfanuméricos e underscores
+    texto = re.sub(r'[^a-z0-9_]', '', texto)
+
+    # Remover espaços/underscores duplicados
+    texto = re.sub(r'_+', '_', texto)
+
+    # Remover underscores no início/fim
+    texto = texto.strip('_')
+
+    return texto
+
 @bp.route('/api/importar', methods=['POST'])
 @login_required
 def importar():
@@ -3005,79 +3035,96 @@ def importar():
                 except:
                     count_error += 1
         elif tipo == 'servicos':
-            # Importação de serviços
-            logger.info(f"Importando {len(rows)} linhas de serviços...")
+            # Importação de serviços com NORMALIZAÇÃO EXTREMA
+            logger.info(f"🔄 Importando {len(rows)} linhas de serviços com normalização extrema...")
+
             for idx, row in enumerate(rows, 1):
                 try:
-                    r = {k.lower().strip(): v for k, v in row.items() if k and v is not None}
+                    # NORMALIZAÇÃO EXTREMA: remover acentos, caracteres especiais, etc
+                    r = {normalizar_coluna(k): v for k, v in row.items() if k and v is not None}
+
                     if not r or all(not v for v in r.values()):
+                        logger.debug(f"Linha {idx}: linha vazia, pulando")
                         continue
 
-                    # Nome do serviço
+                    logger.debug(f"📋 Linha {idx}: Colunas detectadas: {list(r.keys())}")
+
+                    # Nome do serviço - NORMALIZADO
                     nome = None
-                    for col in ['nome', 'servico', 'name', 'serviço']:
+                    nome_cols = [normalizar_coluna(x) for x in ['nome', 'servico', 'serviço', 'name', 'service']]
+                    for col in nome_cols:
                         if col in r and r[col]:
                             nome = str(r[col]).strip()
-                            break
-                    if not nome or len(nome) < 2:
-                        logger.warning(f"Linha {idx}: nome do serviço inválido ou ausente")
-                        count_error += 1
-                        continue
-                    
-                    # Categoria
-                    categoria = 'Serviço'
-                    for col in ['categoria', 'category', 'tipo']:
-                        if col in r and r[col]:
-                            categoria = str(r[col]).strip().title()
+                            logger.debug(f"  ✓ Nome encontrado na coluna '{col}': {nome}")
                             break
 
-                    # Duração (em minutos)
+                    if not nome or len(nome) < 2:
+                        logger.warning(f"❌ Linha {idx}: nome do serviço inválido ou ausente - Colunas: {list(r.keys())}")
+                        count_error += 1
+                        continue
+
+                    # Categoria - NORMALIZADO
+                    categoria = 'Serviço'
+                    cat_cols = [normalizar_coluna(x) for x in ['categoria', 'category', 'tipo', 'type']]
+                    for col in cat_cols:
+                        if col in r and r[col]:
+                            categoria = str(r[col]).strip().title()
+                            logger.debug(f"  ✓ Categoria encontrada: {categoria}")
+                            break
+
+                    # Duração (em minutos) - NORMALIZADO
                     duracao = 60  # Padrão: 60 minutos
-                    for col in ['duracao', 'duração', 'tempo', 'duration', 'minutos']:
+                    dur_cols = [normalizar_coluna(x) for x in ['duracao', 'duração', 'tempo', 'duration', 'minutos', 'minutes', 'min']]
+                    for col in dur_cols:
                         if col in r and r[col]:
                             try:
                                 duracao = int(float(r[col]))
+                                logger.debug(f"  ✓ Duração encontrada: {duracao} min")
                                 break
                             except:
                                 continue
 
-                    # Preços por tamanho - EXPANDIDO com mais aliases
+                    # Preços por tamanho - NORMALIZADO com mais aliases
                     tamanhos_map = {
-                        'kids': ['kids', 'crianca', 'criança', 'infantil', 'child', 'kid'],
-                        'masculino': ['masculino', 'male', 'homem', 'masc', 'masculina'],
-                        'curto': ['curto', 'short', 'p', 'pequeno', 'mini'],
-                        'medio': ['medio', 'médio', 'medium', 'm', 'media', 'média'],
-                        'longo': ['longo', 'long', 'l', 'grande', 'g'],
-                        'extra_longo': ['extra_longo', 'extra longo', 'extralongo', 'extralong', 'xl', 'extra', 'muito longo', 'gg']
+                        'kids': [normalizar_coluna(x) for x in ['kids', 'crianca', 'criança', 'infantil', 'child', 'kid', 'bebe', 'bebê']],
+                        'masculino': [normalizar_coluna(x) for x in ['masculino', 'male', 'homem', 'masc', 'masculina', 'barba', 'beard']],
+                        'curto': [normalizar_coluna(x) for x in ['curto', 'short', 'p', 'pequeno', 'mini', 'small', 's']],
+                        'medio': [normalizar_coluna(x) for x in ['medio', 'médio', 'medium', 'm', 'media', 'média', 'normal']],
+                        'longo': [normalizar_coluna(x) for x in ['longo', 'long', 'l', 'grande', 'g', 'large', 'big']],
+                        'extra_longo': [normalizar_coluna(x) for x in ['extra_longo', 'extra longo', 'extralongo', 'extralong', 'xl', 'extra', 'muito longo', 'gg', 'xxl', 'extralarge']]
                     }
-                    
+
                     tamanhos_precos = {}
                     for tamanho_key, col_aliases in tamanhos_map.items():
                         preco = 0.0
                         for col_alias in col_aliases:
                             if col_alias in r and r[col_alias]:
                                 try:
-                                    val = str(r[col_alias]).replace('R$', '').strip()
+                                    val = str(r[col_alias]).replace('R$', '').replace('$', '').strip()
                                     if ',' in val:
                                         val = val.replace(',', '.')
                                     preco = float(val)
+                                    logger.debug(f"  ✓ Preço {tamanho_key} encontrado: R$ {preco:.2f} (coluna: {col_alias})")
                                     break
-                                except:
+                                except Exception as e:
+                                    logger.debug(f"  ⚠ Erro ao converter preço da coluna '{col_alias}': {e}")
                                     continue
                         if preco > 0:
                             tamanhos_precos[tamanho_key] = preco
-                    
+
                     # Se não há nenhum preço válido, tentar preço único
                     if not tamanhos_precos:
-                        # Tentar importar com preço único
+                        # Tentar importar com preço único - NORMALIZADO
                         preco_unico = 0.0
-                        for col in ['preco', 'preço', 'price', 'valor']:
+                        preco_cols = [normalizar_coluna(x) for x in ['preco', 'preço', 'price', 'valor', 'value', 'cost']]
+                        for col in preco_cols:
                             if col in r and r[col]:
                                 try:
-                                    val = str(r[col]).replace('R$', '').strip()
+                                    val = str(r[col]).replace('R$', '').replace('$', '').strip()
                                     if ',' in val:
                                         val = val.replace(',', '.')
                                     preco_unico = float(val)
+                                    logger.debug(f"  ✓ Preço único encontrado: R$ {preco_unico:.2f}")
                                     break
                                 except:
                                     continue
@@ -3096,13 +3143,14 @@ def importar():
                                 'preco_longo': preco_unico,
                                 'preco_extra_longo': preco_unico,
                                 'categoria': categoria,
-                                'duracao': duracao,  # Usar duração detectada
+                                'duracao': duracao,
                                 'ativo': True,
                                 'created_at': datetime.now()
                             })
+                            logger.info(f"✅ Linha {idx}: '{nome}' importado com preço único R$ {preco_unico:.2f}")
                             count_success += 1
                         else:
-                            logger.warning(f"Linha {idx}: nenhum preço válido encontrado")
+                            logger.warning(f"❌ Linha {idx}: '{nome}' sem preços válidos - Colunas: {list(r.keys())}")
                             count_error += 1
                         continue
                     
@@ -3115,25 +3163,27 @@ def importar():
                         'longo': 'Longo',
                         'extra_longo': 'Extra Longo'
                     }
-                    
+
+                    logger.info(f"✅ Linha {idx}: '{nome}' com {len(tamanhos_precos)} tamanhos detectados")
                     for tamanho_key, preco in tamanhos_precos.items():
                         tamanho_label = tamanhos_labels.get(tamanho_key, tamanho_key.title())
                         sku = f"{nome.upper().replace(' ', '-')}-{tamanho_label.upper().replace(' ', '-')}"
-                        
+
                         db.servicos.insert_one({
                             'nome': nome,
                             'sku': sku,
                             'tamanho': tamanho_label,
                             'preco': preco,
                             'categoria': categoria,
-                            'duracao': duracao,  # Usar duração detectada
+                            'duracao': duracao,
                             'ativo': True,
                             'created_at': datetime.now()
                         })
-                    
+                        logger.debug(f"  ➕ Criado: {nome} - {tamanho_label} - R$ {preco:.2f}")
+
                     count_success += 1
                 except Exception as e:
-                    logger.error(f"Erro ao importar serviço: {e}")
+                    logger.error(f"❌ Erro na linha {idx}: {str(e)}")
                     count_error += 1
         if filepath and os.path.exists(filepath):
             os.remove(filepath)

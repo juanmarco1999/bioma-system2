@@ -12529,7 +12529,7 @@ function showModalProfissional(){
         preConfirm:()=>{
         const nome=document.getElementById('swal-prof-nome').value;
         const cpf=document.getElementById('swal-prof-cpf').value;
-        if(!nome||!cpf){Swal.showValidationMessage('Nome e CPF obrigatórios');return false;}
+        if(!nome){Swal.showValidationMessage('Nome é obrigatório');return false;}
         return {nome,cpf,especialidade:document.getElementById('swal-prof-espec').value,comissao_perc:document.getElementById('swal-prof-comissao').value};
     }}).then(async(result)=>{
         if(result.isConfirmed){
