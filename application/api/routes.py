@@ -3268,16 +3268,17 @@ def importar():
                             except:
                                 continue
 
-                    # Preços por tamanho - DETECÇÃO MELHORADA
-                    # Busca por padrões DENTRO do nome da coluna (ex: "Preço P" contém "p")
-                    tamanhos_patterns = {
-                        'kids': ['kids', 'crianca', 'infantil', 'child', 'kid', 'bebe'],
-                        'masculino': ['masculino', 'male', 'homem', 'masc', 'barba', 'beard'],
-                        'curto': ['curto', 'short', 'pequeno', 'mini', 'small'],
-                        'medio': ['medio', 'medium', 'media', 'normal'],
-                        'longo': ['longo', 'long', 'grande', 'large', 'big'],
-                        'extra_longo': ['extralongo', 'extralong', 'extralarge', 'muitolongo']
-                    }
+                    # Preços por tamanho - DETECÇÃO MELHORADA v7.2
+                    # IMPORTANTE: Ordem importa! Mais específicos primeiro (extra_longo ANTES de longo)
+                    from collections import OrderedDict
+                    tamanhos_patterns = OrderedDict([
+                        ('extra_longo', ['extralongo', 'extra_longo', 'extralong', 'extra_long', 'extralarge', 'extra_large', 'muitolongo']),
+                        ('kids', ['kids', 'crianca', 'infantil', 'child', 'kid', 'bebe']),
+                        ('masculino', ['masculino', 'male', 'homem', 'masc', 'barba', 'beard']),
+                        ('curto', ['curto', 'short', 'pequeno', 'mini', 'small']),
+                        ('medio', ['medio', 'medium', 'media', 'normal']),
+                        ('longo', ['longo', 'long', 'grande', 'large', 'big']),
+                    ])
 
                     # Letras únicas para tamanhos (P, M, G, etc) - busca EXATA
                     tamanhos_letras = {
@@ -3290,13 +3291,17 @@ def importar():
                     tamanhos_precos = {}
 
                     # Buscar por colunas normalizadas - DETECÇÃO MELHORADA v7.0
-                    logger.debug(f"  🔍 Iniciando detecção de tamanhos...")
+                    logger.info(f"  🔍 Linha {idx} - Iniciando detecção de tamanhos...")
+                    logger.info(f"  📋 Colunas disponíveis: {list(r.keys())}")
+
                     for coluna_normalizada, valor in r.items():
                         if not valor:
                             continue
 
                         tamanho_detectado = None
                         metodo_deteccao = None
+
+                        # ORDEM CORRIGIDA v7.2: Padrão textual PRIMEIRO para evitar falsos positivos
 
                         # 1. Verificar se a coluna é EXATAMENTE uma letra (p, m, g, etc)
                         if len(coluna_normalizada) <= 3:  # Colunas curtas como 'p', 'm', 'g', 'gg', 'xl'
@@ -3306,7 +3311,20 @@ def importar():
                                     metodo_deteccao = f"letra exata '{coluna_normalizada}'"
                                     break
 
-                        # 2. Se não achou, verificar se a coluna TERMINA com letra de tamanho
+                        # 2. PADRÃO TEXTUAL (ANTES de "termina com" para evitar "kids" -> "curto")
+                        if not tamanho_detectado:
+                            for tam, patterns in tamanhos_patterns.items():
+                                for pattern in patterns:
+                                    pattern_norm = normalizar_coluna(pattern)
+                                    # v7.2: Buscar padrão NA coluna (unidirecional para evitar "longo" in "extralongo")
+                                    if pattern_norm in coluna_normalizada:
+                                        tamanho_detectado = tam
+                                        metodo_deteccao = f"padrão '{pattern}'"
+                                        break
+                                if tamanho_detectado:
+                                    break
+
+                        # 3. TERMINA COM (ÚLTIMA PRIORIDADE para evitar falsos positivos)
                         if not tamanho_detectado and len(coluna_normalizada) > 1:
                             ultima_letra = coluna_normalizada[-1]
                             if ultima_letra in ['p', 's']:
@@ -3326,19 +3344,6 @@ def importar():
                                     tamanho_detectado = 'extra_longo'
                                     metodo_deteccao = f"termina com '{ultimas_duas}'"
 
-                        # 3. Se não achou, verificar se algum padrão está CONTIDO na coluna
-                        if not tamanho_detectado:
-                            for tam, patterns in tamanhos_patterns.items():
-                                for pattern in patterns:
-                                    pattern_norm = normalizar_coluna(pattern)
-                                    # Buscar o padrão DENTRO da coluna
-                                    if pattern_norm in coluna_normalizada or coluna_normalizada in pattern_norm:
-                                        tamanho_detectado = tam
-                                        metodo_deteccao = f"padrão '{pattern}'"
-                                        break
-                                if tamanho_detectado:
-                                    break
-
                         # Se detectou um tamanho, extrair o preço (REMOVIDO o check "not in tamanhos_precos" para pegar TODOS)
                         if tamanho_detectado:
                             try:
@@ -3353,6 +3358,11 @@ def importar():
                                         logger.debug(f"  ✓ Preço {tamanho_detectado} encontrado: R$ {preco:.2f} (coluna: '{coluna_normalizada}', método: {metodo_deteccao})")
                             except Exception as e:
                                 logger.debug(f"  ⚠ Erro ao converter preço da coluna '{coluna_normalizada}': {e}")
+
+                    # Log de resumo da detecção
+                    logger.info(f"  📊 Linha {idx} - Tamanhos detectados: {list(tamanhos_precos.keys())}")
+                    for tam_key, preco_val in tamanhos_precos.items():
+                        logger.info(f"    ✓ {tam_key}: R$ {preco_val:.2f}")
 
                     # Se não há nenhum preço válido, tentar preço único
                     if not tamanhos_precos:
