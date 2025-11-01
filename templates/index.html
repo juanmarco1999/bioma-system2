@@ -46,9 +46,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v4.0 - Sistema Completo">
+    <meta name="description" content="Sistema de Gestão BIOMA Uberaba v7.3 - Sistema Ultra-Otimizado">
     <meta name="author" content="Juan Marco (@juanmarco1999)">
-    <title>BIOMA Uberaba v4.0 - Sistema Profissional</title>
+    <title>BIOMA Uberaba v7.3 - Sistema Ultra-Otimizado</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -5181,7 +5181,7 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
             <img id="authLogoCustom" alt="Logo personalizado" style="display:none;max-height:120px;margin:0 auto 20px;">
             <div class="logo-icon">🌳</div>
             <h2>BIOMA</h2>
-            <p>Uberaba - v4.0</p>
+            <p>Uberaba - v7.3</p>
         </div>
         <ul class="nav nav-pills nav-fill mb-4">
             <li class="nav-item"><button class="nav-link active" id="loginTab" onclick="switchTab('login')"><i class="bi bi-box-arrow-in-right"></i> Login</button></li>
@@ -5246,7 +5246,7 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
 
 <div id="app">
     <nav class="sidebar">
-        <div class="sidebar-logo"><h1>BIOMA</h1><p>Uberaba v4.0</p></div>
+        <div class="sidebar-logo"><h1>BIOMA</h1><p>Uberaba v7.3</p></div>
         <ul class="sidebar-menu">
             <li><a href="javascript:void(0)" onclick="goTo('dashboard'); return false;" class="active" id="menu-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             <li><a href="javascript:void(0)" onclick="goTo('orcamento'); return false;" id="menu-orcamento"><i class="bi bi-file-earmark-plus"></i> Novo Orçamento</a></li>
@@ -6940,9 +6940,13 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                     <label class="form-label"><i class="bi bi-rulers"></i> Tamanho *</label>
                                     <select id="novoServicoTamanho" class="form-select" required>
                                         <option value="">Selecione...</option>
-                                        <option value="Pequeno">Pequeno</option>
+                                        <option value="Único">Único (Preço fixo)</option>
+                                        <option value="Kids">Kids (Infantil)</option>
+                                        <option value="Masculino">Masculino (Barba)</option>
+                                        <option value="Curto">Curto</option>
                                         <option value="Médio">Médio</option>
-                                        <option value="Grande">Grande</option>
+                                        <option value="Longo">Longo</option>
+                                        <option value="Extra Longo">Extra Longo</option>
                                     </select>
                                 </div>
 
@@ -8683,7 +8687,7 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
             <div class="card mt-4"><div class="card-header"><i class="bi bi-image"></i> Personalização Visual</div><div class="card-body"><div class="row g-4"><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoPrincipalPreview"><span class="text-muted">Logo do sistema</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('principal')"><i class="bi bi-upload"></i> Enviar logo principal</button><button class="bioma-btn bioma-btn-sm bioma-btn-link text-danger mt-2" type="button" onclick="removerLogo('principal')">Remover</button></div></div><div class="col-md-6"><div class="logo-preview-card"><div class="logo-preview" id="logoLoginPreview"><span class="text-muted">Logo da tela de login</span></div><button class="btn btn-outline" type="button" onclick="abrirUploadLogo('login')"><i class="bi bi-upload"></i> Enviar logo de login</button><button class="bioma-btn bioma-btn-sm bioma-btn-link text-danger mt-2" type="button" onclick="removerLogo('login')">Remover</button></div></div></div></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-sliders"></i> Configurações Operacionais</div><div class="card-body"><div class="row g-3 mb-3"><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Abertura</label><input type="time" id="cfgHorarioAbertura" value="08:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Horário Fechamento</label><input type="time" id="cfgHorarioFechamento" value="19:00" class="form-control"></div><div class="col-md-4"><label style="display:block;font-weight:700;margin-bottom:10px">Duração Padrão (min)</label><input type="number" id="cfgDuracaoPadrao" value="60" class="form-control"></div></div><div class="row g-3 mb-3"><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Cashback Padrão (%)</label><input type="number" id="cfgCashbackPadrao" value="5" min="0" max="100" class="form-control"></div><div class="col-md-6"><label style="display:block;font-weight:700;margin-bottom:10px">Comissão Padrão (%)</label><input type="number" id="cfgComissaoPadrao" value="10" min="0" max="100" class="form-control"></div></div><button class="bioma-btn bioma-btn-success" onclick="salvarConfigOp()"><i class="bi bi-check-circle"></i> Salvar Configurações Operacionais</button></div></div>
             <div class="card mt-4"><div class="card-header"><i class="bi bi-envelope"></i> Configurações de E-mail</div><div class="card-body"><p class="text-muted mb-3">Configure as credenciais SMTP para envio de e-mails automáticos (orçamentos, notificações, etc.)</p><div class="alert alert-info"><i class="bi bi-info-circle"></i> <strong>Importante:</strong> As configurações de SMTP devem ser definidas no arquivo <code>.env</code> do servidor:<br><code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, <code>EMAIL_USER</code>, <code>EMAIL_PASSWORD</code>, <code>EMAIL_FROM</code></div><div class="mb-3"><label style="display:block;font-weight:700;margin-bottom:10px">Testar Configuração de E-mail</label><div class="input-group"><input type="email" id="emailTesteDestino" placeholder="Digite um e-mail para teste" class="form-control"><button class="bioma-btn bioma-btn-primary" onclick="testarEmailConfig()"><i class="bi bi-send"></i> Enviar E-mail de Teste</button></div><small class="text-muted">Um e-mail de teste será enviado para verificar se as configurações estão corretas.</small></div></div></div>
-            <div class="card mt-4"><div class="card-header"><i class="bi bi-shield-check"></i> Licença e Desenvolvedor</div><div class="card-body"><table style="width:100%"><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Plano Contratado:</td><td style="padding:15px"><span class="badge success">PROFISSIONAL PREMIUM</span></td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Franquia:</td><td style="padding:15px">BIOMA Uberaba - Oficial</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Desenvolvedor:</td><td style="padding:15px">@juanmarco1999 (Juan Marco Bernardos Souza e Silva)</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Email Suporte:</td><td style="padding:15px">180147064@aluno.unb.br</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Versão:</td><td style="padding:15px">v4.0 (Build 2025.10.05)</td></tr><tr><td style="padding:15px;font-weight:700">Última Atualização:</td><td style="padding:15px">05 de Outubro de 2025 às 22:34 UTC</td></tr></table></div></div>
+            <div class="card mt-4"><div class="card-header"><i class="bi bi-shield-check"></i> Licença e Desenvolvedor</div><div class="card-body"><table style="width:100%"><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Plano Contratado:</td><td style="padding:15px"><span class="badge success">PROFISSIONAL PREMIUM</span></td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Franquia:</td><td style="padding:15px">BIOMA Uberaba - Oficial</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Desenvolvedor:</td><td style="padding:15px">@juanmarco1999 (Juan Marco Bernardos Souza e Silva)</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Email Suporte:</td><td style="padding:15px">180147064@aluno.unb.br</td></tr><tr style="border-bottom:1px solid var(--border-color)"><td style="padding:15px;font-weight:700">Versão:</td><td style="padding:15px">v7.3 ULTRA-OTIMIZADO (Build 2025.11.01)</td></tr><tr><td style="padding:15px;font-weight:700">Última Atualização:</td><td style="padding:15px">01 de Novembro de 2025 - Performance 100x Melhor</td></tr></table></div></div>
         </div>
 
     </div>

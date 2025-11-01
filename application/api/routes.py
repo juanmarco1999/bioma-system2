@@ -3450,24 +3450,20 @@ def importar():
                                     continue
 
                         if preco_unico > 0:
-                            # Criar serviço com preço único
-                            sku = f"{nome.upper().replace(' ', '-')}"
+                            # v7.3.3: Serviço com preço único = criar com tamanho "Único"
+                            # Sistema dinâmico: apenas quando há colunas de tamanho detecta automaticamente
+                            sku = f"{nome.upper().replace(' ', '-')}-UNICO"
                             db.servicos.insert_one({
                                 'nome': nome,
                                 'sku': sku,
+                                'tamanho': 'Único',  # Tamanho padrão quando não há colunas específicas
                                 'preco': preco_unico,
-                                'preco_kids': preco_unico,
-                                'preco_masculino': preco_unico,
-                                'preco_curto': preco_unico,
-                                'preco_medio': preco_unico,
-                                'preco_longo': preco_unico,
-                                'preco_extra_longo': preco_unico,
                                 'categoria': categoria,
                                 'duracao': duracao,
                                 'ativo': True,
                                 'created_at': datetime.now()
                             })
-                            logger.info(f"✅ Linha {idx}: '{nome}' importado com preço único R$ {preco_unico:.2f}")
+                            logger.info(f"✅ Linha {idx}: '{nome}' importado com tamanho 'Único' - R$ {preco_unico:.2f}")
                             count_success += 1
                         else:
                             logger.warning(f"❌ Linha {idx}: '{nome}' sem preços válidos - Colunas: {list(r.keys())}")
