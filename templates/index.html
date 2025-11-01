@@ -11576,11 +11576,14 @@ async function carregarListaAnamnese() {
         const response = await fetch('/api/clientes', {
             credentials: 'include'
         });
-        const clientes = await response.json();
+        const data = await response.json();
+
+        // A API retorna {success: true, clientes: [...]}
+        const clientes = data.clientes || data || [];
 
         const tbody = document.getElementById('anamnesesListaBody');
 
-        if (!clientes || clientes.length === 0) {
+        if (!clientes || !Array.isArray(clientes) || clientes.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado</td></tr>';
             return;
         }
@@ -11987,11 +11990,14 @@ async function carregarListaProntuario() {
         const response = await fetch('/api/clientes', {
             credentials: 'include'
         });
-        const clientes = await response.json();
+        const data = await response.json();
+
+        // A API retorna {success: true, clientes: [...]}
+        const clientes = data.clientes || data || [];
 
         const tbody = document.getElementById('prontuariosListaBody');
 
-        if (!clientes || clientes.length === 0) {
+        if (!clientes || !Array.isArray(clientes) || clientes.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum cliente cadastrado</td></tr>';
             return;
         }
@@ -14754,6 +14760,8 @@ async function deletarTodosProdutos() {
                 confirmButtonColor: '#3085d6'
             });
 
+            // Aguardar um pouco antes de recarregar (evita modal sobreposto)
+            await new Promise(resolve => setTimeout(resolve, 300));
             await loadProdutosLista();
 
         } catch (e) {
@@ -14967,6 +14975,8 @@ async function deletarTodosServicos() {
                 confirmButtonColor: '#3085d6'
             });
 
+            // Aguardar um pouco antes de recarregar (evita modal sobreposto)
+            await new Promise(resolve => setTimeout(resolve, 300));
             await loadServicosLista();
 
         } catch (e) {

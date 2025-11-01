@@ -1058,8 +1058,17 @@ def profissionais():
             logger.error(f"Erro ao listar profissionais: {e}")
             return jsonify({'success': False, 'message': 'Erro ao carregar profissionais'}), 500
     
-    data = request.json
+    # Aceitar tanto JSON quanto FormData
+    if request.is_json:
+        data = request.json
+    else:
+        data = request.form.to_dict()
+
     try:
+        #Validar nome obrigatório
+        if not data.get('nome'):
+            return jsonify({'success': False, 'message': 'Nome é obrigatório'}), 400
+
         assistente_id = data.get('assistente_id') or None
         assistente_tipo = data.get('assistente_tipo')
         if assistente_id:
@@ -1082,13 +1091,21 @@ def profissionais():
             'ativo': True,
             'created_at': datetime.now()
         }
+
+        # Upload de foto (se enviado via FormData)
+        if 'foto' in request.files:
+            foto = request.files['foto']
+            if foto and foto.filename:
+                import base64
+                foto_b64 = base64.b64encode(foto.read()).decode('utf-8')
+                profissional_data['foto_url'] = f"data:image/jpeg;base64,{foto_b64}"
+
         result = db.profissionais.insert_one(profissional_data)
         inserted_id = str(result.inserted_id)
         logger.info(f"✅ Profissional cadastrado: {profissional_data['nome']} (ID: {inserted_id})")
-        # clear_cache('profissionais_list')  # Cache invalidation - opcional
         return jsonify({'success': True, 'message': 'Profissional cadastrado com sucesso', 'id': inserted_id})
     except Exception as e:
-        logger.error(f"Erro ao cadastrar profissional: {e}")
+        logger.error(f"❌ Erro ao cadastrar profissional: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/profissionais/<id>', methods=['DELETE'])
@@ -8011,6 +8028,27 @@ def toggle_todos_servicos():
 
     except Exception as e:
         logger.error(f"❌ Erro ao toggle servicos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/api/servicos/deletar-todos', methods=['DELETE'])
+@login_required
+@permission_required('Admin')
+def deletar_todos_servicos():
+    db = get_db()
+    """Deleta TODOS os serviços do sistema (apenas Admin)"""
+    try:
+        count_antes = db.servicos.count_documents({})
+        result = db.servicos.delete_many({})
+
+        logger.warning(f"🗑️ TODOS os serviços deletados: {result.deleted_count} registros removidos")
+        return jsonify({
+            'success': True,
+            'count': result.deleted_count,
+            'message': f'{result.deleted_count} serviços deletados com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao deletar todos servicos: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/produtos/toggle-todos', methods=['POST'])
