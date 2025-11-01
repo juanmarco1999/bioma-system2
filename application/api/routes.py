@@ -8058,6 +8058,27 @@ def deletar_todos_servicos():
         logger.error(f"❌ Erro ao deletar todos servicos: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
+@bp.route('/api/produtos/deletar-todos', methods=['DELETE'])
+@login_required
+@permission_required('Admin')
+def deletar_todos_produtos():
+    db = get_db()
+    """Deleta TODOS os produtos do sistema (apenas Admin)"""
+    try:
+        count_antes = db.produtos.count_documents({})
+        result = db.produtos.delete_many({})
+
+        logger.warning(f"🗑️ TODOS os produtos deletados: {result.deleted_count} registros removidos")
+        return jsonify({
+            'success': True,
+            'count': result.deleted_count,
+            'message': f'{result.deleted_count} produtos deletados com sucesso'
+        })
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao deletar todos produtos: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @bp.route('/api/produtos/toggle-todos', methods=['POST'])
 @login_required
 @permission_required('Admin', 'Gestão')
