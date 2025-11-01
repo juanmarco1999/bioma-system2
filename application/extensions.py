@@ -14,30 +14,70 @@ logger = logging.getLogger(__name__)
 # Database instance (será inicializada no __init__.py)
 db = None
 
-# Cache simples para requisições GET
+# ========== SISTEMA DE CACHE v7.2 AVANÇADO ==========
+from time import time
+from functools import wraps
+import hashlib
+import json
+
+# Cache com TTL por chave
 request_cache = {}
 
+class CacheManager:
+    """Gerenciador de cache avançado com TTL configurável"""
 
-def get_from_cache(key):
-    """Buscar do cache se ainda válido"""
-    from time import time
-    from flask import current_app
+    @staticmethod
+    def get(key, ttl=60):
+        """Buscar do cache se ainda válido"""
+        if key in request_cache:
+            data, timestamp, cache_ttl = request_cache[key]
+            if time() - timestamp < cache_ttl:
+                logger.debug(f"Cache HIT: {key} (age: {int(time() - timestamp)}s)")
+                return data
+            else:
+                del request_cache[key]
+                logger.debug(f"Cache EXPIRED: {key}")
+        return None
 
-    ttl = current_app.config.get('CACHE_TTL', 60)
+    @staticmethod
+    def set(key, data, ttl=60):
+        """Salvar no cache com TTL específico"""
+        request_cache[key] = (data, time(), ttl)
+        logger.debug(f"Cache SET: {key} (ttl: {ttl}s)")
 
-    if key in request_cache:
-        data, timestamp = request_cache[key]
-        if time() - timestamp < ttl:
-            return data
+    @staticmethod
+    def invalidate(pattern=None):
+        """Invalidar cache por padrão"""
+        if pattern is None:
+            count = len(request_cache)
+            request_cache.clear()
+            logger.info(f"Cache CLEARED: {count} entradas removidas")
         else:
-            del request_cache[key]
-    return None
+            removed = 0
+            keys_to_remove = [k for k in request_cache.keys() if pattern in k]
+            for key in keys_to_remove:
+                del request_cache[key]
+                removed += 1
+            if removed > 0:
+                logger.info(f"Cache INVALIDATED: {removed} entradas com padrão '{pattern}'")
 
+    @staticmethod
+    def get_cache_key(endpoint, args=None):
+        """Gera chave de cache única baseada em endpoint e argumentos"""
+        if args:
+            args_str = json.dumps(args, sort_keys=True)
+            hash_suffix = hashlib.md5(args_str.encode()).hexdigest()[:8]
+            return f"{endpoint}:{hash_suffix}"
+        return endpoint
+
+# Funções legadas (compatibilidade)
+def get_from_cache(key):
+    """Buscar do cache se ainda válido (função legada)"""
+    return CacheManager.get(key)
 
 def set_in_cache(key, data):
-    """Salvar no cache"""
-    from time import time
-    request_cache[key] = (data, time())
+    """Salvar no cache (função legada)"""
+    CacheManager.set(key, data)
 
 
 def init_db(app):

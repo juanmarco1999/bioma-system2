@@ -42,7 +42,7 @@ from application.api import bp
 from application.decorators import login_required, permission_required, get_user_permissions
 from application.utils import convert_objectid, allowed_file, registrar_auditoria, update_cliente_denormalized_fields, get_assistente_details
 from application.constants import ANAMNESE_FORM, PRONTUARIO_FORM, default_form_state
-from application.extensions import get_from_cache, set_in_cache
+from application.extensions import get_from_cache, set_in_cache, CacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -444,18 +444,24 @@ def system_status():
 @bp.route('/api/dashboard/stats')
 @login_required
 def dashboard_stats():
+    # v7.2: Cache de 60 segundos para performance
+    cache_key = 'dashboard:stats'
+    cached = CacheManager.get(cache_key, ttl=60)
+    if cached:
+        return jsonify({'success': True, 'stats': cached, 'cached': True})
+
     db = get_db()
     if db is None:
         return jsonify({'success': False}), 500
-    
+
     try:
         hoje_inicio = datetime.now().replace(hour=0, minute=0, second=0)
         hoje_fim = datetime.now().replace(hour=23, minute=59, second=59)
-        
+
         agendamentos_hoje = 0
         if 'agendamentos' in db.list_collection_names():
             agendamentos_hoje = db.agendamentos.count_documents({'data': {'$gte': hoje_inicio, '$lte': hoje_fim}})
-        
+
         stats = {
             'total_orcamentos': db.orcamentos.count_documents({}),
             'total_clientes': db.clientes.count_documents({}),
@@ -463,7 +469,11 @@ def dashboard_stats():
             'faturamento': sum(o.get('total_final', 0) for o in db.orcamentos.find({'status': 'Aprovado'})),
             'agendamentos_hoje': agendamentos_hoje
         }
-        return jsonify({'success': True, 'stats': stats})
+
+        # Cachear resultado
+        CacheManager.set(cache_key, stats, ttl=60)
+
+        return jsonify({'success': True, 'stats': stats, 'cached': False})
     except Exception as e:
         logger.error(f"Erro ao buscar stats: {e}")
         return jsonify({'success': False}), 500
@@ -789,6 +799,8 @@ def delete_cliente(id):
         if result.deleted_count > 0:
             # v7.0: Broadcast
             broadcast_sse_event('data_changed', {'section': 'clientes', 'action': 'delete', 'id': id})
+            # v7.2: Invalidar cache do dashboard
+            CacheManager.invalidate('dashboard')
         return jsonify({'success': result.deleted_count > 0})
     except:
         return jsonify({'success': False}), 500
