@@ -177,24 +177,49 @@ def ping():
 
 @bp.route('/api/login', methods=['POST'])
 def login():
+    """Login v7.0 - Com segurança aprimorada e auditoria"""
     db = get_db()
-    data = request.json
-    logger.info(f"🔐 Login attempt: {data.get('username')}")
-    
+    data = request.json or {}
+
+    # v7.0: Validação de dados
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Usuário e senha são obrigatórios'}), 400
+
+    # v7.0: IP do cliente para auditoria
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+    logger.info(f"🔐 Login attempt: {username} from {client_ip}")
+
     if db is None:
         return jsonify({'success': False, 'message': 'Database offline'}), 500
-    
+
     try:
-        user = db.users.find_one({'$or': [{'username': data['username']}, {'email': data['username']}]})
-        
-        if user and check_password_hash(user['password'], data['password']):
+        user = db.users.find_one({'$or': [{'username': username}, {'email': username}]})
+
+        if user and check_password_hash(user['password'], password):
             session.permanent = True
             session['user_id'] = str(user['_id'])
             session['username'] = user['username']
             session['role'] = user.get('role', 'admin')
-            session['tipo_acesso'] = user.get('tipo_acesso', 'Admin')  # Admin, Gestão, Profissional
+            session['tipo_acesso'] = user.get('tipo_acesso', 'Admin')
 
-            logger.info(f"✅ Login SUCCESS: {user['username']} (role: {session['role']}, tipo: {session['tipo_acesso']})")
+            # v7.0: Atualizar último login e IP
+            try:
+                db.users.update_one(
+                    {'_id': user['_id']},
+                    {'$set': {
+                        'last_login': datetime.now(),
+                        'last_ip': client_ip,
+                        'login_count': user.get('login_count', 0) + 1
+                    }}
+                )
+            except Exception as update_err:
+                logger.warning(f"⚠️ Erro ao atualizar last_login: {update_err}")
+
+            logger.info(f"✅ Login SUCCESS: {user['username']} (role: {session['role']}, tipo: {session['tipo_acesso']}, IP: {client_ip})")
 
             return jsonify({
                 'success': True,
@@ -205,13 +230,14 @@ def login():
                     'email': user['email'],
                     'role': user.get('role', 'admin'),
                     'tipo_acesso': user.get('tipo_acesso', 'Admin'),
-                    'theme': user.get('theme', 'light')
+                    'theme': user.get('theme', 'light'),
+                    'last_login': user.get('last_login').isoformat() if user.get('last_login') else None
                 }
             })
-        
-        logger.warning(f"❌ Login FAILED: {data.get('username')}")
-        return jsonify({'success': False, 'message': 'Usuário ou senha inválidos'})
-        
+
+        logger.warning(f"❌ Login FAILED: {username} from {client_ip}")
+        return jsonify({'success': False, 'message': 'Usuário ou senha inválidos'}), 401
+
     except Exception as e:
         logger.error(f"❌ Login ERROR: {e}")
         return jsonify({'success': False, 'message': 'Erro no servidor'}), 500
@@ -3403,6 +3429,14 @@ def importar():
                     count_error += 1
         if filepath and os.path.exists(filepath):
             os.remove(filepath)
+
+        # v7.0: Broadcast para todos os usuários quando importação é concluída
+        if count_success > 0:
+            broadcast_sse_event('data_changed', {'section': tipo, 'action': 'import', 'count': count_success})
+            # Se importou produtos, atualizar estoque também
+            if tipo == 'produtos':
+                broadcast_sse_event('data_changed', {'section': 'estoque', 'action': 'update'})
+
         return jsonify({'success': True, 'message': f'{count_success} importados!', 'count_success': count_success, 'count_error': count_error})
     except Exception as e:
         logger.error(f"Erro na importação: {e}")
