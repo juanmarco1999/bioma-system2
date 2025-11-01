@@ -883,6 +883,11 @@
     }
 }
 
+.spin {
+    animation: spinRefresh 1s linear infinite;
+    display: inline-block;
+}
+
 .btn-refresh-success{
     animation:successPulse 0.6s ease;
 }
@@ -6022,13 +6027,14 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                             <th>Horário</th>
                                             <th>Cliente</th>
                                             <th>Serviço</th>
+                                            <th>Tamanho</th>
                                             <th>Profissional</th>
                                             <th>Status</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="agendamentosHojeBody">
-                                        <tr><td colspan="6" class="text-center"><div class="spinner"></div></td></tr>
+                                        <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -6051,13 +6057,14 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                         <th>Horário</th>
                                         <th>Cliente</th>
                                         <th>Serviço</th>
+                                        <th>Tamanho</th>
                                         <th>Profissional</th>
                                         <th>Status</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="agendamentosSemanaBody">
-                                    <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                                    <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -6078,20 +6085,21 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                         <th>Horário</th>
                                         <th>Cliente</th>
                                         <th>Serviço</th>
+                                        <th>Tamanho</th>
                                         <th>Profissional</th>
                                         <th>Status</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="agendamentosMesBody">
-                                    <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                                    <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Sub-tab: Todos -->
             <div id="agendamentos-subtab-todos" class="sub-tab-content d-none">
                 <div class="card">
@@ -6128,13 +6136,14 @@ console.log('%c  🔍 Sistema de autocomplete moderno carregado', 'color: #3B82F
                                         <th>Horário</th>
                                         <th>Cliente</th>
                                         <th>Serviço</th>
+                                        <th>Tamanho</th>
                                         <th>Profissional</th>
                                         <th>Status</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="agendamentosTodosBody">
-                                    <tr><td colspan="7" class="text-center"><div class="spinner"></div></td></tr>
+                                    <tr><td colspan="8" class="text-center"><div class="spinner"></div></td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -13797,6 +13806,18 @@ function novoAgendamentoRapido(dataInicio, dataFim) {
                         <option value="">Selecione um profissional</option>
                     </select>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">Serviço / Tamanho</label>
+                    <select id="agend-tamanho" class="form-select">
+                        <option value="">Selecione um tamanho</option>
+                        <option value="Kids">Kids (Infantil)</option>
+                        <option value="Masculino">Masculino (Barba)</option>
+                        <option value="Curto">Curto (P/Small)</option>
+                        <option value="Médio">Médio (M/Medium)</option>
+                        <option value="Longo">Longo (G/Large)</option>
+                        <option value="Extra Longo">Extra Longo (GG/XL)</option>
+                    </select>
+                </div>
                 <div class="row g-2">
                     <div class="col-md-6">
                         <label class="form-label">Data</label>
@@ -13835,6 +13856,7 @@ function novoAgendamentoRapido(dataInicio, dataFim) {
             const cliente = document.getElementById('agend-cliente').value;
             const telefone = document.getElementById('agend-telefone').value;
             const profissional = document.getElementById('agend-profissional').value;
+            const tamanho = document.getElementById('agend-tamanho').value;
             const data = document.getElementById('agend-data').value;
             const hora = document.getElementById('agend-hora').value;
             const obs = document.getElementById('agend-obs').value;
@@ -13844,7 +13866,7 @@ function novoAgendamentoRapido(dataInicio, dataFim) {
                 return false;
             }
 
-            return { cliente, telefone, profissional, data, hora, obs };
+            return { cliente, telefone, profissional, tamanho, data, hora, obs };
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -13853,6 +13875,7 @@ function novoAgendamentoRapido(dataInicio, dataFim) {
                     cliente_nome: result.value.cliente,
                     telefone: result.value.telefone,
                     profissional_id: result.value.profissional,
+                    tamanho: result.value.tamanho,
                     data: result.value.data,
                     horario: result.value.hora,
                     observacoes: result.value.obs,
@@ -13902,6 +13925,7 @@ function visualizarAgendamentoCalendario(event) {
                 <p><strong>Cliente:</strong> ${props.cliente}</p>
                 <p><strong>Profissional:</strong> ${props.profissional}</p>
                 <p><strong>Telefone:</strong> ${props.telefone}</p>
+                ${props.tamanho ? `<p><strong>Tamanho:</strong> <span class="badge" style="background: var(--primary); color: white;">${props.tamanho}</span></p>` : ''}
                 <p><strong>Data/Hora:</strong> ${event.start.toLocaleString('pt-BR')}</p>
                 <p><strong>Status:</strong> <span class="badge success">${props.status}</span></p>
                 <p><strong>Observações:</strong> ${props.observacoes}</p>
@@ -16143,14 +16167,19 @@ async function handleUpload(input,tipo){
                 <div class="mb-3">
                     <div class="progress" style="height: 25px;">
                         <div id="barra-progresso-upload" class="progress-bar progress-bar-striped progress-bar-animated bg-info"
-                             role="progressbar" style="width: 0%">0%</div>
+                             role="progressbar" style="width: 100%">
+                            <i class="bi bi-hourglass-split"></i> Processando arquivo no servidor...
+                        </div>
                     </div>
                 </div>
                 <p style="margin-top: 20px; font-size: 1.1rem;">
                     <strong>📁 Arquivo:</strong> ${file.name}
                 </p>
                 <p id="status-upload" style="margin-top: 10px; color: var(--text-secondary);">
-                    <i class="bi bi-info-circle"></i> Enviando arquivo...
+                    <i class="bi bi-info-circle"></i> Aguarde enquanto processamos seus dados...
+                </p>
+                <p style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">
+                    ⚠️ Não feche esta janela. A importação pode levar alguns minutos dependendo do tamanho do arquivo.
                 </p>
                 <div id="detalhes-upload" style="display: none; margin-top: 15px;"></div>
             </div>
@@ -16158,42 +16187,15 @@ async function handleUpload(input,tipo){
         allowOutsideClick: false,
         showConfirmButton: true,
         confirmButtonText: 'OK',
-        showCancelButton: true,
-        showCloseButton: true,
-        cancelButtonText: '<i class="bi bi-x-circle"></i> Cancelar Importação',
-        cancelButtonColor: '#dc3545',
+        showCancelButton: false,
+        showCloseButton: false,
         didOpen: () => {
             const confirmBtn = Swal.getConfirmButton();
-            const cancelBtn = Swal.getCancelButton();
 
             // Esconder botão OK inicialmente (será mostrado após conclusão)
             if (confirmBtn) {
                 confirmBtn.style.display = 'none';
             }
-
-            if (cancelBtn) {
-                cancelBtn.onclick = () => {
-                    cancelarProcesso = true;
-                    cancelBtn.disabled = true;
-                    cancelBtn.innerHTML = '<i class="bi bi-hourglass"></i> Cancelando...';
-                    cancelBtn.style.backgroundColor = '#6c757d';
-                };
-            }
-
-            // Simular progresso durante envio
-            let progresso = 0;
-            const intervalo = setInterval(() => {
-                if (cancelarProcesso || progresso >= 80) {
-                    clearInterval(intervalo);
-                    return;
-                }
-                progresso += 10;
-                const barra = document.getElementById('barra-progresso-upload');
-                if (barra) {
-                    barra.style.width = `${progresso}%`;
-                    barra.textContent = `${progresso}%`;
-                }
-            }, 200);
         }
     });
 
@@ -16207,7 +16209,7 @@ async function handleUpload(input,tipo){
 
         const statusElement = document.getElementById('status-upload');
         if (statusElement) {
-            statusElement.innerHTML = '<i class="bi bi-upload"></i> Processando arquivo...';
+            statusElement.innerHTML = '<i class="bi bi-gear-fill spin"></i> Processando e validando dados...';
         }
 
         const res=await fetch('/api/importar',{
@@ -16216,15 +16218,12 @@ async function handleUpload(input,tipo){
             body:formData
         });
 
-        if (cancelarProcesso) {
-            throw new Error('Importação cancelada pelo usuário');
-        }
-
-        // Atualizar barra para 100%
+        // Atualizar status para "concluído"
         const barra = document.getElementById('barra-progresso-upload');
         if (barra) {
-            barra.style.width = '100%';
-            barra.textContent = '100%';
+            barra.classList.remove('bg-info');
+            barra.classList.add('bg-success');
+            barra.innerHTML = '<i class="bi bi-check-circle-fill"></i> Processamento concluído!';
         }
 
         if(!res.ok){
@@ -23000,15 +22999,16 @@ async function carregarAgendamentosHoje() {
         document.getElementById('agendamentosHojeCancelados').textContent = data.cancelados || 0;
         
         if (!agendamentos || agendamentos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum agendamento para hoje</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento para hoje</td></tr>';
             return;
         }
-        
+
         tbody.innerHTML = agendamentos.map(ag => {
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
             const horario = ag.horario || ag.hora || 'N/A';
             const clienteNome = ag.cliente_nome || ag.cliente?.nome || 'Cliente não informado';
             const servico = ag.servico || ag.servico_nome || ag.servico?.nome || 'Serviço não informado';
+            const tamanho = ag.tamanho || '-';
             const profissional = ag.profissional || ag.profissional_nome || ag.profissional?.nome || 'Profissional não informado';
             const status = ag.status || 'Pendente';
 
@@ -23017,6 +23017,7 @@ async function carregarAgendamentosHoje() {
                     <td>${horario}</td>
                     <td>${clienteNome}</td>
                     <td>${servico}</td>
+                    <td><span class="badge" style="background: var(--primary); color: white;">${tamanho}</span></td>
                     <td>${profissional}</td>
                     <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
@@ -23036,7 +23037,7 @@ async function carregarAgendamentosHoje() {
     } catch (error) {
         console.error('❌ Erro ao carregar agendamentos de hoje:', error);
         Swal.fire('Erro', 'Não foi possível carregar os agendamentos de hoje', 'error');
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados</td></tr>';
     } finally {
         // SEMPRE limpar estado
         if (window.loadingStates) {
@@ -23063,7 +23064,7 @@ async function carregarAgendamentosSemana() {
         const agendamentos = data.agendamentos || data;
 
         if (!agendamentos || agendamentos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento esta semana</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum agendamento esta semana</td></tr>';
             return;
         }
 
@@ -23073,6 +23074,7 @@ async function carregarAgendamentosSemana() {
             const horario = ag.horario || ag.hora || 'N/A';
             const clienteNome = ag.cliente_nome || ag.cliente?.nome || 'Cliente não informado';
             const servico = ag.servico || ag.servico_nome || ag.servico?.nome || 'Serviço não informado';
+            const tamanho = ag.tamanho || '-';
             const profissional = ag.profissional || ag.profissional_nome || ag.profissional?.nome || 'Profissional não informado';
             const status = ag.status || 'Pendente';
 
@@ -23082,6 +23084,7 @@ async function carregarAgendamentosSemana() {
                     <td>${horario}</td>
                     <td>${clienteNome}</td>
                     <td>${servico}</td>
+                    <td><span class="badge" style="background: var(--primary); color: white;">${tamanho}</span></td>
                     <td>${profissional}</td>
                     <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
@@ -23101,7 +23104,7 @@ async function carregarAgendamentosSemana() {
     } catch (error) {
         console.error('❌ Erro ao carregar agendamentos da semana:', error);
         Swal.fire('Erro', 'Falha ao carregar agendamentos da semana', 'error');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
     } finally {
         if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
@@ -23125,7 +23128,7 @@ async function carregarAgendamentosMes() {
         const agendamentos = data.agendamentos || data;
 
         if (!agendamentos || agendamentos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento este mês</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum agendamento este mês</td></tr>';
             return;
         }
 
@@ -23135,6 +23138,7 @@ async function carregarAgendamentosMes() {
             const horario = ag.horario || ag.hora || 'N/A';
             const clienteNome = ag.cliente_nome || ag.cliente?.nome || 'Cliente não informado';
             const servico = ag.servico || ag.servico_nome || ag.servico?.nome || 'Serviço não informado';
+            const tamanho = ag.tamanho || '-';
             const profissional = ag.profissional || ag.profissional_nome || ag.profissional?.nome || 'Profissional não informado';
             const status = ag.status || 'Pendente';
 
@@ -23144,6 +23148,7 @@ async function carregarAgendamentosMes() {
                     <td>${horario}</td>
                     <td>${clienteNome}</td>
                     <td>${servico}</td>
+                    <td><span class="badge" style="background: var(--primary); color: white;">${tamanho}</span></td>
                     <td>${profissional}</td>
                     <td><span class="badge ${statusClass}">${status}</span></td>
                     <td>
@@ -23163,7 +23168,7 @@ async function carregarAgendamentosMes() {
     } catch (error) {
         console.error('❌ Erro ao carregar agendamentos do mês:', error);
         Swal.fire('Erro', 'Falha ao carregar agendamentos do mês', 'error');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
     } finally {
         if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }
@@ -23193,19 +23198,21 @@ async function carregarTodosAgendamentos() {
         const agendamentos = data.agendamentos || [];
 
         if (!agendamentos || agendamentos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum agendamento encontrado</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum agendamento encontrado</td></tr>';
             return;
         }
 
         tbody.innerHTML = agendamentos.map(ag => {
             const data = new Date(ag.data).toLocaleDateString('pt-BR');
             const statusClass = ag.status === 'Confirmado' ? 'success' : ag.status === 'Cancelado' ? 'danger' : 'warning';
+            const tamanho = ag.tamanho || '-';
             return `
                 <tr>
                     <td>${data}</td>
                     <td>${ag.horario}</td>
                     <td>${ag.cliente_nome}</td>
                     <td>${ag.servico}</td>
+                    <td><span class="badge" style="background: var(--primary); color: white;">${tamanho}</span></td>
                     <td>${ag.profissional}</td>
                     <td><span class="badge ${statusClass}">${ag.status}</span></td>
                     <td>
@@ -23219,11 +23226,11 @@ async function carregarTodosAgendamentos() {
                 </tr>
             `;
         }).join('');
-        
+
     } catch (error) {
         console.error('❌ Erro:', error);
         Swal.fire('Erro', 'Falha ao carregar todos os agendamentos', 'error');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Erro ao carregar agendamentos</td></tr>';
     } finally {
         if (window.loadingStates) window.loadingStates[FUNC_KEY] = false;
     }

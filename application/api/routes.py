@@ -5,7 +5,7 @@ BIOMA v3.7 - Todas as Rotas (Consolidado)
 Migrado automaticamente do app.py monolítico
 """
 
-from flask import request, jsonify, session, current_app, send_file, render_template
+from flask import request, jsonify, session, current_app, send_file, render_template, Response, stream_with_context
 from flask_cors import CORS
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1837,16 +1837,21 @@ def agendamentos():
             return jsonify({'success': True, 'agendamentos': convert_objectid(agends)})
         except:
             return jsonify({'success': False}), 500
-    # POST - Criar novo agendamento com VALIDAÇÃO ROBUSTA (Roadmap - Input Validation)
+    # POST - Criar novo agendamento com VALIDAÇÃO FLEXÍVEL
     data = request.json
 
-    # Validação de campos obrigatórios
-    required_fields = ['data', 'horario', 'cliente_id', 'profissional_id', 'servico_id']
-    missing_fields = [field for field in required_fields if not data.get(field)]
-    if missing_fields:
+    # Validação de campos obrigatórios mínimos (data e horario)
+    if not data.get('data') or not data.get('horario'):
         return jsonify({
             'success': False,
-            'message': f'Campos obrigatórios ausentes: {", ".join(missing_fields)}'
+            'message': 'Data e horário são obrigatórios'
+        }), 400
+
+    # Validar que pelo menos nome do cliente foi fornecido
+    if not data.get('cliente_nome') and not data.get('cliente_id'):
+        return jsonify({
+            'success': False,
+            'message': 'Nome ou ID do cliente é obrigatório'
         }), 400
 
     try:
@@ -1884,16 +1889,18 @@ def agendamentos():
 
         # Inserir agendamento
         agend_id = db.agendamentos.insert_one({
-            'cliente_id': data['cliente_id'],
+            'cliente_id': data.get('cliente_id', 'temp'),
             'cliente_nome': data.get('cliente_nome', 'N/A'),
             'cliente_telefone': data.get('cliente_telefone'),
-            'profissional_id': data['profissional_id'],
+            'profissional_id': data.get('profissional_id', 'temp'),
             'profissional_nome': data.get('profissional_nome', 'N/A'),
-            'servico_id': data['servico_id'],
+            'servico_id': data.get('servico_id', 'temp'),
             'servico_nome': data.get('servico_nome', 'N/A'),
+            'tamanho': data.get('tamanho', ''),
             'data': data_agendamento,
             'horario': horario,
-            'status': 'confirmado',
+            'status': data.get('status', 'confirmado'),
+            'observacoes': data.get('observacoes', ''),
             'created_at': datetime.now(),
             'created_by': session.get('user_email', 'sistema')
         }).inserted_id
