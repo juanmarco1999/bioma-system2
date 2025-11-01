@@ -2643,12 +2643,26 @@ def rejeitar_entrada_estoque(id):
 def estoque_alerta():
     db = get_db()
     if db is None:
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': 'Erro ao conectar ao banco'}), 500
     try:
-        produtos = list(db.produtos.find({'$expr': {'$lte': ['$estoque', '$estoque_minimo']}}))
-        return jsonify({'success': True, 'produtos': convert_objectid(produtos)})
-    except:
-        return jsonify({'success': False}), 500
+        # Buscar TODOS os produtos primeiro
+        todos_produtos = list(db.produtos.find({}))
+
+        # Filtrar produtos onde estoque <= estoque_minimo (default 5)
+        produtos_baixos = []
+        for p in todos_produtos:
+            estoque_atual = p.get('estoque', 0) or 0
+            estoque_minimo = p.get('estoque_minimo', 5) or 5
+
+            if estoque_atual <= estoque_minimo:
+                produtos_baixos.append(p)
+
+        logger.info(f"📦 Alerta de estoque: {len(produtos_baixos)}/{len(todos_produtos)} produtos abaixo do mínimo")
+        return jsonify({'success': True, 'produtos': convert_objectid(produtos_baixos)})
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao buscar alertas de estoque: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/api/estoque/movimentacao', methods=['POST'])
 @login_required
