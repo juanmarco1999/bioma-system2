@@ -49,6 +49,46 @@ logger = logging.getLogger(__name__)
 # Importar DB diretamente de extensions
 from application.extensions import db as database_connection
 
+# ==================== SSE BROADCAST SYSTEM v7.0 ====================
+import queue
+import threading
+
+# Gerenciador global de clientes SSE conectados
+sse_clients = []
+sse_lock = threading.Lock()
+
+def broadcast_sse_event(event_type, data):
+    """
+    Envia evento SSE para TODOS os clientes conectados
+    event_type: 'data_changed', 'refresh_needed', etc.
+    data: {'section': 'servicos', 'action': 'create/update/delete'}
+    """
+    message = json.dumps({
+        'type': event_type,
+        'data': data,
+        'timestamp': datetime.now().isoformat()
+    })
+
+    with sse_lock:
+        # Limpar clientes desconectados
+        dead_clients = []
+        for client_queue in sse_clients:
+            try:
+                client_queue.put_nowait(message)
+            except queue.Full:
+                dead_clients.append(client_queue)
+
+        # Remover clientes mortos
+        for dead in dead_clients:
+            try:
+                sse_clients.remove(dead)
+            except ValueError:
+                pass
+
+        logger.debug(f"📡 SSE Broadcast: {event_type} → {len(sse_clients)} clientes")
+
+# ==================== FIM SSE BROADCAST SYSTEM ====================
+
 # Helper para obter DB
 def get_db():
     """Retorna instância do MongoDB"""
@@ -720,6 +760,9 @@ def delete_cliente(id):
         return jsonify({'success': False}), 500
     try:
         result = db.clientes.delete_one({'_id': ObjectId(id)})
+        if result.deleted_count > 0:
+            # v7.0: Broadcast
+            broadcast_sse_event('data_changed', {'section': 'clientes', 'action': 'delete', 'id': id})
         return jsonify({'success': result.deleted_count > 0})
     except:
         return jsonify({'success': False}), 500
@@ -801,7 +844,10 @@ def update_cliente(id):
         
         db.clientes.update_one({'_id': ObjectId(id)}, {'$set': update_data})
         logger.info(f"✅ Cliente atualizado: {update_data['nome']}")
-        
+
+        # v7.0: Broadcast
+        broadcast_sse_event('data_changed', {'section': 'clientes', 'action': 'update', 'id': id})
+
         return jsonify({'success': True, 'message': 'Cliente atualizado com sucesso'})
     except Exception as e:
         logger.error(f"Erro ao atualizar cliente: {e}")
@@ -1119,6 +1165,8 @@ def delete_profissional(id):
 
         if result.deleted_count > 0:
             logger.info(f"✅ Profissional deletado: {id}")
+            # v7.0: Broadcast
+            broadcast_sse_event('data_changed', {'section': 'profissionais', 'action': 'delete', 'id': id})
             return jsonify({'success': True, 'message': 'Profissional deletado com sucesso'})
         else:
             logger.warning(f"⚠️ Profissional não encontrado: {id}")
@@ -1165,6 +1213,8 @@ def profissional_detalhes(id):
 
             if result.modified_count > 0:
                 logger.info(f"✅ Profissional {id} atualizado: {update_data}")
+                # v7.0: Broadcast
+                broadcast_sse_event('data_changed', {'section': 'profissionais', 'action': 'update', 'id': id})
                 return jsonify({'success': True, 'message': 'Profissional atualizado com sucesso'})
 
             return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
@@ -7856,6 +7906,9 @@ def produto_detalhes(id):
 
             if result.deleted_count > 0:
                 logger.info(f"✅ Produto {id} deletado com sucesso")
+                # v7.0: Broadcast
+                broadcast_sse_event('data_changed', {'section': 'produtos', 'action': 'delete', 'id': id})
+                broadcast_sse_event('data_changed', {'section': 'estoque', 'action': 'update'})  # Atualiza estoque
                 return jsonify({'success': True, 'message': 'Produto deletado com sucesso'})
 
             return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
@@ -7922,6 +7975,10 @@ def produto_detalhes(id):
         # Aceitar tanto modificações quanto quando não há mudanças (matched_count > 0)
         if result.matched_count > 0:
             logger.info(f"✅ Produto {id} atualizado: {update_data}")
+            # v7.0: Broadcast
+            broadcast_sse_event('data_changed', {'section': 'produtos', 'action': 'update', 'id': id})
+            if 'estoque' in update_data or 'estoque_minimo' in update_data:
+                broadcast_sse_event('data_changed', {'section': 'estoque', 'action': 'update'})
             return jsonify({'success': True, 'message': 'Produto atualizado com sucesso'})
 
         return jsonify({'success': False, 'message': 'Produto não encontrado'}), 404
@@ -8041,6 +8098,8 @@ def atualizar_servico(id):
 
             if result.deleted_count > 0:
                 logger.info(f"✅ Serviço {id} deletado com sucesso")
+                # v7.0: Broadcast para todos os clientes
+                broadcast_sse_event('data_changed', {'section': 'servicos', 'action': 'delete', 'id': id})
                 return jsonify({'success': True, 'message': 'Serviço deletado com sucesso'})
 
             return jsonify({'success': False, 'message': 'Serviço não encontrado'}), 404
@@ -8093,8 +8152,10 @@ def atualizar_servico(id):
         
         if result.modified_count > 0:
             logger.info(f"✅ Serviço {id} atualizado: {update_data}")
+            # v7.0: Broadcast para todos os clientes
+            broadcast_sse_event('data_changed', {'section': 'servicos', 'action': 'update', 'id': id})
             return jsonify({'success': True, 'message': 'Serviço atualizado com sucesso'})
-        
+
         return jsonify({'success': False, 'message': 'Nenhuma alteração realizada'}), 400
         
     except Exception as e:
@@ -8643,51 +8704,63 @@ def admin_database_stats():
 @bp.route('/api/stream')
 @login_required
 def stream_updates():
-    """Route for Server-Sent Events (SSE) for real-time updates - OTIMIZADO v4.0"""
+    """Route for Server-Sent Events (SSE) v7.0 - Real-time broadcast system"""
     def generate():
-        """Generator function for SSE - apenas heartbeat (sem queries no DB)"""
-        try:
-            # Enviar heartbeat inicial
-            yield f"data: {json.dumps({'type': 'connected', 'message': 'SSE conectado com sucesso'})}\n\n"
+        """Generator function for SSE with real-time broadcast support"""
+        # Criar fila para este cliente
+        client_queue = queue.Queue(maxsize=50)
 
-            # Loop para manter conexão viva
+        # Registrar cliente
+        with sse_lock:
+            sse_clients.append(client_queue)
+            logger.info(f"📡 Novo cliente SSE conectado. Total: {len(sse_clients)}")
+
+        try:
+            # Enviar mensagem de conexão
+            yield f"data: {json.dumps({'type': 'connected', 'message': 'SSE v7.0 conectado', 'clients': len(sse_clients)})}\n\n"
+
             import time
-            counter = 0
-            max_duration = 86400  # 24 horas em segundos (limite de conexão)
-            start_time = time.time()
+            heartbeat_interval = 30  # Heartbeat a cada 30 segundos
+            last_heartbeat = time.time()
 
             while True:
-                counter += 1
+                # Tentar pegar mensagens da fila (non-blocking)
+                try:
+                    message = client_queue.get(timeout=1)
+                    yield f"data: {message}\n\n"
+                except queue.Empty:
+                    pass
 
-                # Verificar se ultrapassou o tempo máximo de conexão
-                if time.time() - start_time > max_duration:
-                    logger.info("SSE: Tempo máximo de conexão atingido (24h)")
-                    break
-
-                # Enviar apenas heartbeat leve (SEM queries no banco)
-                # Os dados devem ser buscados via refresh manual ou polling no frontend
-                data = {
-                    'type': 'heartbeat',
-                    'timestamp': datetime.now().isoformat(),
-                    'counter': counter
-                }
-
-                yield f"data: {json.dumps(data)}\n\n"
-
-                # Aguardar 60 segundos (vs 30s anterior = 50% menos requisições)
-                time.sleep(60)
+                # Enviar heartbeat periódico
+                current_time = time.time()
+                if current_time - last_heartbeat >= heartbeat_interval:
+                    heartbeat_data = {
+                        'type': 'heartbeat',
+                        'timestamp': datetime.now().isoformat(),
+                        'clients': len(sse_clients)
+                    }
+                    yield f"data: {json.dumps(heartbeat_data)}\n\n"
+                    last_heartbeat = current_time
 
         except GeneratorExit:
             logger.info("Cliente SSE desconectado")
         except Exception as e:
             logger.error(f"Erro no SSE stream: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        finally:
+            # Remover cliente da lista
+            with sse_lock:
+                try:
+                    sse_clients.remove(client_queue)
+                    logger.info(f"📡 Cliente SSE removido. Total: {len(sse_clients)}")
+                except ValueError:
+                    pass
 
     from flask import Response
     # Headers otimizados para SSE
-    response = Response(generate(), mimetype='text/event-stream')
+    response = Response(stream_with_context(generate()), mimetype='text/event-stream')
     response.headers['Cache-Control'] = 'no-cache, no-transform'
-    response.headers['X-Accel-Buffering'] = 'no'  # Desabilita buffering no NGINX
+    response.headers['X-Accel-Buffering'] = 'no'
+    response.headers['Connection'] = 'keep-alive'
     return response
 
 

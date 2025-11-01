@@ -20729,6 +20729,28 @@ function startSSE(){
     
     ev.onmessage = (e)=>{
       let data = {}; try{ data = JSON.parse(e.data); }catch{}
+
+      // v7.0: Sistema de Broadcast em Tempo Real
+      if (data.type === 'data_changed') {
+        const section = data.data?.section;
+        const action = data.data?.action;
+
+        if (section) {
+          console.log(`📡 SSE Recebido: ${section} (${action})`);
+          // Auto-refresh automático quando outro usuário faz mudanças
+          autoRefreshAfterOperation(section).catch(err => {
+            console.warn(`⚠️ Erro no auto-refresh SSE de ${section}:`, err);
+          });
+        }
+        return;
+      }
+
+      // Heartbeat e conexão
+      if (data.type === 'heartbeat' || data.type === 'connected') {
+        return;
+      }
+
+      // Compatibilidade com sistema antigo (channel)
       if(data.channel==='hello') return;
       const feed = document.querySelector('#feedCards') || document.querySelector('#feed');
       if(feed){ const card = document.createElement('div'); card.className='community-card'; card.innerHTML = `<h5>${data.channel||'evento'}</h5><pre style="white-space:pre-wrap">${JSON.stringify(data.payload,null,2)}</pre><small class="text-muted">${new Date().toLocaleString()}</small>`; feed.prepend(card); while(feed.children.length>50){ feed.removeChild(feed.lastChild);} }
