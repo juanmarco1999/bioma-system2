@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Documentação e scripts locais
+*.md
+limpar_servicos_produtos.py
+gunicorn_config.py
+
+# Backups
+*.backup
+*.backup-*
+templates/*.backup*
+
+# Logs
+*.log
+
+# Render específico (não usado no Vercel)
+render.yaml
+
+# Claude
+.claude/
+
+# Arquivos temporários
+tmp/
+temp/
+*.tmp

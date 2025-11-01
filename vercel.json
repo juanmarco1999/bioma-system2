@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "name": "bioma-system2",
+  "builds": [
+    {
+      "src": "run.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "templates/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "static/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "run.py"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "PYTHON_VERSION": "3.11"
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "run.py": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}
