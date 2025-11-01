@@ -11231,7 +11231,7 @@ async function deleteCliente(id){
             const data = await response.json();
             if(data.success){
                 mostrarNotificacao('success', 'Cliente deletado com sucesso!');
-                await loadClientes();
+                await autoRefreshAfterOperation('clientes'); // v7.1: Auto-refresh
             }else{
                 mostrarNotificacao('error', data.message || 'Erro ao deletar cliente');
             }
@@ -12533,7 +12533,7 @@ async function deleteProfissional(id){
             const data = await response.json();
             if(data.success){
                 Swal.fire('Deletado!','Profissional removido com sucesso','success');
-                await loadProfissionais();
+                await autoRefreshAfterOperation('profissionais'); // v7.1: Auto-refresh
             }else{
                 Swal.fire('Erro',data.message || 'Erro ao deletar profissional','error');
             }
@@ -13101,8 +13101,8 @@ async function salvarNovoServico() {
             // Limpar formulário
             limparFormularioNovoServico();
 
-            // Recarregar lista
-            await loadServicosLista();
+            // Recarregar lista (v7.1: Auto-refresh otimizado)
+            await autoRefreshAfterOperation('servicos');
 
             // Voltar para aba de todos
             setTimeout(() => {
@@ -14082,7 +14082,7 @@ async function deleteServico(id){
             const data = await response.json();
             if(data.success){
                 Swal.fire('Deletado!','Serviço removido com sucesso','success');
-                loadServicosLista();
+                await autoRefreshAfterOperation('servicos'); // v7.1: Auto-refresh
             }else{
                 Swal.fire('Erro',data.message || 'Erro ao deletar serviço','error');
             }
@@ -14280,8 +14280,8 @@ async function editarServico(id) {
                         text: `${result.value.nome} foi atualizado com sucesso.`,
                         timer: 2000
                     });
-                    // Recarregar lista de serviços
-                    loadServicosLista();
+                    // Recarregar lista de serviços (v7.1: Auto-refresh otimizado)
+                    await autoRefreshAfterOperation('servicos');
                 } else {
                     throw new Error(updateData.message || 'Erro ao atualizar serviço');
                 }
@@ -14459,7 +14459,8 @@ async function deleteProduto(id){
             const data = await response.json();
             if(data.success){
                 Swal.fire('Deletado!','Produto removido com sucesso','success');
-                loadProdutosLista();
+                await autoRefreshAfterOperation('produtos'); // v7.1: Auto-refresh
+                await autoRefreshAfterOperation('estoque'); // Atualizar estoque também
             }else{
                 Swal.fire('Erro',data.message || 'Erro ao deletar produto','error');
             }
@@ -19907,6 +19908,34 @@ function setLoading(key, state) {
 function debounce(key, func, delay = 300) {
     clearTimeout(debounceTimers[key]);
     debounceTimers[key] = setTimeout(func, delay);
+}
+
+// v7.1: Auto-refresh após operações (CREATE, UPDATE, DELETE)
+async function autoRefreshAfterOperation(section) {
+    console.log(`🔄 Auto-refresh após operação: ${section}`);
+
+    const refreshMap = {
+        'servicos': loadServicosLista,
+        'produtos': loadProdutosLista,
+        'clientes': loadClientesLista,
+        'profissionais': loadProfissionaisLista,
+        'orcamentos': loadOrcamentosLista,
+        'estoque': loadEstoque,
+        'dashboard': () => {
+            loadMensalResumo();
+            loadEstoqueResumo();
+        }
+    };
+
+    const refreshFunc = refreshMap[section];
+    if (refreshFunc) {
+        try {
+            await refreshFunc();
+            console.log(`✅ ${section} atualizado com sucesso`);
+        } catch (e) {
+            console.error(`❌ Erro ao atualizar ${section}:`, e);
+        }
+    }
 }
 
 // Wrap async functions to prevent concurrent calls

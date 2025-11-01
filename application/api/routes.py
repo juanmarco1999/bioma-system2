@@ -1195,13 +1195,25 @@ def profissional_detalhes(id):
         desempenho_mensal = {}
         multicomissao_detalhes = []
 
-        assistente_info = get_assistente_details(
-            profissional.get('assistente_id'),
-            profissional.get('assistente_tipo')
-        )
+        # v7.1: Tratamento robusto de erros para evitar 500
+        try:
+            assistente_info = get_assistente_details(
+                profissional.get('assistente_id'),
+                profissional.get('assistente_tipo')
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao buscar assistente: {e}")
+            assistente_info = None
 
-        comissao_prof_perc = float(profissional.get('comissao_perc', 0))
-        comissao_assistente_padrao = float(profissional.get('comissao_assistente_perc', 0))
+        try:
+            comissao_prof_perc = float(profissional.get('comissao_perc', 0))
+        except (ValueError, TypeError):
+            comissao_prof_perc = 0.0
+
+        try:
+            comissao_assistente_padrao = float(profissional.get('comissao_assistente_perc', 0))
+        except (ValueError, TypeError):
+            comissao_assistente_padrao = 0.0
 
         for orc in orcamentos_prof:
             data_orc = orc.get('created_at', datetime.now())
@@ -1236,24 +1248,32 @@ def profissional_detalhes(id):
                 assistente_perc = servico.get('assistente_comissao_perc')
                 assistente_servico = servico.get('assistente_servico') or servico.get('nome')
 
-                if servico.get('assistente_id'):
-                    assistente_item = get_assistente_details(
-                        servico.get('assistente_id'),
-                        servico.get('assistente_tipo')
-                    )
-                    if assistente_perc is None:
-                        assistente_perc = servico.get('assistente_comissao_perc', comissao_assistente_padrao)
-                elif assistente_info:
-                    assistente_item = assistente_info
-                    if assistente_perc is None:
-                        assistente_perc = comissao_assistente_padrao
+                # v7.1: Tratamento robusto para assistentes
+                try:
+                    if servico.get('assistente_id'):
+                        assistente_item = get_assistente_details(
+                            servico.get('assistente_id'),
+                            servico.get('assistente_tipo')
+                        )
+                        if assistente_perc is None:
+                            assistente_perc = servico.get('assistente_comissao_perc', comissao_assistente_padrao)
+                    elif assistente_info:
+                        assistente_item = assistente_info
+                        if assistente_perc is None:
+                            assistente_perc = comissao_assistente_padrao
+                except Exception as e:
+                    logger.warning(f"⚠️ Erro ao processar assistente do serviço: {e}")
+                    assistente_item = None
 
                 comissao_assistente_valor = 0.0
-                if assistente_item and assistente_perc:
-                    assistente_perc = float(assistente_perc)
-                    comissao_assistente_valor = comissao_valor * (assistente_perc / 100)
-                    total_comissao_assistente += comissao_assistente_valor
-                    desempenho_mensal[mes_key]['comissao_assistente'] += comissao_assistente_valor
+                try:
+                    if assistente_item and assistente_perc:
+                        assistente_perc = float(assistente_perc)
+                        comissao_assistente_valor = comissao_valor * (assistente_perc / 100)
+                        total_comissao_assistente += comissao_assistente_valor
+                        desempenho_mensal[mes_key]['comissao_assistente'] += comissao_assistente_valor
+                except (ValueError, TypeError, KeyError) as e:
+                    logger.warning(f"⚠️ Erro ao calcular comissão assistente: {e}")
 
                 multicomissao_detalhes.append({
                     'orcamento_id': str(orc['_id']),
