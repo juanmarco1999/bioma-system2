@@ -3193,21 +3193,44 @@ def importar():
 
                     tamanhos_precos = {}
 
-                    # Buscar por colunas normalizadas
+                    # Buscar por colunas normalizadas - DETECÇÃO MELHORADA v7.0
+                    logger.debug(f"  🔍 Iniciando detecção de tamanhos...")
                     for coluna_normalizada, valor in r.items():
                         if not valor:
                             continue
 
                         tamanho_detectado = None
+                        metodo_deteccao = None
 
                         # 1. Verificar se a coluna é EXATAMENTE uma letra (p, m, g, etc)
                         if len(coluna_normalizada) <= 3:  # Colunas curtas como 'p', 'm', 'g', 'gg', 'xl'
                             for tam, letras in tamanhos_letras.items():
                                 if coluna_normalizada in letras:
                                     tamanho_detectado = tam
+                                    metodo_deteccao = f"letra exata '{coluna_normalizada}'"
                                     break
 
-                        # 2. Se não achou, verificar se algum padrão está CONTIDO na coluna
+                        # 2. Se não achou, verificar se a coluna TERMINA com letra de tamanho
+                        if not tamanho_detectado and len(coluna_normalizada) > 1:
+                            ultima_letra = coluna_normalizada[-1]
+                            if ultima_letra in ['p', 's']:
+                                tamanho_detectado = 'curto'
+                                metodo_deteccao = f"termina com '{ultima_letra}'"
+                            elif ultima_letra == 'm':
+                                tamanho_detectado = 'medio'
+                                metodo_deteccao = f"termina com '{ultima_letra}'"
+                            elif ultima_letra in ['g', 'l']:
+                                tamanho_detectado = 'longo'
+                                metodo_deteccao = f"termina com '{ultima_letra}'"
+
+                            # Verificar se termina com GG/XL
+                            if not tamanho_detectado and len(coluna_normalizada) >= 2:
+                                ultimas_duas = coluna_normalizada[-2:]
+                                if ultimas_duas in ['gg', 'xl']:
+                                    tamanho_detectado = 'extra_longo'
+                                    metodo_deteccao = f"termina com '{ultimas_duas}'"
+
+                        # 3. Se não achou, verificar se algum padrão está CONTIDO na coluna
                         if not tamanho_detectado:
                             for tam, patterns in tamanhos_patterns.items():
                                 for pattern in patterns:
@@ -3215,20 +3238,23 @@ def importar():
                                     # Buscar o padrão DENTRO da coluna
                                     if pattern_norm in coluna_normalizada or coluna_normalizada in pattern_norm:
                                         tamanho_detectado = tam
+                                        metodo_deteccao = f"padrão '{pattern}'"
                                         break
                                 if tamanho_detectado:
                                     break
 
-                        # Se detectou um tamanho, extrair o preço
-                        if tamanho_detectado and tamanho_detectado not in tamanhos_precos:
+                        # Se detectou um tamanho, extrair o preço (REMOVIDO o check "not in tamanhos_precos" para pegar TODOS)
+                        if tamanho_detectado:
                             try:
                                 val = str(valor).replace('R$', '').replace('$', '').strip()
                                 if ',' in val:
                                     val = val.replace(',', '.')
                                 preco = float(val)
                                 if preco > 0:
-                                    tamanhos_precos[tamanho_detectado] = preco
-                                    logger.debug(f"  ✓ Preço {tamanho_detectado} encontrado: R$ {preco:.2f} (coluna: '{coluna_normalizada}')")
+                                    # Permitir sobrescrever se encontrar preço maior
+                                    if tamanho_detectado not in tamanhos_precos or preco > tamanhos_precos[tamanho_detectado]:
+                                        tamanhos_precos[tamanho_detectado] = preco
+                                        logger.debug(f"  ✓ Preço {tamanho_detectado} encontrado: R$ {preco:.2f} (coluna: '{coluna_normalizada}', método: {metodo_deteccao})")
                             except Exception as e:
                                 logger.debug(f"  ⚠ Erro ao converter preço da coluna '{coluna_normalizada}': {e}")
 
@@ -6929,6 +6955,32 @@ def gerar_pdf_contrato(id):
         O cliente declara estar ciente dos valores e condições apresentados.
         A BIOMA se compromete a prestar os serviços com excelência e profissionalismo."""
         elements.append(Paragraph(termos, styles['Normal']))
+
+        # Assinaturas na MESMA PÁGINA das cláusulas (v7.0)
+        elements.append(Spacer(1, 1.5*cm))
+
+        # Criar tabela de assinaturas (duas colunas lado a lado)
+        data_assinatura = datetime.now().strftime('%d/%m/%Y')
+        cidade = "Uberaba/MG"
+
+        assinaturas_data = [
+            [f'{cidade}, {data_assinatura}', ''],
+            ['', ''],
+            ['_' * 40, '_' * 40],
+            ['<b>BIOMA Uberaba</b>', f'<b>{contrato.get("cliente_nome", "CLIENTE")}</b>'],
+            ['CNPJ: __.___.___/____-__', f'CPF: {contrato.get("cliente_cpf", "___.___.___-__")}']
+        ]
+
+        assinaturas_table = Table(assinaturas_data, colWidths=[8*cm, 8*cm])
+        assinaturas_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 3), (-1, 3), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 2), (-1, 2), 0),
+            ('BOTTOMPADDING', (0, 2), (-1, 2), 2),
+        ]))
+        elements.append(assinaturas_table)
 
         # Gerar PDF
         doc.build(elements)
