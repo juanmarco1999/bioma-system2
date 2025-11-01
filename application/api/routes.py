@@ -1113,12 +1113,20 @@ def profissionais():
 def delete_profissional(id):
     db = get_db()
     if db is None:
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': 'Erro ao conectar ao banco'}), 500
     try:
         result = db.profissionais.delete_one({'_id': ObjectId(id)})
-        return jsonify({'success': result.deleted_count > 0})
-    except:
-        return jsonify({'success': False}), 500
+
+        if result.deleted_count > 0:
+            logger.info(f"✅ Profissional deletado: {id}")
+            return jsonify({'success': True, 'message': 'Profissional deletado com sucesso'})
+        else:
+            logger.warning(f"⚠️ Profissional não encontrado: {id}")
+            return jsonify({'success': False, 'message': 'Profissional não encontrado'}), 404
+
+    except Exception as e:
+        logger.error(f"❌ Erro ao deletar profissional {id}: {str(e)}")
+        return jsonify({'success': False, 'message': f'Erro ao deletar: {str(e)}'}), 500
 
 @bp.route('/api/profissionais/<id>', methods=['GET', 'PUT'])
 @login_required
